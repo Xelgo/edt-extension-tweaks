@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            id="ru.xelgo.edt.contextlinks.ui.category"
+            name="%command.category.name">
+      </category>
+      <command
+            categoryId="ru.xelgo.edt.contextlinks.ui.category"
+            defaultHandler="ru.xelgo.edt.contextlinks.ui.ConfigureContextLinksHandler"
+            id="ru.xelgo.edt.contextlinks.ui.commands.configureContextLinks"
+            name="%command.name">
+      </command>
+   </extension>
+
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="popup:com._1c.g5.v8.dt.navigator.ui.navigator.popup?endof=group.open">
+         <command
+               commandId="ru.xelgo.edt.contextlinks.ui.commands.configureContextLinks"
+               style="push"
+               tooltip="%command.tooltip">
+         </command>
+      </menuContribution>
+   </extension>
+
+   <extension
+         point="com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension">
+      <bslRuntimeModuleExtension
+            module="ru.xelgo.edt.contextlinks.core.ContextLinksBslRuntimeModule">
+      </bslRuntimeModuleExtension>
+   </extension>
+
+</plugin>
