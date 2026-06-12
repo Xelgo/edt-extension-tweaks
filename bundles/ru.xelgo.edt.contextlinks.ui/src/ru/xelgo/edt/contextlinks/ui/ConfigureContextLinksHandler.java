@@ -99,7 +99,7 @@ public class ConfigureContextLinksHandler
 
         try
         {
-            ContextLinks.setContextProjectNamesBidirectional(project, names);
+            ContextLinks.setContextProjectNames(project, names);
             ContextLinks.logWarning("EDT Context Links configure command saved project=" + project.getName() //$NON-NLS-1$
                 + ", names=" + names + ", allSettings=" + ContextLinks.describeWorkspaceSettings()); //$NON-NLS-1$ //$NON-NLS-2$
         }
