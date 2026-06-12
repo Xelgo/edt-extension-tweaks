@@ -32,6 +32,8 @@ public class ContextLinksCachedScopeProvider
     private static final Set<String> loggedTypeScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedPropertyScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> debugLoggedKeys = ConcurrentHashMap.newKeySet();
+    private static final Set<String> resourceBackedLoggedKeys = ConcurrentHashMap.newKeySet();
+    private static final Set<String> resourceBackedQueryLoggedKeys = ConcurrentHashMap.newKeySet();
     private static final ConcurrentHashMap<String, IScope> lastKnownTypeItemScopes = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, IScope> lastKnownPropertyScopes = new ConcurrentHashMap<>();
 
@@ -145,7 +147,8 @@ public class ContextLinksCachedScopeProvider
 
             if (linkedScope != null)
             {
-                compositeScope.addScope(new ResourceBackedScope(linkedScope));
+                compositeScope.addScope(new ResourceBackedScope(linkedScope, project.getName(), linkedProjectName,
+                    "type-item")); //$NON-NLS-1$
                 addedProjects.add(lastKnownLinkedScope ? linkedProjectName + " (last-known)" : linkedProjectName); //$NON-NLS-1$
             }
             else
@@ -221,7 +224,8 @@ public class ContextLinksCachedScopeProvider
 
             if (linkedScope != null)
             {
-                compositeScope.addScope(new ResourceBackedScope(linkedScope));
+                compositeScope.addScope(new ResourceBackedScope(linkedScope, project.getName(), linkedProjectName,
+                    "property")); //$NON-NLS-1$
                 addedProjects.add(lastKnownLinkedScope ? linkedProjectName + " (last-known)" : linkedProjectName); //$NON-NLS-1$
             }
             else
@@ -406,70 +410,190 @@ public class ContextLinksCachedScopeProvider
         implements IScope
     {
         private final IScope delegate;
+        private final String currentProjectName;
+        private final String linkedProjectName;
+        private final String kind;
 
-        private ResourceBackedScope(IScope delegate)
+        private ResourceBackedScope(IScope delegate, String currentProjectName, String linkedProjectName, String kind)
         {
             this.delegate = delegate;
+            this.currentProjectName = currentProjectName;
+            this.linkedProjectName = linkedProjectName;
+            this.kind = kind;
         }
 
         @Override
         public IEObjectDescription getSingleElement(QualifiedName name)
         {
             IEObjectDescription description = delegate.getSingleElement(name);
-            return safeDescription(description);
+            IEObjectDescription safeDescription = safeDescription(description);
+            logSingleQuery("name", name, description, safeDescription); //$NON-NLS-1$
+            return safeDescription;
         }
 
         @Override
         public Iterable<IEObjectDescription> getElements(QualifiedName name)
         {
-            return filter(delegate.getElements(name));
+            return filter(delegate.getElements(name), "name", name); //$NON-NLS-1$
         }
 
         @Override
         public IEObjectDescription getSingleElement(EObject object)
         {
             IEObjectDescription description = delegate.getSingleElement(object);
-            return safeDescription(description);
+            IEObjectDescription safeDescription = safeDescription(description);
+            logSingleQuery("object", object != null ? object.eClass().getName() : "NULL", description, //$NON-NLS-1$ //$NON-NLS-2$
+                safeDescription);
+            return safeDescription;
         }
 
         @Override
         public Iterable<IEObjectDescription> getElements(EObject object)
         {
-            return filter(delegate.getElements(object));
+            return filter(delegate.getElements(object), "object", object != null ? object.eClass().getName() : "NULL"); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
         @Override
         public Iterable<IEObjectDescription> getAllElements()
         {
-            return filter(delegate.getAllElements());
+            return filter(delegate.getAllElements(), "all", "ALL"); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
-        private Iterable<IEObjectDescription> filter(Iterable<IEObjectDescription> descriptions)
+        private Iterable<IEObjectDescription> filter(Iterable<IEObjectDescription> descriptions, String method,
+            Object query)
         {
             List<IEObjectDescription> filteredDescriptions = new ArrayList<>();
+            int total = 0;
+            int rejected = 0;
+            int noUri = 0;
+            int noEClass = 0;
+            int noObject = 0;
+            int noResource = 0;
+            int proxy = 0;
+
             for (IEObjectDescription description : descriptions)
             {
+                total++;
+                RejectReason rejectReason = getRejectReason(description);
+                if (rejectReason != RejectReason.NONE)
+                {
+                    rejected++;
+                    switch (rejectReason)
+                    {
+                    case NO_URI:
+                        noUri++;
+                        break;
+                    case NO_ECLASS:
+                        noEClass++;
+                        break;
+                    case NO_OBJECT:
+                        noObject++;
+                        break;
+                    case NO_RESOURCE:
+                        noResource++;
+                        break;
+                    case PROXY:
+                        proxy++;
+                        break;
+                    default:
+                        break;
+                    }
+                    continue;
+                }
+
                 IEObjectDescription safeDescription = safeDescription(description);
                 if (safeDescription != null)
                     filteredDescriptions.add(safeDescription);
             }
+
+            logFilter(method, query, total, filteredDescriptions.size(), rejected, noUri, noEClass, noObject,
+                noResource, proxy);
             return filteredDescriptions;
         }
 
         private IEObjectDescription safeDescription(IEObjectDescription description)
         {
-            if (description == null)
-                return null;
+            return getRejectReason(description) == RejectReason.NONE ? description : null;
+        }
 
-            if (description.getEObjectURI() == null || description.getEClass() == null)
-                return null;
+        private RejectReason getRejectReason(IEObjectDescription description)
+        {
+            if (description == null)
+                return RejectReason.NO_OBJECT;
+
+            if (description.getEObjectURI() == null)
+                return RejectReason.NO_URI;
+
+            if (description.getEClass() == null)
+                return RejectReason.NO_ECLASS;
 
             EObject object = description.getEObjectOrProxy();
-            if (object == null || object.eResource() == null)
-                return null;
+            if (object == null)
+                return RejectReason.NO_OBJECT;
 
-            return description;
+            if (object.eResource() == null)
+                return RejectReason.NO_RESOURCE;
+
+            if (object.eIsProxy())
+                return RejectReason.PROXY;
+
+            return RejectReason.NONE;
         }
+
+        private void logFilter(String method, Object query, int total, int accepted, int rejected, int noUri,
+            int noEClass, int noObject, int noResource, int proxy)
+        {
+            String key = contextKey() + "|" + method + "|" + query + "|" + total + "|" + accepted + "|" //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                + rejected + "|" + noUri + "|" + noEClass + "|" + noObject + "|" + noResource + "|" + proxy; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            if (resourceBackedLoggedKeys.add(key))
+            {
+                ContextLinks.logDebug("EDT Context Links DEBUG [resourceBacked.filter] current=" //$NON-NLS-1$
+                    + currentProjectName + " linked=" + linkedProjectName + " kind=" + kind //$NON-NLS-1$ //$NON-NLS-2$
+                    + " method=" + method + " query=" + query + " total=" + total //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                    + " accepted=" + accepted + " rejected=" + rejected + " noUri=" + noUri //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                    + " noEClass=" + noEClass + " noObject=" + noObject + " noResource=" + noResource //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                    + " proxy=" + proxy); //$NON-NLS-1$
+            }
+        }
+
+        private void logSingleQuery(String method, Object query, IEObjectDescription description,
+            IEObjectDescription safeDescription)
+        {
+            String key = contextKey() + "|" + method + "|" + query + "|" + describeDescription(description) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                + "|" + describeDescription(safeDescription); //$NON-NLS-1$
+            if (resourceBackedQueryLoggedKeys.add(key))
+            {
+                ContextLinks.logDebug("EDT Context Links DEBUG [resourceBacked.single] current=" //$NON-NLS-1$
+                    + currentProjectName + " linked=" + linkedProjectName + " kind=" + kind //$NON-NLS-1$ //$NON-NLS-2$
+                    + " method=" + method + " query=" + query + " raw=" + describeDescription(description) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                    + " safe=" + describeDescription(safeDescription)); //$NON-NLS-1$
+            }
+        }
+
+        private String contextKey()
+        {
+            return currentProjectName + "|" + linkedProjectName + "|" + kind + "|" //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                + delegate.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(delegate)); //$NON-NLS-1$
+        }
+
+        private String describeDescription(IEObjectDescription description)
+        {
+            if (description == null)
+                return "NULL"; //$NON-NLS-1$
+
+            return description.getName() + " uri=" + description.getEObjectURI() + " eClass=" //$NON-NLS-1$ //$NON-NLS-2$
+                + (description.getEClass() != null ? description.getEClass().getName() : "NULL"); //$NON-NLS-1$
+        }
+    }
+
+    private enum RejectReason
+    {
+        NONE,
+        NO_URI,
+        NO_ECLASS,
+        NO_OBJECT,
+        NO_RESOURCE,
+        PROXY
     }
 
     @FunctionalInterface
