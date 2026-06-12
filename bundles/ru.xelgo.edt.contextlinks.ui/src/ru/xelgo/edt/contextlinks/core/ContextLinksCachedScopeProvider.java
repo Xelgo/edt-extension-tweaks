@@ -26,6 +26,7 @@ public class ContextLinksCachedScopeProvider
     extends BslCachedScopeProvider
 {
     private static final int[] NULL_SCOPE_RETRY_DELAYS_MS = { 25, 75 };
+    private static final int[] LINKED_SCOPE_RETRY_DELAYS_MS = { 250, 500, 1000, 2000, 3000 };
 
     private static final Set<String> loggedTypeScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedPropertyScopeKeys = ConcurrentHashMap.newKeySet();
@@ -276,9 +277,13 @@ public class ContextLinksCachedScopeProvider
 
     private IScope retryNullScope(IProject project, String kind, String reason, ScopeLookup lookup)
     {
-        for (int attempt = 0; attempt < NULL_SCOPE_RETRY_DELAYS_MS.length; attempt++)
+        int[] retryDelays = reason != null && reason.startsWith("linked:") //$NON-NLS-1$
+            ? LINKED_SCOPE_RETRY_DELAYS_MS
+            : NULL_SCOPE_RETRY_DELAYS_MS;
+
+        for (int attempt = 0; attempt < retryDelays.length; attempt++)
         {
-            int delayMs = NULL_SCOPE_RETRY_DELAYS_MS[attempt];
+            int delayMs = retryDelays[attempt];
             ContextLinks.logDebug("EDT Context Links DEBUG [cache.retry.wait] kind=" + kind //$NON-NLS-1$
                 + " project=" + describeProject(project) + " reason=" + reason //$NON-NLS-1$ //$NON-NLS-2$
                 + " attempt=" + (attempt + 1) + " delayMs=" + delayMs); //$NON-NLS-1$ //$NON-NLS-2$
