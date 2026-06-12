@@ -28,6 +28,7 @@ public class ContextLinksCachedScopeProvider
     extends BslCachedScopeProvider
 {
     private static final Set<String> loggedTypeScopeKeys = ConcurrentHashMap.newKeySet();
+    private static final Set<String> loggedPropertyScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> debugLoggedKeys = ConcurrentHashMap.newKeySet();
 
     public ContextLinksCachedScopeProvider()
@@ -153,10 +154,67 @@ public class ContextLinksCachedScopeProvider
     public IScope getPropertyScope(IProject project)
     {
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.getProperty.enter] project=" + describeProject(project)); //$NON-NLS-1$
+        if (project == null)
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.getProperty.exit] project=NULL scope=NULL"); //$NON-NLS-1$
+            return null;
+        }
+
         IScope scope = super.getPropertyScope(project);
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.getProperty.exit] project=" + describeProject(project) //$NON-NLS-1$
             + " scope=" + describeScope(scope)); //$NON-NLS-1$
-        return scope;
+
+        if (scope == null || !project.isAccessible())
+            return scope;
+
+        if (isConfigurationProject(project))
+            return scope;
+
+        Set<String> linkedProjectNames = ContextLinks.getContextProjectNames(project);
+        if (linkedProjectNames.isEmpty())
+            return scope;
+
+        List<String> addedProjects = new ArrayList<>();
+        List<String> missingProjects = new ArrayList<>();
+        CompositeScope compositeScope = new CompositeScope(ISlicedScope.NULLSCOPE, true);
+        compositeScope.addScope(scope);
+
+        for (String linkedProjectName : linkedProjectNames)
+        {
+            IProject linkedProject = ResourcesPlugin.getWorkspace().getRoot().getProject(linkedProjectName);
+            if (!linkedProject.isAccessible() || linkedProject.equals(project))
+            {
+                debugLogScope("linked.property.inaccessible", project, linkedProjectName, null, //$NON-NLS-1$
+                    "not accessible or equals current"); //$NON-NLS-1$
+                continue;
+            }
+
+            IScope linkedScope = super.getPropertyScope(linkedProject);
+            debugLogScope("linked.property.scope", project, linkedProjectName, linkedScope, //$NON-NLS-1$
+                linkedScope == null ? "scope-null" : null); //$NON-NLS-1$
+
+            if (linkedScope != null)
+            {
+                compositeScope.addScope(new ResourceBackedScope(linkedScope));
+                addedProjects.add(linkedProjectName);
+            }
+            else
+            {
+                missingProjects.add(linkedProjectName + " (super.getPropertyScope returned null)"); //$NON-NLS-1$
+            }
+        }
+
+        logPropertyScope(project, linkedProjectNames, addedProjects, missingProjects);
+        if (addedProjects.isEmpty())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.getProperty.composite.exit] project=" //$NON-NLS-1$
+                + project.getName() + " result=own reason=no-added-projects"); //$NON-NLS-1$
+            return scope;
+        }
+
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.getProperty.composite.exit] project=" //$NON-NLS-1$
+            + project.getName() + " result=composite added=" + addedProjects); //$NON-NLS-1$
+        return compositeScope;
     }
 
     private boolean isExtensionProject(IProject project)
@@ -320,6 +378,20 @@ public class ContextLinksCachedScopeProvider
         if (loggedTypeScopeKeys.add(key))
         {
             ContextLinks.logWarning("EDT Context Links type-item scope: project=" + project.getName() //$NON-NLS-1$
+                + ", configured=" + configuredProjects //$NON-NLS-1$
+                + ", added=" + addedProjects //$NON-NLS-1$
+                + ", missing=" + missingProjects); //$NON-NLS-1$
+        }
+    }
+
+    private void logPropertyScope(IProject project, Set<String> configuredProjects, List<String> addedProjects,
+        List<String> missingProjects)
+    {
+        String key = project.getName() + "|" + new LinkedHashSet<>(configuredProjects) + "|" + addedProjects //$NON-NLS-1$ //$NON-NLS-2$
+            + "|" + missingProjects; //$NON-NLS-1$
+        if (loggedPropertyScopeKeys.add(key))
+        {
+            ContextLinks.logWarning("EDT Context Links property scope: project=" + project.getName() //$NON-NLS-1$
                 + ", configured=" + configuredProjects //$NON-NLS-1$
                 + ", added=" + addedProjects //$NON-NLS-1$
                 + ", missing=" + missingProjects); //$NON-NLS-1$
