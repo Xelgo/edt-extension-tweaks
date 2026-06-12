@@ -27,6 +27,8 @@ import com._1c.g5.wiring.ServiceAccess;
 public class ContextLinksCachedScopeProvider
     extends BslCachedScopeProvider
 {
+    private static final int[] NULL_SCOPE_RETRY_DELAYS_MS = { 25, 75 };
+
     private static final Set<String> loggedTypeScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedPropertyScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> debugLoggedKeys = ConcurrentHashMap.newKeySet();
@@ -82,7 +84,7 @@ public class ContextLinksCachedScopeProvider
         }
 
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.getTypeItem.enter] project=" + describeProject(project)); //$NON-NLS-1$
-        IScope ownScope = super.getTypeItemScope(project);
+        IScope ownScope = getSuperTypeItemScopeWithRetry(project, "own"); //$NON-NLS-1$
         if (ownScope == null)
             ownScope = getLastKnownScope(lastKnownTypeItemScopes, project, "type-item", "own"); //$NON-NLS-1$ //$NON-NLS-2$
 
@@ -125,7 +127,7 @@ public class ContextLinksCachedScopeProvider
                 continue;
             }
 
-            IScope linkedScope = super.getTypeItemScope(linkedProject);
+            IScope linkedScope = getSuperTypeItemScopeWithRetry(linkedProject, "linked:" + project.getName()); //$NON-NLS-1$
             boolean lastKnownLinkedScope = false;
             if (linkedScope == null)
             {
@@ -175,7 +177,7 @@ public class ContextLinksCachedScopeProvider
             return null;
         }
 
-        IScope scope = super.getPropertyScope(project);
+        IScope scope = getSuperPropertyScopeWithRetry(project, "own"); //$NON-NLS-1$
         if (scope == null)
             scope = getLastKnownScope(lastKnownPropertyScopes, project, "property", "own"); //$NON-NLS-1$ //$NON-NLS-2$
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.getProperty.exit] project=" + describeProject(project) //$NON-NLS-1$
@@ -206,7 +208,7 @@ public class ContextLinksCachedScopeProvider
                 continue;
             }
 
-            IScope linkedScope = super.getPropertyScope(linkedProject);
+            IScope linkedScope = getSuperPropertyScopeWithRetry(linkedProject, "linked:" + project.getName()); //$NON-NLS-1$
             boolean lastKnownLinkedScope = false;
             if (linkedScope == null)
             {
@@ -254,6 +256,62 @@ public class ContextLinksCachedScopeProvider
     private IScope buildScopeFromConfigurationResource(IProject extensionProject)
     {
         return BslGlobalScopeProviderDelegate.getScopeFromProject(extensionProject);
+    }
+
+    private IScope getSuperTypeItemScopeWithRetry(IProject project, String reason)
+    {
+        IScope scope = super.getTypeItemScope(project);
+        if (scope != null)
+            return scope;
+
+        return retryNullScope(project, "type-item", reason, () -> super.getTypeItemScope(project)); //$NON-NLS-1$
+    }
+
+    private IScope getSuperPropertyScopeWithRetry(IProject project, String reason)
+    {
+        IScope scope = super.getPropertyScope(project);
+        if (scope != null)
+            return scope;
+
+        return retryNullScope(project, "property", reason, () -> super.getPropertyScope(project)); //$NON-NLS-1$
+    }
+
+    private IScope retryNullScope(IProject project, String kind, String reason, ScopeLookup lookup)
+    {
+        for (int attempt = 0; attempt < NULL_SCOPE_RETRY_DELAYS_MS.length; attempt++)
+        {
+            int delayMs = NULL_SCOPE_RETRY_DELAYS_MS[attempt];
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.retry.wait] kind=" + kind //$NON-NLS-1$
+                + " project=" + describeProject(project) + " reason=" + reason //$NON-NLS-1$ //$NON-NLS-2$
+                + " attempt=" + (attempt + 1) + " delayMs=" + delayMs); //$NON-NLS-1$ //$NON-NLS-2$
+            sleep(delayMs);
+
+            IScope scope = lookup.get();
+            if (scope != null)
+            {
+                ContextLinks.logDebug("EDT Context Links DEBUG [cache.retry.hit] kind=" + kind //$NON-NLS-1$
+                    + " project=" + describeProject(project) + " reason=" + reason //$NON-NLS-1$ //$NON-NLS-2$
+                    + " attempt=" + (attempt + 1) + " scope=" + describeScope(scope)); //$NON-NLS-1$ //$NON-NLS-2$
+                return scope;
+            }
+        }
+
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.retry.miss] kind=" + kind //$NON-NLS-1$
+            + " project=" + describeProject(project) + " reason=" + reason); //$NON-NLS-1$
+        return null;
+    }
+
+    private void sleep(int delayMs)
+    {
+        try
+        {
+            Thread.sleep(delayMs);
+        }
+        catch (InterruptedException e)
+        {
+            Thread.currentThread().interrupt();
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.retry.interrupted] delayMs=" + delayMs); //$NON-NLS-1$
+        }
     }
 
     private void rememberScope(ConcurrentHashMap<String, IScope> scopes, IProject project, IScope scope, String kind)
@@ -412,6 +470,12 @@ public class ContextLinksCachedScopeProvider
 
             return description;
         }
+    }
+
+    @FunctionalInterface
+    private interface ScopeLookup
+    {
+        IScope get();
     }
 
     private boolean isConfigurationProject(IProject project)
