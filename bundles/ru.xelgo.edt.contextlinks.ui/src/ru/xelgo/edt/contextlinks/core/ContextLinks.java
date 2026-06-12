@@ -112,6 +112,20 @@ public final class ContextLinks
             return null;
         }
 
+        if ("bm".equals(uri.scheme())) //$NON-NLS-1$
+        {
+            String projectName = uri.authority();
+            if (projectName == null || projectName.isBlank())
+                projectName = uri.segmentCount() > 0 ? uri.segment(0) : null;
+
+            IProject project = projectName != null && !projectName.isBlank()
+                ? ResourcesPlugin.getWorkspace().getRoot().getProject(projectName)
+                : null;
+            logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
+                + " bmProject=" + (project != null ? project.getName() : "NULL")); //$NON-NLS-1$ //$NON-NLS-2$
+            return project;
+        }
+
         if (!uri.isPlatformResource())
         {
             logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$

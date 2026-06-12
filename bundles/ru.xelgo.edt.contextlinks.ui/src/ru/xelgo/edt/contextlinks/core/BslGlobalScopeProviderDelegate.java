@@ -35,7 +35,15 @@ public final class BslGlobalScopeProviderDelegate
             + describeObject(globalScopeProvider));
         if (globalScopeProvider == null)
         {
-            globalScopeProvider = ServiceAccess.get(BslGlobalScopeProvider.class);
+            try
+            {
+                globalScopeProvider = ServiceAccess.get(BslGlobalScopeProvider.class);
+            }
+            catch (RuntimeException e)
+            {
+                ContextLinks.logDebug("EDT Context Links DEBUG [delegate.init.serviceUnavailable] " //$NON-NLS-1$
+                    + e.getClass().getName() + ": " + e.getMessage()); //$NON-NLS-1$
+            }
             ContextLinks.logDebug("EDT Context Links DEBUG [delegate.init.serviceAccess] provider=" //$NON-NLS-1$
                 + describeObject(globalScopeProvider));
         }
