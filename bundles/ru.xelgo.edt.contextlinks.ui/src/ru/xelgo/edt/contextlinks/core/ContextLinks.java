@@ -74,6 +74,53 @@ public final class ContextLinks
     public static void setContextProjectNames(IProject project, Set<String> names)
         throws CoreException
     {
+        setContextProjectNames(project, names, false);
+    }
+
+    public static void setContextProjectNamesBidirectional(IProject project, Set<String> names)
+        throws CoreException
+    {
+        setContextProjectNames(project, names, false);
+
+        if (project == null || !project.isAccessible())
+            return;
+
+        Set<String> previousPeerNames = Arrays.stream(ResourcesPlugin.getWorkspace().getRoot().getProjects())
+            .filter(IProject::isAccessible)
+            .filter(candidate -> getContextProjectNames(candidate).contains(project.getName()))
+            .map(IProject::getName)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<String> allPeerNames = new LinkedHashSet<>(previousPeerNames);
+        allPeerNames.addAll(names);
+
+        for (String peerName : allPeerNames)
+        {
+            if (peerName == null || peerName.isBlank() || peerName.equals(project.getName()))
+                continue;
+
+            IProject peerProject = ResourcesPlugin.getWorkspace().getRoot().getProject(peerName);
+            if (peerProject == null || !peerProject.isAccessible())
+            {
+                logDebug("EDT Context Links DEBUG [settings.sync.skip] project=" + project.getName() //$NON-NLS-1$
+                    + " peer=" + peerName + " reason=peer-not-accessible"); //$NON-NLS-1$ //$NON-NLS-2$
+                continue;
+            }
+
+            Set<String> peerLinks = new LinkedHashSet<>(getContextProjectNames(peerProject));
+            boolean shouldLink = names.contains(peerName);
+            boolean changed = shouldLink ? peerLinks.add(project.getName()) : peerLinks.remove(project.getName());
+            if (changed)
+            {
+                logWarning("EDT Context Links sync reciprocal link: project=" + project.getName() //$NON-NLS-1$
+                    + ", peer=" + peerName + ", shouldLink=" + shouldLink); //$NON-NLS-1$ //$NON-NLS-2$
+                setContextProjectNames(peerProject, peerLinks, true);
+            }
+        }
+    }
+
+    private static void setContextProjectNames(IProject project, Set<String> names, boolean reciprocalUpdate)
+        throws CoreException
+    {
         if (project == null)
         {
             logDebug("EDT Context Links DEBUG [settings.save.skip] project=NULL names=" + names); //$NON-NLS-1$
@@ -93,7 +140,8 @@ public final class ContextLinks
             .distinct()
             .collect(Collectors.joining("\n")); //$NON-NLS-1$
         project.setPersistentProperty(CONTEXT_PROJECTS, value.isEmpty() ? null : value);
-        logWarning("Saved EDT context links for " + project.getName() + ": " + names); //$NON-NLS-1$ //$NON-NLS-2$
+        logWarning("Saved EDT context links for " + project.getName() + ": " + names //$NON-NLS-1$ //$NON-NLS-2$
+            + ", reciprocalUpdate=" + reciprocalUpdate); //$NON-NLS-1$
     }
 
     public static String describeWorkspaceSettings()
