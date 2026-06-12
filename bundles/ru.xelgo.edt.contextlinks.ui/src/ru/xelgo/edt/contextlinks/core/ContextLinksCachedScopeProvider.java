@@ -43,16 +43,18 @@ public class ContextLinksCachedScopeProvider
     @Override
     public void clearTypeItemsScopes(IProject project)
     {
+        boolean hadLastKnown = forgetScope(lastKnownTypeItemScopes, project);
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearTypeItems] project=" + describeProject(project) //$NON-NLS-1$
-            + " keepingLastKnown=" + hasLastKnown(lastKnownTypeItemScopes, project)); //$NON-NLS-1$
+            + " removedLastKnown=" + hadLastKnown); //$NON-NLS-1$
         super.clearTypeItemsScopes(project);
     }
 
     @Override
     public void clearPropertyScopes(IProject project)
     {
+        boolean hadLastKnown = forgetScope(lastKnownPropertyScopes, project);
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearProperties] project=" + describeProject(project) //$NON-NLS-1$
-            + " keepingLastKnown=" + hasLastKnown(lastKnownPropertyScopes, project)); //$NON-NLS-1$
+            + " removedLastKnown=" + hadLastKnown); //$NON-NLS-1$
         super.clearPropertyScopes(project);
     }
 
@@ -87,8 +89,6 @@ public class ContextLinksCachedScopeProvider
 
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.getTypeItem.enter] project=" + describeProject(project)); //$NON-NLS-1$
         IScope ownScope = getSuperTypeItemScopeWithRetry(project, "own"); //$NON-NLS-1$
-        if (ownScope == null)
-            ownScope = getLastKnownScope(lastKnownTypeItemScopes, project, "type-item", "own"); //$NON-NLS-1$ //$NON-NLS-2$
 
         debugLogScope("getTypeItemScope", project, null, ownScope, null);
 
@@ -181,8 +181,6 @@ public class ContextLinksCachedScopeProvider
         }
 
         IScope scope = getSuperPropertyScopeWithRetry(project, "own"); //$NON-NLS-1$
-        if (scope == null)
-            scope = getLastKnownScope(lastKnownPropertyScopes, project, "property", "own"); //$NON-NLS-1$ //$NON-NLS-2$
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.getProperty.exit] project=" + describeProject(project) //$NON-NLS-1$
             + " scope=" + describeScope(scope)); //$NON-NLS-1$
 
@@ -343,9 +341,9 @@ public class ContextLinksCachedScopeProvider
         return scope;
     }
 
-    private boolean hasLastKnown(ConcurrentHashMap<String, IScope> scopes, IProject project)
+    private boolean forgetScope(ConcurrentHashMap<String, IScope> scopes, IProject project)
     {
-        return project != null && scopes.containsKey(project.getName());
+        return project != null && scopes.remove(project.getName()) != null;
     }
 
     private void rememberPendingDependent(ConcurrentHashMap<String, Set<String>> pendingDependents,
