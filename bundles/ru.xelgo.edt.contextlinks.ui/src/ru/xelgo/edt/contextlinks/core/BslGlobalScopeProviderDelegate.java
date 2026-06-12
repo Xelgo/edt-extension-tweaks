@@ -70,7 +70,7 @@ public final class BslGlobalScopeProviderDelegate
         IResourceDescriptions index = getResourceDescriptions(resourceSet);
         if (index == null)
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [delegate] index is null from adapter");
+            ContextLinks.logDebug("EDT Context Links DEBUG [delegate] index is null");
             return null;
         }
 
