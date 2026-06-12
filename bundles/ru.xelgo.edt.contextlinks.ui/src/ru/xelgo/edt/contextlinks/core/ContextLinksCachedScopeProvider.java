@@ -30,6 +30,8 @@ public class ContextLinksCachedScopeProvider
     private static final Set<String> loggedTypeScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedPropertyScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> debugLoggedKeys = ConcurrentHashMap.newKeySet();
+    private static final ConcurrentHashMap<String, IScope> lastKnownTypeItemScopes = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, IScope> lastKnownPropertyScopes = new ConcurrentHashMap<>();
 
     public ContextLinksCachedScopeProvider()
     {
@@ -39,14 +41,16 @@ public class ContextLinksCachedScopeProvider
     @Override
     public void clearTypeItemsScopes(IProject project)
     {
-        ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearTypeItems] project=" + describeProject(project)); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearTypeItems] project=" + describeProject(project) //$NON-NLS-1$
+            + " keepingLastKnown=" + hasLastKnown(lastKnownTypeItemScopes, project)); //$NON-NLS-1$
         super.clearTypeItemsScopes(project);
     }
 
     @Override
     public void clearPropertyScopes(IProject project)
     {
-        ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearProperties] project=" + describeProject(project)); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearProperties] project=" + describeProject(project) //$NON-NLS-1$
+            + " keepingLastKnown=" + hasLastKnown(lastKnownPropertyScopes, project)); //$NON-NLS-1$
         super.clearPropertyScopes(project);
     }
 
@@ -55,6 +59,7 @@ public class ContextLinksCachedScopeProvider
     {
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.addTypeItem] project=" + describeProject(project) //$NON-NLS-1$
             + " scope=" + describeScope(scope)); //$NON-NLS-1$
+        rememberScope(lastKnownTypeItemScopes, project, scope, "type-item"); //$NON-NLS-1$
         super.addTypeItemScope(project, scope);
     }
 
@@ -63,6 +68,7 @@ public class ContextLinksCachedScopeProvider
     {
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.addProperty] project=" + describeProject(project) //$NON-NLS-1$
             + " scope=" + describeScope(scope)); //$NON-NLS-1$
+        rememberScope(lastKnownPropertyScopes, project, scope, "property"); //$NON-NLS-1$
         super.addPropertyScope(project, scope);
     }
 
@@ -77,6 +83,8 @@ public class ContextLinksCachedScopeProvider
 
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.getTypeItem.enter] project=" + describeProject(project)); //$NON-NLS-1$
         IScope ownScope = super.getTypeItemScope(project);
+        if (ownScope == null)
+            ownScope = getLastKnownScope(lastKnownTypeItemScopes, project, "type-item", "own"); //$NON-NLS-1$ //$NON-NLS-2$
 
         debugLogScope("getTypeItemScope", project, null, ownScope, null);
 
@@ -118,6 +126,13 @@ public class ContextLinksCachedScopeProvider
             }
 
             IScope linkedScope = super.getTypeItemScope(linkedProject);
+            boolean lastKnownLinkedScope = false;
+            if (linkedScope == null)
+            {
+                linkedScope = getLastKnownScope(lastKnownTypeItemScopes, linkedProject, "type-item", //$NON-NLS-1$
+                    "linked:" + project.getName()); //$NON-NLS-1$
+                lastKnownLinkedScope = linkedScope != null;
+            }
 
             if (linkedScope == null && isExtensionProject(linkedProject))
             {
@@ -129,7 +144,7 @@ public class ContextLinksCachedScopeProvider
             if (linkedScope != null)
             {
                 compositeScope.addScope(new ResourceBackedScope(linkedScope));
-                addedProjects.add(linkedProjectName);
+                addedProjects.add(lastKnownLinkedScope ? linkedProjectName + " (last-known)" : linkedProjectName); //$NON-NLS-1$
             }
             else
             {
@@ -161,6 +176,8 @@ public class ContextLinksCachedScopeProvider
         }
 
         IScope scope = super.getPropertyScope(project);
+        if (scope == null)
+            scope = getLastKnownScope(lastKnownPropertyScopes, project, "property", "own"); //$NON-NLS-1$ //$NON-NLS-2$
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.getProperty.exit] project=" + describeProject(project) //$NON-NLS-1$
             + " scope=" + describeScope(scope)); //$NON-NLS-1$
 
@@ -190,13 +207,20 @@ public class ContextLinksCachedScopeProvider
             }
 
             IScope linkedScope = super.getPropertyScope(linkedProject);
+            boolean lastKnownLinkedScope = false;
+            if (linkedScope == null)
+            {
+                linkedScope = getLastKnownScope(lastKnownPropertyScopes, linkedProject, "property", //$NON-NLS-1$
+                    "linked:" + project.getName()); //$NON-NLS-1$
+                lastKnownLinkedScope = linkedScope != null;
+            }
             debugLogScope("linked.property.scope", project, linkedProjectName, linkedScope, //$NON-NLS-1$
                 linkedScope == null ? "scope-null" : null); //$NON-NLS-1$
 
             if (linkedScope != null)
             {
                 compositeScope.addScope(new ResourceBackedScope(linkedScope));
-                addedProjects.add(linkedProjectName);
+                addedProjects.add(lastKnownLinkedScope ? linkedProjectName + " (last-known)" : linkedProjectName); //$NON-NLS-1$
             }
             else
             {
@@ -230,6 +254,36 @@ public class ContextLinksCachedScopeProvider
     private IScope buildScopeFromConfigurationResource(IProject extensionProject)
     {
         return BslGlobalScopeProviderDelegate.getScopeFromProject(extensionProject);
+    }
+
+    private void rememberScope(ConcurrentHashMap<String, IScope> scopes, IProject project, IScope scope, String kind)
+    {
+        if (project == null || scope == null)
+            return;
+
+        scopes.put(project.getName(), scope);
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.remember] kind=" + kind //$NON-NLS-1$
+            + " project=" + project.getName() + " scope=" + describeScope(scope)); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private IScope getLastKnownScope(ConcurrentHashMap<String, IScope> scopes, IProject project, String kind,
+        String reason)
+    {
+        if (project == null || !project.isAccessible())
+            return null;
+
+        IScope scope = scopes.get(project.getName());
+        if (scope != null)
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.lastKnown] kind=" + kind //$NON-NLS-1$
+                + " project=" + project.getName() + " reason=" + reason + " scope=" + describeScope(scope)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        }
+        return scope;
+    }
+
+    private boolean hasLastKnown(ConcurrentHashMap<String, IScope> scopes, IProject project)
+    {
+        return project != null && scopes.containsKey(project.getName());
     }
 
     private void debugLogScope(String phase, IProject project, String linkedProjectName, IScope scope, String reason)
