@@ -1,6 +1,7 @@
 package ru.xelgo.edt.contextlinks.core;
 
 import org.eclipse.xtext.service.AbstractGenericModule;
+import org.eclipse.xtext.resource.IContainer;
 
 import com._1c.g5.v8.dt.bsl.scoping.BslCachedScopeProvider;
 
@@ -10,9 +11,22 @@ import com._1c.g5.v8.dt.bsl.scoping.BslCachedScopeProvider;
 public class ContextLinksBslRuntimeModule
     extends AbstractGenericModule
 {
+    public ContextLinksBslRuntimeModule()
+    {
+        ContextLinks.logWarning("EDT Context Links BSL runtime module constructed"); //$NON-NLS-1$
+    }
+
     public Class<? extends BslCachedScopeProvider> bindBslCachedScopeProvider()
     {
+        ContextLinks.logWarning("EDT Context Links BSL runtime module binding BslCachedScopeProvider -> " //$NON-NLS-1$
+            + ContextLinksCachedScopeProvider.class.getName());
         return ContextLinksCachedScopeProvider.class;
     }
 
+    public Class<? extends IContainer.Manager> bindIContainer$Manager()
+    {
+        ContextLinks.logWarning("EDT Context Links BSL runtime module binding IContainer.Manager -> " //$NON-NLS-1$
+            + ContextLinksContainerManager.class.getName());
+        return ContextLinksContainerManager.class;
+    }
 }

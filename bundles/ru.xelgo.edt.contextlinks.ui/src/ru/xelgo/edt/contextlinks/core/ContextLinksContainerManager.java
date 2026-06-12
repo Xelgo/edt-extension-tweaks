@@ -7,9 +7,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.IPath;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.xtext.resource.IContainer;
 import org.eclipse.xtext.resource.IResourceDescription;
@@ -30,23 +28,50 @@ public class ContextLinksContainerManager
 {
     private static final Set<String> loggedContainerKeys = ConcurrentHashMap.newKeySet();
 
+    public ContextLinksContainerManager()
+    {
+        ContextLinks.logWarning("EDT Context Links container manager constructed"); //$NON-NLS-1$
+    }
+
     @Override
     public List<IContainer> getVisibleContainers(IResourceDescription description,
         IResourceDescriptions resourceDescriptions)
     {
-        List<IContainer> visibleContainers = new ArrayList<>(
-            super.getVisibleContainers(description, resourceDescriptions));
+        ContextLinks.logDebug("EDT Context Links DEBUG [containers.enter] description=" //$NON-NLS-1$
+            + describeDescription(description) + " resourceDescriptions=" + describeObject(resourceDescriptions)); //$NON-NLS-1$
 
         if (description == null || resourceDescriptions == null)
-            return visibleContainers;
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [containers.exit] result=[] reason=null-argument"); //$NON-NLS-1$
+            return List.of();
+        }
 
-        IProject currentProject = getProject(description.getURI());
+        List<IContainer> visibleContainers = new ArrayList<>(
+            super.getVisibleContainers(description, resourceDescriptions));
+        ContextLinks.logDebug("EDT Context Links DEBUG [containers.super] resource=" + description.getURI() //$NON-NLS-1$
+            + " count=" + visibleContainers.size()); //$NON-NLS-1$
+
+        IProject currentProject = ContextLinks.getProject(description.getURI());
         if (isConfigurationProject(currentProject))
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
+                + " result=standard reason=configuration-project"); //$NON-NLS-1$
             return visibleContainers;
+        }
+
+        if (currentProject == null)
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [containers.exit] result=standard reason=project-null"); //$NON-NLS-1$
+            return visibleContainers;
+        }
 
         Set<String> linkedProjectNames = ContextLinks.getContextProjectNames(currentProject);
-        if (currentProject == null || linkedProjectNames.isEmpty())
+        if (linkedProjectNames.isEmpty())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
+                + " result=standard reason=no-linked-projects"); //$NON-NLS-1$
             return visibleContainers;
+        }
 
         IAllContainersState state = getState(resourceDescriptions);
         String currentHandle = state.getContainerHandle(description.getURI());
@@ -86,6 +111,9 @@ public class ContextLinksContainerManager
         logContainers(currentProject, description.getURI(), currentHandle,
             describeVisibleHandles(state, currentHandle), linkedProjectNames, addedHandles, unresolvedProjects);
 
+        ContextLinks.logDebug("EDT Context Links DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
+            + " resultCount=" + visibleContainers.size() + " added=" + addedHandles //$NON-NLS-1$ //$NON-NLS-2$
+            + " unresolved=" + unresolvedProjects); //$NON-NLS-1$
         return visibleContainers;
     }
 
@@ -114,23 +142,16 @@ public class ContextLinksContainerManager
         return state.getVisibleContainerHandles(currentHandle).toString();
     }
 
-    private IProject getProject(URI uri)
+    private String describeDescription(IResourceDescription description)
     {
-        if (uri == null || !uri.isPlatformResource())
-            return null;
+        return description != null ? String.valueOf(description.getURI()) : "NULL"; //$NON-NLS-1$
+    }
 
-        String platformPath = uri.toPlatformString(true);
-        if (platformPath == null || platformPath.isEmpty())
-            return null;
-
-        IResource resource = ResourcesPlugin.getWorkspace().getRoot().findMember(IPath.fromOSString(platformPath));
-        if (resource != null)
-            return resource.getProject();
-
-        String[] segments = platformPath.split("/"); //$NON-NLS-1$
-        return segments.length > 0 && !segments[0].isEmpty()
-            ? ResourcesPlugin.getWorkspace().getRoot().getProject(segments[0])
-            : null;
+    private String describeObject(Object object)
+    {
+        if (object == null)
+            return "NULL"; //$NON-NLS-1$
+        return object.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(object)); //$NON-NLS-1$
     }
 
     private boolean isConfigurationProject(IProject project)

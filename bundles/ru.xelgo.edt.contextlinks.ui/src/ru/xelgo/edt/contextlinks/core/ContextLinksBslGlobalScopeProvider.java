@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.Status;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -37,28 +36,58 @@ public class ContextLinksBslGlobalScopeProvider
     private static final Set<String> loggedKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> debugLoggedKeys = ConcurrentHashMap.newKeySet();
 
+    public ContextLinksBslGlobalScopeProvider()
+    {
+        ContextLinks.logWarning("EDT Context Links global scope provider constructed"); //$NON-NLS-1$
+    }
+
     @Override
     public IScope getScope(Resource resource, EReference reference, Predicate<IEObjectDescription> filter)
     {
+        ContextLinks.logDebug("EDT Context Links DEBUG [global.enter] resource=" + describeResource(resource) //$NON-NLS-1$
+            + " reference=" + describeReference(reference) + " filter=" + describeObject(filter)); //$NON-NLS-1$ //$NON-NLS-2$
         IScope ownScope = super.getScope(resource, reference, filter);
+        ContextLinks.logDebug("EDT Context Links DEBUG [global.super] resource=" + describeResource(resource) //$NON-NLS-1$
+            + " ownScope=" + describeObject(ownScope)); //$NON-NLS-1$
         if (!isTypeItemReference(reference) || resource == null)
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [global.exit] result=own reason=" //$NON-NLS-1$
+                + (!isTypeItemReference(reference) ? "not-type-item-reference" : "resource-null")); //$NON-NLS-1$ //$NON-NLS-2$
             return ownScope;
+        }
 
         IV8ProjectManager projectManager = ServiceAccess.get(IV8ProjectManager.class);
         if (projectManager == null)
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [global.exit] result=own reason=projectManager-null"); //$NON-NLS-1$
             return ownScope;
+        }
 
         IV8Project currentV8Project = projectManager.getProject(resource.getURI());
         if (currentV8Project == null)
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [global.exit] result=own reason=currentV8Project-null uri=" //$NON-NLS-1$
+                + resource.getURI());
             return ownScope;
+        }
 
         IProject currentProject = currentV8Project.getProject();
         if (currentProject == null || !currentProject.isAccessible() || currentV8Project instanceof IConfigurationProject)
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [global.exit] result=own currentProject=" //$NON-NLS-1$
+                + (currentProject != null ? currentProject.getName() : "NULL") + " reason=" //$NON-NLS-1$ //$NON-NLS-2$
+                + (currentProject == null ? "project-null" //$NON-NLS-1$
+                    : (!currentProject.isAccessible() ? "project-not-accessible" : "configuration-project"))); //$NON-NLS-1$ //$NON-NLS-2$
             return ownScope;
+        }
 
         Set<String> linkedProjectNames = ContextLinks.getContextProjectNames(currentProject);
         if (linkedProjectNames.isEmpty())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [global.exit] project=" + currentProject.getName() //$NON-NLS-1$
+                + " result=own reason=no-linked-projects"); //$NON-NLS-1$
             return ownScope;
+        }
 
         CompositeScope compositeScope = new CompositeScope(ISlicedScope.NULLSCOPE, true);
         if (ownScope != null)
@@ -98,8 +127,14 @@ public class ContextLinksBslGlobalScopeProvider
 
         logGlobalScope(currentProject, linkedProjectNames, addedProjects, missingProjects);
         if (addedProjects.isEmpty())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [global.exit] project=" + currentProject.getName() //$NON-NLS-1$
+                + " result=own reason=no-added-projects"); //$NON-NLS-1$
             return ownScope;
+        }
 
+        ContextLinks.logDebug("EDT Context Links DEBUG [global.exit] project=" + currentProject.getName() //$NON-NLS-1$
+            + " result=composite added=" + addedProjects); //$NON-NLS-1$
         return compositeScope;
     }
 
@@ -142,6 +177,25 @@ public class ContextLinksBslGlobalScopeProvider
     {
         return reference != null
             && McorePackage.Literals.TYPE_ITEM.isSuperTypeOf(reference.getEReferenceType());
+    }
+
+    private String describeResource(Resource resource)
+    {
+        return resource != null ? String.valueOf(resource.getURI()) : "NULL"; //$NON-NLS-1$
+    }
+
+    private String describeReference(EReference reference)
+    {
+        if (reference == null)
+            return "NULL"; //$NON-NLS-1$
+        return reference.getName() + "->" + reference.getEReferenceType().getName(); //$NON-NLS-1$
+    }
+
+    private String describeObject(Object object)
+    {
+        if (object == null)
+            return "NULL"; //$NON-NLS-1$
+        return object.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(object)); //$NON-NLS-1$
     }
 
     private Resource getConfigurationResource(IV8ProjectManager projectManager, IProject project)

@@ -30,22 +30,77 @@ public class ContextLinksCachedScopeProvider
     private static final Set<String> loggedTypeScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> debugLoggedKeys = ConcurrentHashMap.newKeySet();
 
+    public ContextLinksCachedScopeProvider()
+    {
+        ContextLinks.logWarning("EDT Context Links cached scope provider constructed"); //$NON-NLS-1$
+    }
+
+    @Override
+    public void clearTypeItemsScopes(IProject project)
+    {
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearTypeItems] project=" + describeProject(project)); //$NON-NLS-1$
+        super.clearTypeItemsScopes(project);
+    }
+
+    @Override
+    public void clearPropertyScopes(IProject project)
+    {
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearProperties] project=" + describeProject(project)); //$NON-NLS-1$
+        super.clearPropertyScopes(project);
+    }
+
+    @Override
+    public void addTypeItemScope(IProject project, IScope scope)
+    {
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.addTypeItem] project=" + describeProject(project) //$NON-NLS-1$
+            + " scope=" + describeScope(scope)); //$NON-NLS-1$
+        super.addTypeItemScope(project, scope);
+    }
+
+    @Override
+    public void addPropertyScope(IProject project, IScope scope)
+    {
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.addProperty] project=" + describeProject(project) //$NON-NLS-1$
+            + " scope=" + describeScope(scope)); //$NON-NLS-1$
+        super.addPropertyScope(project, scope);
+    }
+
     @Override
     public IScope getTypeItemScope(IProject project)
     {
+        if (project == null)
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.getTypeItem.enter] project=NULL result=NULL"); //$NON-NLS-1$
+            return null;
+        }
+
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.getTypeItem.enter] project=" + describeProject(project)); //$NON-NLS-1$
         IScope ownScope = super.getTypeItemScope(project);
 
         debugLogScope("getTypeItemScope", project, null, ownScope, null);
 
-        if (ownScope == null || project == null || !project.isAccessible())
+        if (ownScope == null || !project.isAccessible())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.getTypeItem.exit] project=" + describeProject(project) //$NON-NLS-1$
+                + " result=" + describeScope(ownScope) + " reason=" //$NON-NLS-1$ //$NON-NLS-2$
+                + (ownScope == null ? "own-scope-null" : "project-not-accessible")); //$NON-NLS-1$ //$NON-NLS-2$
             return ownScope;
+        }
 
         if (isConfigurationProject(project))
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.getTypeItem.exit] project=" + project.getName() //$NON-NLS-1$
+                + " result=own reason=configuration-project"); //$NON-NLS-1$
             return ownScope;
+        }
 
         Set<String> linkedProjectNames = ContextLinks.getContextProjectNames(project);
         if (linkedProjectNames.isEmpty())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.getTypeItem.exit] project=" + project.getName() //$NON-NLS-1$
+                + " result=own reason=no-linked-projects"); //$NON-NLS-1$
             return ownScope;
+        }
 
         List<String> addedProjects = new ArrayList<>();
         List<String> missingProjects = new ArrayList<>();
@@ -83,9 +138,25 @@ public class ContextLinksCachedScopeProvider
 
         logTypeScope(project, linkedProjectNames, addedProjects, missingProjects);
         if (addedProjects.isEmpty())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.getTypeItem.exit] project=" + project.getName() //$NON-NLS-1$
+                + " result=own reason=no-added-projects"); //$NON-NLS-1$
             return ownScope;
+        }
 
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.getTypeItem.exit] project=" + project.getName() //$NON-NLS-1$
+            + " result=composite added=" + addedProjects); //$NON-NLS-1$
         return compositeScope;
+    }
+
+    @Override
+    public IScope getPropertyScope(IProject project)
+    {
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.getProperty.enter] project=" + describeProject(project)); //$NON-NLS-1$
+        IScope scope = super.getPropertyScope(project);
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.getProperty.exit] project=" + describeProject(project) //$NON-NLS-1$
+            + " scope=" + describeScope(scope)); //$NON-NLS-1$
+        return scope;
     }
 
     private boolean isExtensionProject(IProject project)
@@ -122,11 +193,12 @@ public class ContextLinksCachedScopeProvider
 
             if (scope != null)
             {
-                int count = 0;
-                for (IEObjectDescription ignored : scope.getAllElements())
-                {
+            int count = 0;
+            for (IEObjectDescription description : scope.getAllElements())
+            {
+                if (description != null)
                     count++;
-                }
+            }
                 msg.append(" elements=").append(count);
             }
 
@@ -144,6 +216,20 @@ public class ContextLinksCachedScopeProvider
 
             ContextLinks.logDebug(msg.toString());
         }
+    }
+
+    private String describeProject(IProject project)
+    {
+        if (project == null)
+            return "NULL"; //$NON-NLS-1$
+        return project.getName() + "{accessible=" + project.isAccessible() + "}"; //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private String describeScope(IScope scope)
+    {
+        if (scope == null)
+            return "NULL"; //$NON-NLS-1$
+        return scope.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(scope)); //$NON-NLS-1$
     }
 
     private static final class ResourceBackedScope

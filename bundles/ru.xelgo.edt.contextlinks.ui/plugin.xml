@@ -34,4 +34,11 @@
       </bslRuntimeModuleExtension>
    </extension>
 
+   <extension
+         point="com._1c.g5.v8.dt.bsl.externalMetaTypesExtension">
+      <bslExternalMetaTypes
+            class="ru.xelgo.edt.contextlinks.core.ContextLinksExternalMetaTypesProvider">
+      </bslExternalMetaTypes>
+   </extension>
+
 </plugin>

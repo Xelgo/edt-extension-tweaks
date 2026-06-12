@@ -4,18 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.IPath;
-import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.resource.Resource;
-import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.resource.IEObjectDescription;
-import org.eclipse.xtext.resource.IResourceDescription;
-import org.eclipse.xtext.resource.IResourceDescriptions;
 import org.eclipse.xtext.scoping.IScope;
 
 import com._1c.g5.v8.dt.bsl.scoping.BslGlobalScopeProvider;
@@ -38,14 +31,19 @@ public final class BslGlobalScopeProviderDelegate
 
     public static synchronized void init()
     {
+        ContextLinks.logDebug("EDT Context Links DEBUG [delegate.init.enter] current=" //$NON-NLS-1$
+            + describeObject(globalScopeProvider));
         if (globalScopeProvider == null)
         {
             globalScopeProvider = ServiceAccess.get(BslGlobalScopeProvider.class);
+            ContextLinks.logDebug("EDT Context Links DEBUG [delegate.init.serviceAccess] provider=" //$NON-NLS-1$
+                + describeObject(globalScopeProvider));
         }
     }
 
     public static IScope getScopeFromProject(IProject project)
     {
+        ContextLinks.logDebug("EDT Context Links DEBUG [delegate.enter] project=" + describeProject(project)); //$NON-NLS-1$
         if (globalScopeProvider == null)
             init();
 
@@ -74,6 +72,8 @@ public final class BslGlobalScopeProviderDelegate
             ContextLinks.logDebug("EDT Context Links DEBUG [delegate] v8Project is null for " + project.getName());
             return null;
         }
+        ContextLinks.logDebug("EDT Context Links DEBUG [delegate.v8Project] project=" + project.getName() //$NON-NLS-1$
+            + " v8Project=" + describeObject(v8Project)); //$NON-NLS-1$
 
         Resource configResource = getConfigurationResource(v8Project);
         if (configResource == null)
@@ -81,6 +81,8 @@ public final class BslGlobalScopeProviderDelegate
             ContextLinks.logDebug("EDT Context Links DEBUG [delegate] configResource is null for " + project.getName());
             return null;
         }
+        ContextLinks.logDebug("EDT Context Links DEBUG [delegate.configResource] project=" + project.getName() //$NON-NLS-1$
+            + " resource=" + configResource.getURI()); //$NON-NLS-1$
 
         EClass typeItemClass = McorePackage.Literals.TYPE_ITEM;
 
@@ -123,16 +125,39 @@ public final class BslGlobalScopeProviderDelegate
         EObject config = null;
         if (v8Project instanceof IConfigurationAware)
         {
+            ContextLinks.logDebug("EDT Context Links DEBUG [delegate.config] path=IConfigurationAware v8Project=" //$NON-NLS-1$
+                + describeObject(v8Project));
             config = ((IConfigurationAware)v8Project).getConfiguration();
         }
         else if (v8Project instanceof IDependentProject)
         {
             IConfigurationProject parent = ((IDependentProject)v8Project).getParent();
+            ContextLinks.logDebug("EDT Context Links DEBUG [delegate.config] path=IDependentProject parent=" //$NON-NLS-1$
+                + (parent != null ? parent.getProject().getName() : "NULL")); //$NON-NLS-1$
             if (parent != null)
                 config = parent.getConfiguration();
         }
+        else
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [delegate.config] path=unknown v8Project=" //$NON-NLS-1$
+                + describeObject(v8Project));
+        }
 
         return config != null ? config.eResource() : null;
+    }
+
+    private static String describeProject(IProject project)
+    {
+        if (project == null)
+            return "NULL"; //$NON-NLS-1$
+        return project.getName() + "{accessible=" + project.isAccessible() + "}"; //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private static String describeObject(Object object)
+    {
+        if (object == null)
+            return "NULL"; //$NON-NLS-1$
+        return object.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(object)); //$NON-NLS-1$
     }
 
     private static final class SimpleScope

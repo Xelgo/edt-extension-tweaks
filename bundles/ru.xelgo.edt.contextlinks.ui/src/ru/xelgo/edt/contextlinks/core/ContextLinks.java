@@ -6,12 +6,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.QualifiedName;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.emf.common.util.URI;
 
 /**
  * Stores additional context source project names for an EDT project.
@@ -30,19 +33,36 @@ public final class ContextLinks
 
     public static Set<String> getContextProjectNames(IProject project)
     {
-        if (project == null || !project.isAccessible())
+        if (project == null)
+        {
+            logDebug("EDT Context Links DEBUG [settings.read.skip] project=NULL"); //$NON-NLS-1$
             return Set.of();
+        }
+
+        if (!project.isAccessible())
+        {
+            logDebug("EDT Context Links DEBUG [settings.read.skip] project=" + project.getName() //$NON-NLS-1$
+                + " reason=not-accessible"); //$NON-NLS-1$
+            return Set.of();
+        }
 
         try
         {
             String value = project.getPersistentProperty(CONTEXT_PROJECTS);
             if (value == null || value.isBlank())
+            {
+                logDebug("EDT Context Links DEBUG [settings.read] project=" + project.getName() //$NON-NLS-1$
+                    + " links=[] raw=NULL_OR_BLANK"); //$NON-NLS-1$
                 return Set.of();
+            }
 
-            return Arrays.stream(value.split("\\R")) //$NON-NLS-1$
+            Set<String> result = Arrays.stream(value.split("\\R")) //$NON-NLS-1$
                 .map(String::trim)
                 .filter(name -> !name.isEmpty())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+            logDebug("EDT Context Links DEBUG [settings.read] project=" + project.getName() //$NON-NLS-1$
+                + " links=" + result + " raw=" + value.replace('\n', '|')); //$NON-NLS-1$ //$NON-NLS-2$
+            return result;
         }
         catch (CoreException e)
         {
@@ -54,8 +74,18 @@ public final class ContextLinks
     public static void setContextProjectNames(IProject project, Set<String> names)
         throws CoreException
     {
-        if (project == null || !project.isAccessible())
+        if (project == null)
+        {
+            logDebug("EDT Context Links DEBUG [settings.save.skip] project=NULL names=" + names); //$NON-NLS-1$
             return;
+        }
+
+        if (!project.isAccessible())
+        {
+            logDebug("EDT Context Links DEBUG [settings.save.skip] project=" + project.getName() //$NON-NLS-1$
+                + " reason=not-accessible names=" + names); //$NON-NLS-1$
+            return;
+        }
 
         String value = names.stream()
             .map(String::trim)
@@ -72,6 +102,54 @@ public final class ContextLinks
             .filter(IProject::isAccessible)
             .map(project -> project.getName() + "=" + getContextProjectNames(project)) //$NON-NLS-1$
             .collect(Collectors.joining("; ")); //$NON-NLS-1$
+    }
+
+    public static IProject getProject(URI uri)
+    {
+        if (uri == null)
+        {
+            logDebug("EDT Context Links DEBUG [project.from.uri] uri=NULL result=NULL"); //$NON-NLS-1$
+            return null;
+        }
+
+        if (!uri.isPlatformResource())
+        {
+            logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
+                + " result=NULL reason=not-platform-resource"); //$NON-NLS-1$
+            return null;
+        }
+
+        String platformPath = uri.toPlatformString(true);
+        if (platformPath == null || platformPath.isEmpty())
+        {
+            logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
+                + " result=NULL reason=empty-platform-path"); //$NON-NLS-1$
+            return null;
+        }
+
+        IResource resource = ResourcesPlugin.getWorkspace().getRoot().findMember(IPath.fromOSString(platformPath));
+        if (resource != null)
+        {
+            IProject project = resource.getProject();
+            logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
+                + " resource=" + resource.getFullPath() + " project=" //$NON-NLS-1$ //$NON-NLS-2$
+                + (project != null ? project.getName() : "NULL")); //$NON-NLS-1$
+            return project;
+        }
+
+        String[] segments = platformPath.split("/"); //$NON-NLS-1$
+        IProject project = segments.length > 0 && !segments[0].isEmpty()
+            ? ResourcesPlugin.getWorkspace().getRoot().getProject(segments[0])
+            : null;
+        logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri + " fallbackProject=" //$NON-NLS-1$ //$NON-NLS-2$
+            + (project != null ? project.getName() : "NULL")); //$NON-NLS-1$
+        return project;
+    }
+
+    public static void logError(String message, Throwable throwable)
+    {
+        Platform.getLog(ContextLinks.class)
+            .log(new Status(IStatus.ERROR, PLUGIN_ID, message, throwable));
     }
 
     public static void logWarning(String message)
