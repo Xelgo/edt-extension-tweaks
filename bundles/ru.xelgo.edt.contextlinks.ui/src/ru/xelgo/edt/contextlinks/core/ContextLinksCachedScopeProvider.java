@@ -13,10 +13,13 @@ import org.eclipse.xtext.scoping.IScope;
 
 import com._1c.g5.modeling.xtext.scoping.CompositeScope;
 import com._1c.g5.modeling.xtext.scoping.ISlicedScope;
+import com._1c.g5.v8.dt.bsl.model.Block;
+import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.scoping.BslCachedScopeProvider;
 import com._1c.g5.v8.dt.core.platform.IConfigurationProject;
 import com._1c.g5.v8.dt.core.platform.IV8Project;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
+import com._1c.g5.v8.dt.mcore.util.Environments;
 import com._1c.g5.wiring.ServiceAccess;
 
 /**
@@ -28,6 +31,8 @@ public class ContextLinksCachedScopeProvider
     private static final Set<String> loggedTypeScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedPropertyScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedScopeDetails = ConcurrentHashMap.newKeySet();
+    private static final Set<String> loggedModuleScopeKeys = ConcurrentHashMap.newKeySet();
+    private static final ConcurrentHashMap<ModuleScopeKey, IScope> moduleScopes = new ConcurrentHashMap<>();
 
     public ContextLinksCachedScopeProvider()
     {
@@ -62,6 +67,37 @@ public class ContextLinksCachedScopeProvider
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.addProperty] project=" + describeProject(project) //$NON-NLS-1$
             + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
         super.addPropertyScope(project, scope);
+    }
+
+    @Override
+    public void addScope(Block block, Environments environments, BslCachedScopeType scopeType, IScope scope)
+    {
+        rememberModuleScope(block, environments, scopeType, scope);
+        super.addScope(block, environments, scopeType, scope);
+    }
+
+    @Override
+    public IScope getScope(Block block, Environments environments, BslCachedScopeType scopeType)
+    {
+        IScope scope = super.getScope(block, environments, scopeType);
+        if (scope != null)
+            return scope;
+
+        IScope mirroredScope = moduleScopes.get(new ModuleScopeKey(blockUniqueName(block), environments, scopeType));
+        logModuleScope("get-fallback", block, environments, scopeType, mirroredScope); //$NON-NLS-1$
+        return mirroredScope;
+    }
+
+    @Override
+    public void clearScopes(Module module)
+    {
+        int removedCount = forgetModuleScope(module != null ? module.getUniqueName() : null);
+        if (module != null)
+            module.allMethods().forEach(method -> forgetModuleScope(method.getUniqueName()));
+
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.clear] module=" + blockUniqueName(module) //$NON-NLS-1$
+            + " removed=" + removedCount); //$NON-NLS-1$
+        super.clearScopes(module);
     }
 
     @Override
@@ -207,6 +243,44 @@ public class ContextLinksCachedScopeProvider
         return scope.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(scope)); //$NON-NLS-1$
     }
 
+    private void rememberModuleScope(Block block, Environments environments, BslCachedScopeType scopeType, IScope scope)
+    {
+        ModuleScopeKey key = new ModuleScopeKey(blockUniqueName(block), environments, scopeType);
+        if (!key.isUsable() || scope == null)
+            return;
+
+        moduleScopes.put(key, scope);
+        logModuleScope("add", block, environments, scopeType, scope); //$NON-NLS-1$
+    }
+
+    private int forgetModuleScope(String blockName)
+    {
+        if (blockName == null || blockName.isBlank())
+            return 0;
+
+        int before = moduleScopes.size();
+        moduleScopes.keySet().removeIf(key -> blockName.equals(key.blockName));
+        return before - moduleScopes.size();
+    }
+
+    private void logModuleScope(String phase, Block block, Environments environments, BslCachedScopeType scopeType,
+        IScope scope)
+    {
+        String key = phase + "|" + blockUniqueName(block) + "|" + environments + "|" + scopeType //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            + "|" + describeScope(scope) + "|" + countElements(scope); //$NON-NLS-1$ //$NON-NLS-2$
+        if (loggedModuleScopeKeys.add(key))
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.module." + phase + "] block=" //$NON-NLS-1$ //$NON-NLS-2$
+                + blockUniqueName(block) + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
+                + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+    }
+
+    private String blockUniqueName(Block block)
+    {
+        return block != null ? block.getUniqueName() : null;
+    }
+
     private enum ScopeKind
     {
         TYPE_ITEM("type-item") //$NON-NLS-1$
@@ -244,5 +318,52 @@ public class ContextLinksCachedScopeProvider
     private IScope getDirectPropertyScope(IProject project)
     {
         return super.getPropertyScope(project);
+    }
+
+    private static final class ModuleScopeKey
+    {
+        private final String blockName;
+        private final Environments environments;
+        private final BslCachedScopeType scopeType;
+
+        ModuleScopeKey(String blockName, Environments environments, BslCachedScopeType scopeType)
+        {
+            this.blockName = blockName;
+            this.environments = environments;
+            this.scopeType = scopeType;
+        }
+
+        boolean isUsable()
+        {
+            return blockName != null && !blockName.isBlank() && environments != null && scopeType != null;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = blockName != null ? blockName.hashCode() : 0;
+            result = 31 * result + (environments != null ? environments.hashCode() : 0);
+            result = 31 * result + (scopeType != null ? scopeType.hashCode() : 0);
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (!(obj instanceof ModuleScopeKey))
+                return false;
+
+            ModuleScopeKey other = (ModuleScopeKey)obj;
+            return equals(blockName, other.blockName)
+                && equals(environments, other.environments)
+                && scopeType == other.scopeType;
+        }
+
+        private boolean equals(Object left, Object right)
+        {
+            return left == null ? right == null : left.equals(right);
+        }
     }
 }
