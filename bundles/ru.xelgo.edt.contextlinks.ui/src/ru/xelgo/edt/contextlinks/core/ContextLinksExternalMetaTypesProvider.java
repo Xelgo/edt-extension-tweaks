@@ -10,11 +10,7 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.emf.ecore.resource.Resource;
 
 import com._1c.g5.v8.dt.bsl.types.extension.IExternalMetaTypesProvider;
-import com._1c.g5.v8.dt.mcore.ContextDef;
-import com._1c.g5.v8.dt.mcore.McoreFactory;
-import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
-import com._1c.g5.v8.dt.mcore.util.Environments;
 
 /**
  * Diagnostic provider for the official EDT external meta types extension point.
@@ -22,9 +18,6 @@ import com._1c.g5.v8.dt.mcore.util.Environments;
 public class ContextLinksExternalMetaTypesProvider
     implements IExternalMetaTypesProvider
 {
-    private static final String PROBE_TYPE_NAME = "XelgoContextLinksProbe"; //$NON-NLS-1$
-    private static final String PROBE_PROPERTY_NAME = "ContextLinksProviderWasCalled"; //$NON-NLS-1$
-
     public ContextLinksExternalMetaTypesProvider()
     {
         ContextLinks.logWarning("EDT Context Links external meta types provider constructed"); //$NON-NLS-1$
@@ -66,39 +59,11 @@ public class ContextLinksExternalMetaTypesProvider
             return List.of();
         }
 
-        Type probeType = createProbeType();
-        ContextLinks.logWarning("EDT Context Links external meta types provider returns probe type " + PROBE_TYPE_NAME //$NON-NLS-1$
-            + " for project=" + currentProject.getName() + ", linked=" + linkedProjectNames); //$NON-NLS-1$
-        return List.of(probeType);
-    }
-
-    private Type createProbeType()
-    {
-        Type type = McoreFactory.eINSTANCE.createType();
-        type.setName(PROBE_TYPE_NAME);
-        type.setNameRu(PROBE_TYPE_NAME);
-        type.setEnvironments(Environments.ALL);
-        type.setContextDef(createProbeContextDef());
-        return type;
-    }
-
-    private ContextDef createProbeContextDef()
-    {
-        ContextDef contextDef = McoreFactory.eINSTANCE.createContextDef();
-        contextDef.setEnvironments(Environments.ALL);
-        contextDef.getProperties().add(createProbeProperty());
-        return contextDef;
-    }
-
-    private Property createProbeProperty()
-    {
-        Property property = McoreFactory.eINSTANCE.createProperty();
-        property.setName(PROBE_PROPERTY_NAME);
-        property.setNameRu(PROBE_PROPERTY_NAME);
-        property.setReadable(true);
-        property.setWritable(false);
-        property.setEnvironments(Environments.ALL);
-        return property;
+        ContextLinks.logDebug("EDT Context Links DEBUG [external.provider.exit] project=" + currentProject.getName() //$NON-NLS-1$
+            + " result=[] reason=probe-disabled linked=" + linkedProjectNames); //$NON-NLS-1$
+        ContextLinks.logWarning("EDT Context Links external meta types provider probe disabled: project=" //$NON-NLS-1$
+            + currentProject.getName() + ", linked=" + linkedProjectNames); //$NON-NLS-1$
+        return List.of();
     }
 
     private String describeResource(Resource context)
