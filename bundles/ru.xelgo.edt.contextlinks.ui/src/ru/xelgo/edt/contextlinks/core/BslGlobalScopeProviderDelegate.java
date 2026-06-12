@@ -9,6 +9,7 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.naming.QualifiedName;
@@ -17,6 +18,7 @@ import org.eclipse.xtext.resource.IResourceDescription;
 import org.eclipse.xtext.resource.IResourceDescriptions;
 import org.eclipse.xtext.scoping.IScope;
 
+import com._1c.g5.v8.dt.bsl.scoping.BslGlobalScopeProvider;
 import com._1c.g5.v8.dt.core.platform.IConfigurationAware;
 import com._1c.g5.v8.dt.core.platform.IConfigurationProject;
 import com._1c.g5.v8.dt.core.platform.IDependentProject;
@@ -24,15 +26,35 @@ import com._1c.g5.v8.dt.core.platform.IV8Project;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.mcore.McorePackage;
 import com._1c.g5.wiring.ServiceAccess;
+import com.google.common.base.Predicate;
 
 public final class BslGlobalScopeProviderDelegate
 {
+    private static volatile BslGlobalScopeProvider globalScopeProvider;
+
     private BslGlobalScopeProviderDelegate()
     {
     }
 
+    public static synchronized void init()
+    {
+        if (globalScopeProvider == null)
+        {
+            globalScopeProvider = ServiceAccess.get(BslGlobalScopeProvider.class);
+        }
+    }
+
     public static IScope getScopeFromProject(IProject project)
     {
+        if (globalScopeProvider == null)
+            init();
+
+        if (globalScopeProvider == null)
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [delegate] BslGlobalScopeProvider is null");
+            return null;
+        }
+
         if (project == null)
         {
             ContextLinks.logDebug("EDT Context Links DEBUG [delegate] project is null");
@@ -60,84 +82,40 @@ public final class BslGlobalScopeProviderDelegate
             return null;
         }
 
-        ResourceSet resourceSet = configResource.getResourceSet();
-        if (resourceSet == null)
-        {
-            ContextLinks.logDebug("EDT Context Links DEBUG [delegate] resourceSet is null");
-            return null;
-        }
-
-        IResourceDescriptions index = getResourceDescriptions(resourceSet);
-        if (index == null)
-        {
-            ContextLinks.logDebug("EDT Context Links DEBUG [delegate] index is null");
-            return null;
-        }
-
         EClass typeItemClass = McorePackage.Literals.TYPE_ITEM;
-        if (typeItemClass == null)
+
+        Predicate<IEObjectDescription> typeItemFilter = description -> {
+            EClass eClass = description.getEClass();
+            return eClass != null && typeItemClass.isSuperTypeOf(eClass);
+        };
+
+        IScope scope = globalScopeProvider.getScope(configResource, null, typeItemFilter);
+
+        if (scope == null)
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [delegate] TYPE_ITEM class is null");
+            ContextLinks.logDebug("EDT Context Links DEBUG [delegate] scope is null for " + project.getName());
             return null;
         }
 
         List<IEObjectDescription> descriptions = new ArrayList<>();
-
-        for (IResourceDescription rd : index.getAllResourceDescriptions())
+        for (IEObjectDescription desc : scope.getAllElements())
         {
-            URI resUri = rd.getURI();
-            if (resUri == null || !resUri.isPlatformResource())
-                continue;
-
-            String platformPath = resUri.toPlatformString(true);
-            if (platformPath == null)
-                continue;
-
-            IPath path = IPath.fromOSString(platformPath);
-            if (path.segmentCount() == 0)
-                continue;
-
-            IProject resProject = ResourcesPlugin.getWorkspace().getRoot().getProject(path.segment(0));
-            if (resProject == null || !resProject.isAccessible())
-                continue;
-
-            for (IEObjectDescription eod : rd.getExportedObjects())
+            if (desc.getEObjectURI() != null && desc.getEClass() != null)
             {
-                EClass eClass = eod.getEClass();
-                if (eClass != null && typeItemClass.isSuperTypeOf(eClass))
+                EObject obj = desc.getEObjectOrProxy();
+                if (obj != null && obj.eResource() != null && !obj.eIsProxy())
                 {
-                    if (eod.getEObjectURI() != null && eod.getEClass() != null)
-                    {
-                        EObject obj = eod.getEObjectOrProxy();
-                        if (obj != null && obj.eResource() != null && !obj.eIsProxy())
-                        {
-                            descriptions.add(eod);
-                        }
-                    }
+                    descriptions.add(desc);
                 }
             }
         }
 
-        ContextLinks.logDebug("EDT Context Links DEBUG [delegate] found " + descriptions.size() + " TYPE_ITEM descriptions for " + project.getName());
+        ContextLinks.logDebug("EDT Context Links DEBUG [delegate] found " + descriptions.size() + " TYPE_ITEM from BslGlobalScopeProvider for " + project.getName());
 
         if (descriptions.isEmpty())
             return null;
 
         return new SimpleScope(descriptions);
-    }
-
-    private static IResourceDescriptions getResourceDescriptions(ResourceSet resourceSet)
-    {
-        if (resourceSet == null)
-            return null;
-
-        for (Object adapter : resourceSet.eAdapters())
-        {
-            if (adapter instanceof IResourceDescriptions)
-                return (IResourceDescriptions)adapter;
-        }
-
-        return null;
     }
 
     private static Resource getConfigurationResource(IV8Project v8Project)
