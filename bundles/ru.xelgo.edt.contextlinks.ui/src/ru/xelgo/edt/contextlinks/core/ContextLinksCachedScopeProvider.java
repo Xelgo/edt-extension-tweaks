@@ -32,6 +32,8 @@ public class ContextLinksCachedScopeProvider
     private static final Set<String> debugLoggedKeys = ConcurrentHashMap.newKeySet();
     private static final ConcurrentHashMap<String, IScope> lastKnownTypeItemScopes = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, IScope> lastKnownPropertyScopes = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Set<String>> pendingTypeItemDependents = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Set<String>> pendingPropertyDependents = new ConcurrentHashMap<>();
 
     public ContextLinksCachedScopeProvider()
     {
@@ -61,6 +63,7 @@ public class ContextLinksCachedScopeProvider
             + " scope=" + describeScope(scope)); //$NON-NLS-1$
         rememberScope(lastKnownTypeItemScopes, project, scope, "type-item"); //$NON-NLS-1$
         super.addTypeItemScope(project, scope);
+        clearPendingDependentScopes(pendingTypeItemDependents, project, "type-item"); //$NON-NLS-1$
     }
 
     @Override
@@ -70,6 +73,7 @@ public class ContextLinksCachedScopeProvider
             + " scope=" + describeScope(scope)); //$NON-NLS-1$
         rememberScope(lastKnownPropertyScopes, project, scope, "property"); //$NON-NLS-1$
         super.addPropertyScope(project, scope);
+        clearPendingDependentScopes(pendingPropertyDependents, project, "property"); //$NON-NLS-1$
     }
 
     @Override
@@ -149,6 +153,7 @@ public class ContextLinksCachedScopeProvider
             else
             {
                 missingProjects.add(linkedProjectName + " (super.getTypeItemScope returned null)");
+                rememberPendingDependent(pendingTypeItemDependents, linkedProjectName, project.getName(), "type-item"); //$NON-NLS-1$
             }
         }
 
@@ -225,6 +230,7 @@ public class ContextLinksCachedScopeProvider
             else
             {
                 missingProjects.add(linkedProjectName + " (super.getPropertyScope returned null)"); //$NON-NLS-1$
+                rememberPendingDependent(pendingPropertyDependents, linkedProjectName, project.getName(), "property"); //$NON-NLS-1$
             }
         }
 
@@ -340,6 +346,54 @@ public class ContextLinksCachedScopeProvider
     private boolean hasLastKnown(ConcurrentHashMap<String, IScope> scopes, IProject project)
     {
         return project != null && scopes.containsKey(project.getName());
+    }
+
+    private void rememberPendingDependent(ConcurrentHashMap<String, Set<String>> pendingDependents,
+        String sourceProjectName, String dependentProjectName, String kind)
+    {
+        pendingDependents.computeIfAbsent(sourceProjectName, key -> ConcurrentHashMap.newKeySet())
+            .add(dependentProjectName);
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.dependency.pending] kind=" + kind //$NON-NLS-1$
+            + " source=" + sourceProjectName + " dependent=" + dependentProjectName); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private void clearPendingDependentScopes(ConcurrentHashMap<String, Set<String>> pendingDependents,
+        IProject sourceProject, String kind)
+    {
+        if (sourceProject == null || !sourceProject.isAccessible())
+            return;
+
+        Set<String> dependentProjectNames = pendingDependents.remove(sourceProject.getName());
+        if (dependentProjectNames == null || dependentProjectNames.isEmpty())
+            return;
+
+        List<String> clearedProjects = new ArrayList<>();
+        List<String> skippedProjects = new ArrayList<>();
+        for (String dependentProjectName : dependentProjectNames)
+        {
+            IProject dependentProject = ResourcesPlugin.getWorkspace().getRoot().getProject(dependentProjectName);
+            if (!dependentProject.isAccessible() || dependentProject.equals(sourceProject))
+            {
+                skippedProjects.add(dependentProjectName + " (not accessible or same project)"); //$NON-NLS-1$
+                continue;
+            }
+
+            if (!ContextLinks.getContextProjectNames(dependentProject).contains(sourceProject.getName()))
+            {
+                skippedProjects.add(dependentProjectName + " (link removed)"); //$NON-NLS-1$
+                continue;
+            }
+
+            if ("property".equals(kind)) //$NON-NLS-1$
+                super.clearPropertyScopes(dependentProject);
+            else
+                super.clearTypeItemsScopes(dependentProject);
+            clearedProjects.add(dependentProjectName);
+        }
+
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.dependency.ready] kind=" + kind //$NON-NLS-1$
+            + " source=" + sourceProject.getName() + " cleared=" + clearedProjects //$NON-NLS-1$ //$NON-NLS-2$
+            + " skipped=" + skippedProjects); //$NON-NLS-1$
     }
 
     private void debugLogScope(String phase, IProject project, String linkedProjectName, IScope scope, String reason)
