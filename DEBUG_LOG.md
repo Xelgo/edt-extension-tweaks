@@ -983,3 +983,43 @@ Open risks:
   declared, but direct `QlStandaloneSetup` bytecode does not show the extension merge.
 - If the query constructor uses a separate QL-DCS injector that does not consume the QL runtime extension point, we may need a second
   path through DCS/QL-DCS service registration.
+
+## 2026-06-13 - First QL Db-View Scope Injection Attempt
+
+Implementation attempt:
+
+- Add `com._1c.g5.v8.dt.ql` as a required bundle.
+- Register `com._1c.g5.v8.dt.ql.qlRuntimeModuleExtension` in `plugin.xml`.
+- Add `ContextLinksQlRuntimeModule`, binding `IQlCachedScopeProvider` to `ContextLinksQlCachedScopeProvider`.
+- Add `ContextLinksQlCachedScopeProvider extends QlCachedScopeProvider`.
+- Keep QL's standard scope provider untouched.
+- In the custom QL cache provider:
+  - call `super.getDbViewScope(project)` for the current project;
+  - if the current project has no QL db-view scope yet, return `null` so EDT still builds the standard scope normally;
+  - for extension projects with configured linked context, return a composite db-view scope:
+    current project first, linked projects after it;
+  - when linked project direct QL db-view scope is temporarily `null`, use the last stable linked db-view scope;
+  - do not clear stable db-view snapshots on `clearDbViewScopes`.
+
+Expected behavior:
+
+- Query text and Query Constructor should see tables/fields from configured linked extension projects through the same QL db-view
+  scope path used by `QlScopeProvider`.
+- If EDT rebuilds a linked extension and temporarily clears its QL db-view scope, other extensions should keep the last stable
+  linked query tables/fields instead of dropping the whole linked query context.
+
+Build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 17:58:09 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `112926` bytes.
+
+Next log check:
+
+- On EDT start/open query constructor, look for:
+  - `EDT Context Links QL runtime module constructed`;
+  - `EDT Context Links QL cached scope provider constructed`.
+- With debug logging enabled, useful signals are:
+  - `EDT Context Links QL db-view scope: project=... configured=... added=... missing=...`;
+  - `EDT Context Links QL stable db-view fallback project=...`.

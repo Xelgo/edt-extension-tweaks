@@ -65,4 +65,11 @@
       </bslRuntimeModuleExtension>
    </extension>
 
+   <extension
+         point="com._1c.g5.v8.dt.ql.qlRuntimeModuleExtension">
+      <qlRuntimeModuleExtension
+            module="ru.xelgo.edt.contextlinks.core.ContextLinksQlRuntimeModule">
+      </qlRuntimeModuleExtension>
+   </extension>
+
 </plugin>
