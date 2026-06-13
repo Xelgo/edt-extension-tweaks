@@ -1307,3 +1307,31 @@ Conclusion:
 - The plugin did start, because the QL BM wrapper registration message is present.
 - There are no fresh `QL BM provider call` lines after that registration yet, so this log does not prove whether the new
   `IResourceLookup` fallback resolves `QlDcsResource` projects. Need one more query-constructor open/check after this build.
+
+Follow-up after opening/checking query constructor with `90f4cf0`:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main\.metadata\.log
+Length: 617217
+LastWriteTime: 2026-06-13 19:19:38 +04:00
+```
+
+Important result:
+
+```text
+EDT Context Links QL BM global scope wrapper registered
+EDT Context Links QL BM provider call resource=com._1c.g5.v8.bm.core.internal.BmResource project=Конфигурация ql=false uri=bm://Конфигурация/Configuration
+EDT Context Links QL BM provider call resource=com._1c.g5.v8.dt.ql.dcs.resource.QlDcsResource project=Конфигурация.Расширение2 ql=true uri=platform:/resource/Конфигурация.Расширение2/querywizard_1781363970873.qldcs
+EDT Context Links QL BM scope project=Конфигурация.Расширение2 linked=[Конфигурация.Расширение] skipped=[Конфигурация]
+```
+
+Conclusion:
+
+- The `IResourceLookup` fallback fixed the immediate `QlDcsResource project=NULL` problem.
+- The query constructor / QL DCS path now reaches our BM scope wrapper with the correct extension project.
+- For `Конфигурация.Расширение2`, the wrapper adds the linked sibling extension `Конфигурация.Расширение` and skips the base
+  configuration as intended.
+- Remaining uncertainty: this only proves scope injection for the opened `Расширение2` query constructor resource. Need functional
+  EDT UI check to confirm whether the query constructor suggestions now show sibling-extension objects.
+- Current log still contains unrelated EDT/p2 noise from stale update-site zip URLs (`repository-v*.zip`) and 1C service
+  authentication failures; these are not plugin runtime failures.
