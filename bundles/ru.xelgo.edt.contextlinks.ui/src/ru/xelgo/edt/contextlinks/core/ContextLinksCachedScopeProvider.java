@@ -8,11 +8,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.scoping.IScope;
 
-import com._1c.g5.modeling.xtext.scoping.CompositeScope;
-import com._1c.g5.modeling.xtext.scoping.ISlicedScope;
 import com._1c.g5.v8.dt.bsl.model.Block;
 import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.scoping.BslCachedScopeProvider;
@@ -137,8 +137,6 @@ public class ContextLinksCachedScopeProvider
     private IScope composeLinkedScope(IProject project, IScope ownScope, ScopeKind kind)
     {
         Set<String> linkedProjectNames = ContextLinks.getContextProjectNames(project);
-        CompositeScope compositeScope = new CompositeScope(ISlicedScope.NULLSCOPE, true);
-        compositeScope.addScope(ownScope);
 
         List<String> addedProjects = new ArrayList<>();
         List<String> missingProjects = new ArrayList<>();
@@ -159,15 +157,11 @@ public class ContextLinksCachedScopeProvider
                 continue;
             }
 
-            compositeScope.addScope(linkedScope);
             addedProjects.add(linkedProjectName);
         }
 
         logComposedScope(kind, project, linkedProjectNames, addedProjects, missingProjects);
-        if (addedProjects.isEmpty())
-            return ownScope;
-
-        return compositeScope;
+        return new ContextLinksProjectScope(this, project, ownScope, linkedProjectNames, kind);
     }
 
     private boolean isUsableLinkedProject(IProject project, IProject linkedProject)
@@ -318,6 +312,104 @@ public class ContextLinksCachedScopeProvider
     private IScope getDirectPropertyScope(IProject project)
     {
         return super.getPropertyScope(project);
+    }
+
+    private static final class ContextLinksProjectScope
+        implements IScope
+    {
+        private final ContextLinksCachedScopeProvider provider;
+        private final IProject project;
+        private final IScope ownScope;
+        private final List<String> linkedProjectNames;
+        private final ScopeKind kind;
+
+        ContextLinksProjectScope(ContextLinksCachedScopeProvider provider, IProject project, IScope ownScope,
+            Set<String> linkedProjectNames, ScopeKind kind)
+        {
+            this.provider = provider;
+            this.project = project;
+            this.ownScope = ownScope;
+            this.linkedProjectNames = new ArrayList<>(linkedProjectNames);
+            this.kind = kind;
+        }
+
+        @Override
+        public IEObjectDescription getSingleElement(QualifiedName name)
+        {
+            IEObjectDescription ownElement = ownScope.getSingleElement(name);
+            if (ownElement != null)
+                return ownElement;
+
+            for (IScope linkedScope : getLinkedScopes())
+            {
+                IEObjectDescription linkedElement = linkedScope.getSingleElement(name);
+                if (linkedElement != null)
+                    return linkedElement;
+            }
+            return null;
+        }
+
+        @Override
+        public Iterable<IEObjectDescription> getElements(QualifiedName name)
+        {
+            List<IEObjectDescription> result = new ArrayList<>();
+            ownScope.getElements(name).forEach(result::add);
+            for (IScope linkedScope : getLinkedScopes())
+                linkedScope.getElements(name).forEach(result::add);
+            return result;
+        }
+
+        @Override
+        public IEObjectDescription getSingleElement(EObject object)
+        {
+            IEObjectDescription ownElement = ownScope.getSingleElement(object);
+            if (ownElement != null)
+                return ownElement;
+
+            for (IScope linkedScope : getLinkedScopes())
+            {
+                IEObjectDescription linkedElement = linkedScope.getSingleElement(object);
+                if (linkedElement != null)
+                    return linkedElement;
+            }
+            return null;
+        }
+
+        @Override
+        public Iterable<IEObjectDescription> getElements(EObject object)
+        {
+            List<IEObjectDescription> result = new ArrayList<>();
+            ownScope.getElements(object).forEach(result::add);
+            for (IScope linkedScope : getLinkedScopes())
+                linkedScope.getElements(object).forEach(result::add);
+            return result;
+        }
+
+        @Override
+        public Iterable<IEObjectDescription> getAllElements()
+        {
+            List<IEObjectDescription> result = new ArrayList<>();
+            ownScope.getAllElements().forEach(result::add);
+            for (IScope linkedScope : getLinkedScopes())
+                linkedScope.getAllElements().forEach(result::add);
+            return result;
+        }
+
+        private List<IScope> getLinkedScopes()
+        {
+            List<IScope> scopes = new ArrayList<>();
+            for (String linkedProjectName : linkedProjectNames)
+            {
+                IProject linkedProject = ResourcesPlugin.getWorkspace().getRoot().getProject(linkedProjectName);
+                if (!provider.isUsableLinkedProject(project, linkedProject))
+                    continue;
+
+                IScope linkedScope = kind.get(provider, linkedProject);
+                if (linkedScope != null)
+                    scopes.add(linkedScope);
+            }
+            return scopes;
+        }
     }
 
     private static final class ModuleScopeKey
