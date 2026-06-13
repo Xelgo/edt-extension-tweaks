@@ -1,7 +1,5 @@
 package ru.xelgo.edt.contextlinks.ui;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -10,11 +8,8 @@ import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IAdaptable;
-import org.eclipse.emf.ecore.EObject;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -27,9 +22,6 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.jface.window.Window;
 import org.eclipse.ui.dialogs.ListSelectionDialog;
 import org.eclipse.ui.handlers.HandlerUtil;
-
-import com._1c.g5.v8.dt.core.platform.IResourceLookup;
-import com._1c.g5.wiring.ServiceAccess;
 
 import ru.xelgo.edt.contextlinks.core.ContextLinks;
 
@@ -53,10 +45,19 @@ public class ConfigureContextLinksHandler
             return null;
         }
         ContextLinks.logWarning("EDT Context Links configure command selected project " + project.getName()); //$NON-NLS-1$
+        if (!ContextLinks.isExtensionProject(project))
+        {
+            ContextLinks.logWarning("EDT Context Links configure command ignored non-extension project " //$NON-NLS-1$
+                + project.getName());
+            Messages.showInfo(shell, Messages.ConfigureContextLinksHandler_Title,
+                Messages.ConfigureContextLinksHandler_NotExtensionProject);
+            return null;
+        }
 
         IProject[] candidates = Arrays.stream(ResourcesPlugin.getWorkspace().getRoot().getProjects())
             .filter(IProject::isAccessible)
             .filter(candidate -> !candidate.equals(project))
+            .filter(ContextLinks::isExtensionProject)
             .toArray(IProject[]::new);
         ContextLinks.logDebug("EDT Context Links DEBUG [ui.candidates] project=" + project.getName() //$NON-NLS-1$
             + " candidates=" + Arrays.toString(Arrays.stream(candidates).map(IProject::getName).toArray())); //$NON-NLS-1$
@@ -140,49 +141,10 @@ public class ConfigureContextLinksHandler
 
     private IProject getProject(Object selected)
     {
-        IProject project = adapt(selected, IProject.class);
-        if (project != null)
-        {
-            ContextLinks.logDebug("EDT Context Links DEBUG [ui.getProject] via=IProject selected=" + describeObject(selected) //$NON-NLS-1$
-                + " project=" + project.getName()); //$NON-NLS-1$
-            return project;
-        }
-
-        IResource resource = adapt(selected, IResource.class);
-        if (resource != null)
-        {
-            ContextLinks.logDebug("EDT Context Links DEBUG [ui.getProject] via=IResource selected=" + describeObject(selected) //$NON-NLS-1$
-                + " resource=" + resource.getFullPath() + " project=" + resource.getProject().getName()); //$NON-NLS-1$ //$NON-NLS-2$
-            return resource.getProject();
-        }
-
-        EObject modelObject = getModelObject(selected);
-        if (modelObject == null)
-        {
-            ContextLinks.logDebug("EDT Context Links DEBUG [ui.getProject] no model object selected=" + describeObject(selected)); //$NON-NLS-1$
-            return null;
-        }
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.getProject] modelObject=" + describeObject(modelObject)); //$NON-NLS-1$
-
-        IResourceLookup resourceLookup = ServiceAccess.get(IResourceLookup.class);
-        if (resourceLookup == null)
-        {
-            ContextLinks.logDebug("EDT Context Links DEBUG [ui.getProject] resourceLookup=NULL"); //$NON-NLS-1$
-            return null;
-        }
-
-        IProject modelProject = resourceLookup.getProject(modelObject);
-        if (modelProject != null)
-        {
-            ContextLinks.logDebug("EDT Context Links DEBUG [ui.getProject] via=resourceLookup.getProject project=" //$NON-NLS-1$
-                + modelProject.getName());
-            return modelProject;
-        }
-
-        IResource modelResource = resourceLookup.getPlatformResource(modelObject);
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.getProject] via=resourceLookup.getPlatformResource resource=" //$NON-NLS-1$
-            + (modelResource != null ? modelResource.getFullPath() : "NULL")); //$NON-NLS-1$
-        return modelResource != null ? modelResource.getProject() : null;
+        IProject project = ProjectSelection.getProject(selected);
+        ContextLinks.logDebug("EDT Context Links DEBUG [ui.getProject] selected=" + describeObject(selected) //$NON-NLS-1$
+            + " project=" + (project != null ? project.getName() : "NULL")); //$NON-NLS-1$ //$NON-NLS-2$
+        return project;
     }
 
     private IProject getActiveEditorProject(ExecutionEvent event)
@@ -212,72 +174,6 @@ public class ConfigureContextLinksHandler
         IEditorInput input = activeEditor.getEditorInput();
         ContextLinks.logDebug("EDT Context Links DEBUG [ui.editor.input] input=" + describeObject(input)); //$NON-NLS-1$
         return getProject(input);
-    }
-
-    private EObject getModelObject(Object selected)
-    {
-        EObject modelObject = adapt(selected, EObject.class);
-        if (modelObject != null)
-        {
-            ContextLinks.logDebug("EDT Context Links DEBUG [ui.modelObject] via=adapt selected=" + describeObject(selected)); //$NON-NLS-1$
-            return modelObject;
-        }
-
-        String[] methodNames = { "getModelObject", "getModel", "getEObject", "getObject", "getTarget" }; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
-        for (String methodName : methodNames)
-        {
-            Object value = invokeNoArg(selected, methodName);
-            if (value instanceof EObject)
-            {
-                ContextLinks.logDebug("EDT Context Links DEBUG [ui.modelObject] via=" + methodName + " value=" //$NON-NLS-1$ //$NON-NLS-2$
-                    + describeObject(value));
-                return (EObject)value;
-            }
-        }
-        return null;
-    }
-
-    private Object invokeNoArg(Object target, String methodName)
-    {
-        if (target == null)
-            return null;
-
-        try
-        {
-            Method method = target.getClass().getMethod(methodName);
-            if (method.getParameterCount() == 0)
-            {
-                ContextLinks.logDebug("EDT Context Links DEBUG [ui.invoke] target=" + describeObject(target) //$NON-NLS-1$
-                    + " method=" + methodName); //$NON-NLS-1$
-                return method.invoke(target);
-            }
-        }
-        catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException e)
-        {
-            return null;
-        }
-        return null;
-    }
-
-    private <T> T adapt(Object object, Class<T> type)
-    {
-        if (type.isInstance(object))
-        {
-            ContextLinks.logDebug("EDT Context Links DEBUG [ui.adapt] direct type=" + type.getName() //$NON-NLS-1$
-                + " object=" + describeObject(object)); //$NON-NLS-1$
-            return type.cast(object);
-        }
-        if (object instanceof IAdaptable)
-        {
-            Object adapted = ((IAdaptable)object).getAdapter(type);
-            if (type.isInstance(adapted))
-            {
-                ContextLinks.logDebug("EDT Context Links DEBUG [ui.adapt] adaptable type=" + type.getName() //$NON-NLS-1$
-                    + " object=" + describeObject(object) + " adapted=" + describeObject(adapted)); //$NON-NLS-1$ //$NON-NLS-2$
-                return type.cast(adapted);
-            }
-        }
-        return null;
     }
 
     private String describeObject(Object object)

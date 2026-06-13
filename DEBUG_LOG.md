@@ -638,3 +638,47 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `92364` bytes.
+
+## 2026-06-13 - Startup Warm-Up And Extension-Only Configuration Command
+
+Current workspace under investigation:
+
+- `C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main`
+
+User observation:
+
+- On primary EDT startup, the background linter/model build starts too early.
+- `Extension 2` does not see `Extension 1`.
+- If the user opens a module in `Extension 1`, returns to the old module, and changes one line, EDT starts another
+  validation/model build and the linked context becomes correct.
+
+Analysis:
+
+- The manual edit is acting as a delayed rebuild/warm-up after all linked extension projects have become available.
+- We should emulate that post-startup pass for configured extension links instead of relying on the very first
+  background model build.
+- The configure command is meaningful only on extension projects. The base configuration context is already available
+  in EDT, and external data processors/reports are not a target for this plugin.
+
+Implementation attempt:
+
+- Add `ContextLinksStartup` through `org.eclipse.ui.startup`.
+- Schedule two system `WorkspaceJob` warm-up passes after startup (`15s` and `45s`).
+- For each accessible extension project with configured links, full-build linked extension projects first, then the
+  configured extension project itself.
+- Add `ContextLinks.isExtensionProject(IProject)` using EDT `IV8ProjectManager` and `IExtensionProject`.
+- Add a navigator property tester so the **Настроить контекст EDT** menu item is visible only for extension projects.
+- Guard the handler as well, and filter dialog candidates to extension projects only.
+
+Expected next log check:
+
+- Startup should log `EDT Context Links startup warm-up scheduled`.
+- Warm-up passes should log `startup warm-up pass=1/2 projects=[...]` and per-project build lines.
+- After that, the initial diagnostics should match the state previously achieved only after manual module edit.
+
+Build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 16:54:41 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `95058` bytes.

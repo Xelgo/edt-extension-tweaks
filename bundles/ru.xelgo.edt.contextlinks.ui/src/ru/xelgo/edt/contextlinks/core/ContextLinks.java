@@ -16,6 +16,11 @@ import org.eclipse.core.runtime.QualifiedName;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.emf.common.util.URI;
 
+import com._1c.g5.v8.dt.core.platform.IExtensionProject;
+import com._1c.g5.v8.dt.core.platform.IV8Project;
+import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
+import com._1c.g5.wiring.ServiceAccess;
+
 /**
  * Stores additional context source project names for an EDT project.
  */
@@ -102,6 +107,27 @@ public final class ContextLinks
             .filter(IProject::isAccessible)
             .map(project -> project.getName() + "=" + getContextProjectNames(project)) //$NON-NLS-1$
             .collect(Collectors.joining("; ")); //$NON-NLS-1$
+    }
+
+    public static boolean isExtensionProject(IProject project)
+    {
+        if (project == null || !project.isAccessible())
+            return false;
+
+        IV8ProjectManager projectManager = ServiceAccess.get(IV8ProjectManager.class);
+        if (projectManager == null)
+        {
+            logDebug("EDT Context Links DEBUG [project.kind] project=" + project.getName() //$NON-NLS-1$
+                + " result=false reason=project-manager-null"); //$NON-NLS-1$
+            return false;
+        }
+
+        IV8Project v8Project = projectManager.getProject(project);
+        boolean result = v8Project instanceof IExtensionProject;
+        logDebug("EDT Context Links DEBUG [project.kind] project=" + project.getName() //$NON-NLS-1$
+            + " v8Project=" + (v8Project != null ? v8Project.getClass().getName() : "NULL") //$NON-NLS-1$ //$NON-NLS-2$
+            + " extension=" + result); //$NON-NLS-1$
+        return result;
     }
 
     public static IProject getProject(URI uri)

@@ -23,8 +23,39 @@
                commandId="ru.xelgo.edt.contextlinks.ui.commands.configureContextLinks"
                style="push"
                tooltip="%command.tooltip">
+            <visibleWhen
+                  checkEnabled="false">
+               <with
+                     variable="selection">
+                  <iterate
+                        ifEmpty="false"
+                        operator="and">
+                     <test
+                           property="ru.xelgo.edt.contextlinks.ui.isExtensionProject">
+                     </test>
+                  </iterate>
+               </with>
+            </visibleWhen>
          </command>
       </menuContribution>
+   </extension>
+
+   <extension
+         point="org.eclipse.core.expressions.propertyTesters">
+      <propertyTester
+            class="ru.xelgo.edt.contextlinks.ui.ContextLinksProjectPropertyTester"
+            id="ru.xelgo.edt.contextlinks.ui.projectPropertyTester"
+            namespace="ru.xelgo.edt.contextlinks.ui"
+            properties="isExtensionProject"
+            type="java.lang.Object">
+      </propertyTester>
+   </extension>
+
+   <extension
+         point="org.eclipse.ui.startup">
+      <startup
+            class="ru.xelgo.edt.contextlinks.ui.ContextLinksStartup">
+      </startup>
    </extension>
 
    <extension
