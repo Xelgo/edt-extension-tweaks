@@ -14,7 +14,7 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.ui.IStartup;
 
 import ru.xelgo.edt.contextlinks.core.ContextLinks;
-import ru.xelgo.edt.contextlinks.core.ContextLinksServiceRegistrars;
+import ru.xelgo.edt.contextlinks.core.ContextLinksV8GlobalScopeProviderRegistrar;
 
 /**
  * Warms linked extension projects after EDT opens the workspace.
@@ -27,7 +27,7 @@ public class ContextLinksStartup
     @Override
     public void earlyStartup()
     {
-        ContextLinksServiceRegistrars.ensureRegistered();
+        ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
         ContextLinks.logWarning("EDT Context Links startup warm-up scheduled"); //$NON-NLS-1$
         for (int i = 0; i < WARMUP_DELAYS_MS.length; i++)
             new WarmupJob(i + 1).schedule(WARMUP_DELAYS_MS[i]);

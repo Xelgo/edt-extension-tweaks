@@ -16,7 +16,7 @@ public class ContextLinksBslRuntimeModule
     public ContextLinksBslRuntimeModule()
     {
         ContextLinks.logDebug("EDT Context Links BSL runtime module constructed"); //$NON-NLS-1$
-        ContextLinksServiceRegistrars.ensureRegistered();
+        ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
     }
 
     public Class<? extends BslCachedScopeProvider> bindBslCachedScopeProvider()

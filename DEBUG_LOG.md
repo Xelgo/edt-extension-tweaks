@@ -1657,3 +1657,56 @@ Follow-up, 2026-06-14 attempt `v202606132052`:
   - This attempt did not restore the previously working QL wrapper path documented around `v202606131517`/`v202606131532`.
   - The `IModelObjectAdopter` idea should be removed or disabled until the base Query Wizard `OK` path is stable again.
   - Next attempt should follow the successful historical path: make `IV8GlobalScopeProvider` wrapper registration observable again, then address duplicates/adoption separately.
+
+Recovery attempt in progress, 2026-06-14:
+
+- Removed the experimental `IModelObjectAdopter` runtime registration path.
+- Deleted `ContextLinksServiceRegistrars` and returned direct calls to `ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered()`
+  from plugin startup, UI startup, BSL runtime module construction, and `ContextLinksCachedScopeProvider` construction.
+- Keep the redeploy script's immediate EDT force-kill change.
+- Expected recovery check:
+  - `OK` should return to the previous behavior instead of freezing/failing;
+  - workspace log should again show `EDT Context Links QL BM global scope wrapper registered`.
+
+Follow-up after redeploying recovery build `v202606132100`:
+
+- `EDT Context Links QL BM global scope wrapper registered` is back in the fresh workspace log.
+- `Ctrl+Alt+Q` from `Расш1_ОбщийМодуль` reaches the QL wrapper again.
+- The QL probe shows the composite contains linked `Расш2_Справочник` and `Расш2_Документ`.
+- New concrete failure while opening Query Wizard from the existing query text:
+
+```text
+java.lang.IllegalArgumentException: Expected an instance of BmObject, but was
+com._1c.g5.v8.dt.metadata.dbview.impl.DbViewTableDefImpl@...
+    at com._1c.g5.v8.dt.qw.ui.controls.QueryWizardControl.setQueryText(...)
+```
+
+- The probe explains why:
+  - own scope has `Catalog.Справочник_конфигурации`;
+  - linked scope has another `Catalog.Справочник_конфигурации`;
+  - the previous `DeduplicatingRichestScope` could select the linked richer object for the same qualified name.
+- This matches the user-visible duplicate table bug.
+- Fix in progress:
+  - replace "richest wins" QL scope dedupe with "current project wins; linked projects only fill missing names";
+  - stop returning friendly dynamic proxies from `IEObjectDescription.getEObjectOrProxy()` during `QuerySchemaBuilder`, so proxies do not leak into the query schema model.
+
+Follow-up after redeploying `v202606132104`:
+
+- Built and redeployed successfully.
+- Query Wizard opened from `Расш1_ОбщийМодуль` without the previous `Expected an instance of BmObject` warning.
+- Fresh log shows the wrapper is active:
+
+```text
+EDT Context Links QL BM provider call resource=com._1c.g5.v8.dt.ql.dcs.resource.QlDcsResource
+project=Конфигурация.Расш1 ql=true
+```
+
+- Composite QL scope now has current project objects first:
+  - `Catalog.Расш1_Справочник`;
+  - `Document.Расш1_Документ`;
+  - `Catalog.Справочник_конфигурации` from `Конфигурация.Расш1`;
+  - then linked unique objects `Catalog.Расш2_Справочник` and `Document.Расш2_Документ`.
+- This confirms the `Расш2_*` objects are back in the QL context and the same-name base catalog no longer shadows the current project with the linked extension object.
+- Remaining work:
+  - re-test a clean field-selection scenario in UI;
+  - address the adoption prompt for actual foreign-extension fields after the base Query Wizard open path stays stable.

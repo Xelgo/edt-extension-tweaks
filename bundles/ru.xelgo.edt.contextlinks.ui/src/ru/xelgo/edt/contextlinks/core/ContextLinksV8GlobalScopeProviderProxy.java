@@ -36,7 +36,6 @@ import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.ServiceReference;
 
-import com._1c.g5.modeling.xtext.scoping.CompositeScope;
 import com._1c.g5.modeling.xtext.scoping.ISlicedScope;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com._1c.g5.v8.dt.metadata.dbview.DbViewDef;
@@ -145,7 +144,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
             return ownScope;
 
         CurrentMdObjects currentMdObjects = collectCurrentMdObjects(ownScope, false);
-        CompositeScope result = new CompositeScope(ownScope != null ? ownScope : ISlicedScope.NULLSCOPE, true);
+        List<IScope> linkedScopes = new ArrayList<>();
         List<String> addedProjects = new ArrayList<>();
         List<String> skippedProjects = new ArrayList<>();
 
@@ -168,14 +167,15 @@ final class ContextLinksV8GlobalScopeProviderProxy
 
             IScope currentProjectFriendlyScope = new CurrentProjectFriendlyScope(linkedScope, currentMdObjects);
             logProbe("linked", project, linkedProject, reference, currentProjectFriendlyScope, resource); //$NON-NLS-1$
-            result.addScope(currentProjectFriendlyScope);
+            linkedScopes.add(currentProjectFriendlyScope);
             addedProjects.add(linkedProjectName);
         }
 
         logComposition(project, addedProjects, skippedProjects);
+        IScope result = new CurrentFirstLinkedScope(ownScope, linkedScopes);
         if (!addedProjects.isEmpty())
             logProbe("composite", project, null, reference, result, resource); //$NON-NLS-1$
-        return addedProjects.isEmpty() ? ownScope : new DeduplicatingRichestScope(result);
+        return addedProjects.isEmpty() ? ownScope : result;
     }
 
     private CurrentMdObjects collectCurrentMdObjects(IScope ownScope, boolean allowClassFallback)
@@ -541,48 +541,95 @@ final class ContextLinksV8GlobalScopeProviderProxy
         }
     }
 
-    private static final class DeduplicatingRichestScope
+    private static final class CurrentFirstLinkedScope
         implements IScope
     {
-        private final IScope delegate;
+        private final IScope ownScope;
+        private final List<IScope> linkedScopes;
 
-        DeduplicatingRichestScope(IScope delegate)
+        CurrentFirstLinkedScope(IScope ownScope, List<IScope> linkedScopes)
         {
-            this.delegate = delegate;
+            this.ownScope = ownScope != null ? ownScope : ISlicedScope.NULLSCOPE;
+            this.linkedScopes = List.copyOf(linkedScopes);
         }
 
         @Override
         public IEObjectDescription getSingleElement(QualifiedName name)
         {
-            return richest(delegate.getElements(name));
+            IEObjectDescription ownDescription = ownScope.getSingleElement(name);
+            if (ownDescription != null)
+                return ownDescription;
+
+            for (IScope linkedScope : linkedScopes)
+            {
+                IEObjectDescription linkedDescription = linkedScope.getSingleElement(name);
+                if (linkedDescription != null)
+                    return linkedDescription;
+            }
+            return null;
         }
 
         @Override
         public Iterable<IEObjectDescription> getElements(QualifiedName name)
         {
-            IEObjectDescription description = richest(delegate.getElements(name));
-            List<IEObjectDescription> result = new ArrayList<>();
-            if (description != null)
-                result.add(description);
-            return result;
+            List<IEObjectDescription> ownDescriptions = descriptions(ownScope.getElements(name));
+            if (!ownDescriptions.isEmpty())
+                return ownDescriptions;
+
+            return deduplicate(linkedScopes.stream()
+                .flatMap(scope -> descriptions(scope.getElements(name)).stream())
+                .toList());
         }
 
         @Override
         public IEObjectDescription getSingleElement(EObject object)
         {
-            return richest(delegate.getElements(object));
+            IEObjectDescription ownDescription = ownScope.getSingleElement(object);
+            if (ownDescription != null)
+                return ownDescription;
+
+            for (IScope linkedScope : linkedScopes)
+            {
+                IEObjectDescription linkedDescription = linkedScope.getSingleElement(object);
+                if (linkedDescription != null)
+                    return linkedDescription;
+            }
+            return null;
         }
 
         @Override
         public Iterable<IEObjectDescription> getElements(EObject object)
         {
-            return deduplicate(delegate.getElements(object));
+            List<IEObjectDescription> ownDescriptions = descriptions(ownScope.getElements(object));
+            if (!ownDescriptions.isEmpty())
+                return ownDescriptions;
+
+            return deduplicate(linkedScopes.stream()
+                .flatMap(scope -> descriptions(scope.getElements(object)).stream())
+                .toList());
         }
 
         @Override
         public Iterable<IEObjectDescription> getAllElements()
         {
-            return deduplicate(delegate.getAllElements());
+            List<IEObjectDescription> result = new ArrayList<>(descriptions(ownScope.getAllElements()));
+            for (IScope linkedScope : linkedScopes)
+                result.addAll(descriptions(linkedScope.getAllElements()));
+            return deduplicate(result);
+        }
+
+        private static List<IEObjectDescription> descriptions(Iterable<IEObjectDescription> descriptions)
+        {
+            List<IEObjectDescription> result = new ArrayList<>();
+            if (descriptions == null)
+                return result;
+
+            for (IEObjectDescription description : descriptions)
+            {
+                if (description != null)
+                    result.add(description);
+            }
+            return result;
         }
 
         private static List<IEObjectDescription> deduplicate(Iterable<IEObjectDescription> descriptions)
@@ -596,42 +643,9 @@ final class ContextLinksV8GlobalScopeProviderProxy
                 QualifiedName name = description.getQualifiedName();
                 if (name == null)
                     name = description.getName();
-                IEObjectDescription current = result.get(name);
-                if (current == null || richness(description) > richness(current))
-                    result.put(name, description);
+                result.putIfAbsent(name, description);
             }
             return new ArrayList<>(result.values());
-        }
-
-        private static IEObjectDescription richest(Iterable<IEObjectDescription> descriptions)
-        {
-            IEObjectDescription result = null;
-            for (IEObjectDescription description : descriptions)
-            {
-                if (description != null && (result == null || richness(description) > richness(result)))
-                    result = description;
-            }
-            return result;
-        }
-
-        private static int richness(IEObjectDescription description)
-        {
-            if (description == null)
-                return -1;
-
-            try
-            {
-                EObject object = description.getEObjectOrProxy();
-                if (!(object instanceof DbViewDef))
-                    return 0;
-
-                EList<?> fields = ((DbViewDef)object).getFields();
-                return fields != null ? fields.size() : 0;
-            }
-            catch (RuntimeException e)
-            {
-                return 0;
-            }
         }
     }
 
@@ -745,7 +759,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
         @Override
         public EObject getEObjectOrProxy()
         {
-            if (isQueryWizardProjectMembershipCheck() || isQuerySchemaBuilderStack())
+            if (isQueryWizardProjectMembershipCheck())
                 return friendlyObject;
             return delegate.getEObjectOrProxy();
         }
@@ -962,17 +976,6 @@ final class ContextLinksV8GlobalScopeProviderProxy
     {
         return isQueryWizardProjectMembershipCheck() || isQueryWizardMetadataProjectionStack()
             || isExtensionAdoptionDecisionStack();
-    }
-
-    private static boolean isQuerySchemaBuilderStack()
-    {
-        for (StackTraceElement element : Thread.currentThread().getStackTrace())
-        {
-            if ("buildQuerySchema".equals(element.getMethodName()) //$NON-NLS-1$
-                && element.getClassName().endsWith("QuerySchemaBuilder")) //$NON-NLS-1$
-                return true;
-        }
-        return false;
     }
 
     private static boolean isQueryWizardMetadataProjectionStack()
