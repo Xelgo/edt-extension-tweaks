@@ -2,6 +2,13 @@
 <?eclipse version="3.4"?>
 <plugin>
    <extension
+         point="com._1c.g5.wiring.serviceProvider">
+      <bundle
+            symbolicName="ru.xelgo.edt.contextlinks.ui">
+      </bundle>
+   </extension>
+
+   <extension
          point="org.eclipse.ui.commands">
       <category
             id="ru.xelgo.edt.contextlinks.ui.category"

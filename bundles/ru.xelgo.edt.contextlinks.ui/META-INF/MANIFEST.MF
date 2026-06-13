@@ -4,6 +4,7 @@ Bundle-Name: %pluginName
 Bundle-Vendor: %providerName
 Bundle-Version: 1.0.0.qualifier
 Bundle-SymbolicName: ru.xelgo.edt.contextlinks.ui;singleton:=true
+Bundle-Activator: ru.xelgo.edt.contextlinks.core.ContextLinksPlugin
 Bundle-ActivationPolicy: lazy
 Bundle-Localization: plugin
 Require-Bundle: org.eclipse.ui;bundle-version="[3.201.0,4.0.0)",

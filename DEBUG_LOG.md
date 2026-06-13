@@ -1148,3 +1148,56 @@ Expected next log check:
   `EDT Context Links QL BM global scope wrapper registered`
   and
   `EDT Context Links QL BM scope project=... linked=[...] skipped=[...]`.
+
+Follow-up after installing `e3d53ca`:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main\.metadata\.log
+Length: 101601
+LastWriteTime: 2026-06-13 19:08:33 +04:00
+```
+
+Observed plugin entries:
+
+```text
+EDT Context Links QL BM global scope wrapper skipped: delegate unavailable
+EDT Context Links QL BM global scope wrapper registered
+```
+
+Missing expected entry:
+
+```text
+EDT Context Links QL BM scope project=... linked=[...] skipped=[...]
+```
+
+Conclusion:
+
+- The proxy eventually registered, and the previous singleton QL runtime assertion did not reappear.
+- But there is no evidence that Query Constructor calls flowed through the proxy.
+- Most likely the QL/BM injector captured the original `IV8GlobalScopeProvider` before this plugin registered its wrapper.
+
+Next adjustment:
+
+- Add a real bundle activator and register the proxy from bundle start.
+- Contribute the bundle to `com._1c.g5.wiring.serviceProvider`, so EDT wiring has a reason to start it earlier.
+- Create the proxy without requiring the original delegate to already exist; resolve the delegate lazily on each call.
+- Add a one-per-resource-class diagnostic:
+  `EDT Context Links QL BM provider call resource=... project=... ql=...`.
+
+Implementation:
+
+- Add `Bundle-Activator: ru.xelgo.edt.contextlinks.core.ContextLinksPlugin`.
+- Add `ContextLinksPlugin extends Plugin`, registering the QL BM proxy from `start(...)`.
+- Add a `com._1c.g5.wiring.serviceProvider` contribution for `ru.xelgo.edt.contextlinks.ui`.
+- Change proxy creation so it loads the `IV8GlobalScopeProvider` interface by name and registers immediately, even if the original
+  EDT provider is not yet available.
+- Keep delegate resolution lazy per invocation.
+
+Build:
+
+- First sandboxed build failed before compilation because Maven/Tycho dependency resolution attempted network access and hit
+  `Access is denied`.
+- Re-run outside sandbox completed successfully at `2026-06-13 19:10:45 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `121625` bytes.

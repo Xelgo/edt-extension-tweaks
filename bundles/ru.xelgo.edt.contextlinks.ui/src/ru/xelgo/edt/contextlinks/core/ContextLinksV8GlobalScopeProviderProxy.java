@@ -35,6 +35,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
 
     private static final Set<String> loggedCompositions = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedDelegateFailures = ConcurrentHashMap.newKeySet();
+    private static final Set<String> loggedResourceCalls = ConcurrentHashMap.newKeySet();
 
     private final org.osgi.framework.BundleContext context;
     private final Method projectScopeMethod;
@@ -48,17 +49,10 @@ final class ContextLinksV8GlobalScopeProviderProxy
 
     static Object create(org.osgi.framework.BundleContext context)
     {
-        DelegateService firstDelegate = findDelegate(context);
-        if (firstDelegate == null)
-        {
-            ContextLinks.logWarning("EDT Context Links QL BM global scope wrapper skipped: delegate unavailable"); //$NON-NLS-1$
-            return null;
-        }
-
         try
         {
             Class<?> serviceClass = Class.forName(SERVICE_CLASS_NAME, false,
-                firstDelegate.service.getClass().getClassLoader());
+                ContextLinksV8GlobalScopeProviderProxy.class.getClassLoader());
             ContextLinksV8GlobalScopeProviderProxy handler =
                 new ContextLinksV8GlobalScopeProviderProxy(context, serviceClass);
             return Proxy.newProxyInstance(serviceClass.getClassLoader(), new Class<?>[] { serviceClass }, handler);
@@ -67,10 +61,6 @@ final class ContextLinksV8GlobalScopeProviderProxy
         {
             ContextLinks.logError("EDT Context Links failed to create QL BM global scope wrapper", e); //$NON-NLS-1$
             return null;
-        }
-        finally
-        {
-            firstDelegate.close(context);
         }
     }
 
@@ -93,6 +83,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
 
             Resource resource = (Resource)args[0];
             IProject project = workspaceProject(resource);
+            logResourceCall(resource, project);
             if (!shouldExtendQlScope(resource, project))
                 return value;
 
@@ -170,6 +161,18 @@ final class ContextLinksV8GlobalScopeProviderProxy
     private boolean isQlResource(Resource resource)
     {
         return resource != null && resource.getClass().getName().startsWith("com._1c.g5.v8.dt.ql."); //$NON-NLS-1$
+    }
+
+    private void logResourceCall(Resource resource, IProject project)
+    {
+        String projectName = project != null ? project.getName() : "NULL"; //$NON-NLS-1$
+        String key = resource.getClass().getName() + "|" + projectName; //$NON-NLS-1$
+        if (loggedResourceCalls.add(key))
+        {
+            ContextLinks.logWarning("EDT Context Links QL BM provider call resource=" //$NON-NLS-1$
+                + resource.getClass().getName() + " project=" + projectName //$NON-NLS-1$
+                + " ql=" + isQlResource(resource)); //$NON-NLS-1$
+        }
     }
 
     private IProject workspaceProject(Resource resource)
