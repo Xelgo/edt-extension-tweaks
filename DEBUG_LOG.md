@@ -828,3 +828,41 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `105931` bytes.
+
+## 2026-06-13 - Root Cause Hypothesis: Linked Scope Uses Live EDT Cache, Not Last Stable Snapshot
+
+User question:
+
+- When `Extension2` metadata changes, for example adding a document requisite, it is expected that `Extension2` context rebuilds.
+- But why does `Extension1` lose the entire linked context instead of continuing to see the previous stable `Extension2` context?
+
+Code observation:
+
+- `ContextLinksProjectScope` stores:
+  - `ownScope`;
+  - linked project names;
+  - scope kind.
+- It does **not** store linked `IScope` objects or a stable snapshot.
+- Every lookup calls `getLinkedScopes()`, which resolves current linked scopes through:
+  - `provider.getDirectTypeItemScope(linkedProject)`;
+  - `provider.getDirectPropertyScope(linkedProject)`.
+
+Analysis:
+
+- During EDT rebuild of `Extension2`, EDT likely clears its direct project scopes first and fills them later.
+- While that rebuild gap exists, `getDirect...Scope(Extension2)` can return `null`.
+- `ContextLinksProjectScope.getLinkedScopes()` silently skips `null` linked scopes.
+- Therefore `Extension1` does not see the previous `Extension2` context; it sees no linked `Extension2` scope at all.
+- Our later attempts with workspace listeners/build/touch are outside the real failure point: they try to repair the consumer after
+  the linked producer temporarily disappeared.
+
+Better direction:
+
+- Stop treating EDT's current direct scope as the only source of truth for linked projects.
+- Maintain a last-known-good linked scope snapshot per project/scope kind.
+- On `addTypeItemScope` / `addPropertyScope`, update that stable snapshot.
+- On `clearTypeItemsScopes` / `clearPropertyScopes`, do not immediately erase the stable snapshot.
+- When composing context for another extension, use the current direct scope if available; otherwise fall back to the last-known-good
+  snapshot until the producer publishes a fresh scope.
+- This should turn "full context loss" into "temporarily stale but still usable linked context", which matches the expected behavior
+  during an in-progress background rebuild.
