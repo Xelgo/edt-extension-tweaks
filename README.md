@@ -26,6 +26,10 @@ The installable update site archive is created at:
 repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip
 ```
 
+## Debugging Trail
+
+See [DEBUG_LOG.md](DEBUG_LOG.md) for curated EDT log findings, failed hypotheses, diagnostic commits, and conclusions from runtime debugging.
+
 ## Projects
 
 - `bundles/ru.xelgo.edt.contextlinks.ui` - UI command and experimental external meta types provider.
