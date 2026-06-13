@@ -2,6 +2,7 @@ package ru.xelgo.edt.contextlinks.core;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -11,6 +12,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceChangeEvent;
 import org.eclipse.core.resources.IResourceChangeListener;
 import org.eclipse.core.resources.IResourceDelta;
+import org.eclipse.core.resources.IResourceVisitor;
 import org.eclipse.core.resources.IncrementalProjectBuilder;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.resources.WorkspaceJob;
@@ -26,9 +28,11 @@ import org.eclipse.core.runtime.Status;
 public final class ContextLinksDependencyRefresh
 {
     private static final long REFRESH_DELAY_MS = 2_500L;
+    private static final long SYNTHETIC_DELTA_SUPPRESS_MS = 15_000L;
     private static final AtomicBoolean installed = new AtomicBoolean();
     private static final AtomicBoolean scheduled = new AtomicBoolean();
     private static final Set<String> pendingProjectNames = ConcurrentHashMap.newKeySet();
+    private static final Map<String, Long> syntheticDeltaProjects = new ConcurrentHashMap<>();
 
     private static final IResourceChangeListener listener = ContextLinksDependencyRefresh::resourceChanged;
 
@@ -82,6 +86,10 @@ public final class ContextLinksDependencyRefresh
         if (resource == null || resource.getType() == IResource.ROOT)
             return false;
 
+        IProject project = resource.getProject();
+        if (project != null && isSyntheticDelta(project.getName()))
+            return false;
+
         IPath path = resource.getFullPath();
         if (path == null || path.segmentCount() < 2)
             return false;
@@ -111,19 +119,29 @@ public final class ContextLinksDependencyRefresh
             {
                 scheduled.set(false);
                 Set<String> changedNames = drainPendingProjectNames();
-                Set<IProject> projectsToBuild = collectProjectsToBuild(changedNames);
-                if (projectsToBuild.isEmpty())
+                RefreshPlan plan = collectRefreshPlan(changedNames);
+                if (plan.isEmpty())
                     return Status.OK_STATUS;
 
                 ContextLinks.logWarning("EDT Context Links dependency refresh changed=" + changedNames //$NON-NLS-1$
-                    + " projects=" + describeProjects(projectsToBuild)); //$NON-NLS-1$
+                    + " changedProjects=" + describeProjects(plan.changedProjects) //$NON-NLS-1$
+                    + " dependentProjects=" + describeProjects(plan.dependentProjects)); //$NON-NLS-1$
 
-                monitor.beginTask(getName(), projectsToBuild.size());
-                for (IProject project : projectsToBuild)
+                monitor.beginTask(getName(), plan.size());
+                for (IProject project : plan.changedProjects)
                 {
                     if (monitor.isCanceled())
                         return Status.CANCEL_STATUS;
 
+                    build(project, monitor);
+                    monitor.worked(1);
+                }
+                for (IProject project : plan.dependentProjects)
+                {
+                    if (monitor.isCanceled())
+                        return Status.CANCEL_STATUS;
+
+                    touchProjectSource(project, monitor);
                     build(project, monitor);
                     monitor.worked(1);
                 }
@@ -147,9 +165,10 @@ public final class ContextLinksDependencyRefresh
         return result;
     }
 
-    private static Set<IProject> collectProjectsToBuild(Set<String> changedProjectNames)
+    private static RefreshPlan collectRefreshPlan(Set<String> changedProjectNames)
     {
-        Set<IProject> result = new LinkedHashSet<>();
+        Set<IProject> changedProjects = new LinkedHashSet<>();
+        Set<IProject> dependentProjects = new LinkedHashSet<>();
         Set<String> changedExtensionNames = new LinkedHashSet<>();
         for (String changedProjectName : changedProjectNames)
         {
@@ -157,19 +176,19 @@ public final class ContextLinksDependencyRefresh
             if (ContextLinks.isExtensionProject(changedProject))
             {
                 changedExtensionNames.add(changedProjectName);
-                result.add(changedProject);
+                changedProjects.add(changedProject);
             }
         }
 
         if (changedExtensionNames.isEmpty())
-            return result;
+            return new RefreshPlan(changedProjects, dependentProjects);
 
         Arrays.stream(ResourcesPlugin.getWorkspace().getRoot().getProjects())
             .filter(ContextLinks::isExtensionProject)
             .filter(project -> !changedExtensionNames.contains(project.getName()))
             .filter(project -> dependsOnAny(project, changedExtensionNames))
-            .forEach(result::add);
-        return result;
+            .forEach(dependentProjects::add);
+        return new RefreshPlan(changedProjects, dependentProjects);
     }
 
     private static boolean dependsOnAny(IProject project, Set<String> changedProjectNames)
@@ -190,11 +209,91 @@ public final class ContextLinksDependencyRefresh
         }
     }
 
+    private static void touchProjectSource(IProject project, IProgressMonitor monitor)
+    {
+        IResource touchedResource = findTouchResource(project);
+        if (touchedResource == null)
+            return;
+
+        try
+        {
+            syntheticDeltaProjects.put(project.getName(), Long.valueOf(System.currentTimeMillis()));
+            touchedResource.touch(monitor);
+            ContextLinks.logWarning("EDT Context Links dependency refresh touched project=" + project.getName() //$NON-NLS-1$
+                + " resource=" + touchedResource.getProjectRelativePath()); //$NON-NLS-1$
+        }
+        catch (CoreException e)
+        {
+            ContextLinks.logError("EDT Context Links dependency refresh cannot touch " + project.getName(), e); //$NON-NLS-1$
+        }
+    }
+
+    private static IResource findTouchResource(IProject project)
+    {
+        IResource src = project.findMember("src"); //$NON-NLS-1$
+        if (src == null || !src.exists())
+            return null;
+
+        IResource[] result = new IResource[1];
+        try
+        {
+            src.accept((IResourceVisitor)resource ->
+            {
+                if (result[0] != null)
+                    return false;
+
+                if (resource.getType() == IResource.FILE)
+                {
+                    String extension = resource.getFileExtension();
+                    if ("bsl".equalsIgnoreCase(extension) || "mdo".equalsIgnoreCase(extension)) //$NON-NLS-1$ //$NON-NLS-2$
+                    {
+                        result[0] = resource;
+                        return false;
+                    }
+                }
+                return true;
+            });
+        }
+        catch (CoreException e)
+        {
+            ContextLinks.logError("EDT Context Links dependency refresh cannot find touch resource for " //$NON-NLS-1$
+                + project.getName(), e);
+        }
+        return result[0] != null ? result[0] : src;
+    }
+
+    private static boolean isSyntheticDelta(String projectName)
+    {
+        Long timestamp = syntheticDeltaProjects.get(projectName);
+        if (timestamp == null)
+            return false;
+
+        long age = System.currentTimeMillis() - timestamp.longValue();
+        if (age <= SYNTHETIC_DELTA_SUPPRESS_MS)
+            return true;
+
+        syntheticDeltaProjects.remove(projectName);
+        return false;
+    }
+
     private static String describeProjects(Set<IProject> projects)
     {
         return projects.stream()
             .map(IProject::getName)
             .toList()
             .toString();
+    }
+
+    private record RefreshPlan(Set<IProject> changedProjects, Set<IProject> dependentProjects)
+    {
+        boolean isEmpty()
+        {
+            return changedProjects.isEmpty() && dependentProjects.isEmpty();
+        }
+
+        int size()
+        {
+            return changedProjects.size() + dependentProjects.size();
+        }
     }
 }

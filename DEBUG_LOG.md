@@ -761,3 +761,41 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `103640` bytes.
+
+## 2026-06-13 - Touch Dependent Extension Resources Before Refresh Build
+
+Latest user check:
+
+- After commit `99e3a4d`, nothing changed.
+- Fresh log proves the listener did run:
+  `EDT Context Links dependency refresh listener installed source=bsl-runtime-module`.
+- On extension changes, the listener queued both sides:
+  `changed=[...Расширение2] ... dependentProjects/previous projects include [...Расширение]`.
+
+Analysis:
+
+- The failed attempt is useful: the problem is not that we missed the filesystem/resource event.
+- `project.build(INCREMENTAL_BUILD)` for `Extension1` is not equivalent to the user's manual whitespace edit in an
+  `Extension1` module.
+- EDT likely needs an actual resource delta inside the dependent extension's `src` tree to invalidate/revalidate the BSL model.
+
+Implementation attempt:
+
+- Split dependency refresh into changed extension projects and dependent extension projects.
+- Build the changed extension project first.
+- Before building each dependent extension project, `touch(...)` one existing `.bsl`/`.mdo` resource under its `src` folder.
+- Suppress our own synthetic touch deltas for `15s` so bidirectional links do not create an endless Ext1/Ext2 refresh loop.
+- Log the touched resource so the next `.metadata/.log` proves whether EDT saw the synthetic equivalent of a manual edit.
+
+Build:
+
+- First `mvn package -DskipTests` attempt failed at `2026-06-13 17:22:41 +04:00`.
+- Java compilation succeeded, but repository packaging failed because Maven could not delete the existing locked update-site zip:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`.
+- Second retry attempt at `2026-06-13 17:23:14 +04:00` used an unquoted PowerShell `-Dmaven.clean.skip=true`
+  argument and failed before build execution because PowerShell/Maven interpreted it as an invalid lifecycle phase.
+- After the update-site zip was released, `mvn package -DskipTests` completed successfully at
+  `2026-06-13 17:23:48 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `103436` bytes.
