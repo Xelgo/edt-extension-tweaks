@@ -594,3 +594,47 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `92122` bytes.
+
+## 2026-06-13 - Invalidate Linked Module Scopes On Module Scope Changes
+
+Latest user check:
+
+- The problem remains after commit `2da81f3`.
+- Fresh log confirms the previous transient fallback suspicion is no longer the main path:
+  `[module.context.provider]` for `Ext2_ОбщийМодуль4` shows `allMethods=1`, `methods=[Тест]`, and a BM resource-backed
+  context definition.
+- No `[module.context.fallback]` is needed for that fresh module.
+
+Important log facts:
+
+- Early after startup, `Configuration.Rest2` builds linked scopes while `Configuration.Rest1` is still unavailable:
+  `linked=Configuration.Rest1 scope=NULL`.
+- Later, `Configuration.Rest1` becomes available and gets property/type scopes.
+- Even later, `Configuration.Rest1` module scopes are rebuilt, but project-scope versioning did not change on
+  `addScope(...)` / `clearScopes(Module)`.
+
+Analysis:
+
+- Project property/type scope versioning is not enough for common-module method visibility.
+- Common module exported methods can depend on BSL module context/method scopes.
+- A module in one extension can keep a cached scope built before the linked extension rebuilt its module scopes.
+
+Implementation attempt:
+
+- Bump the project scope version when EDT adds a BSL module scope via `addScope(...)`.
+- Bump the project scope version when EDT clears module scopes via `clearScopes(Module)`.
+- Treat a non-null EDT module scope with no mirrored version as untracked/stale, log `[cache.module.untracked]`, and
+  force rebuild instead of trusting a potentially stale super-cache entry.
+
+Expected next log check:
+
+- After linked project module scope rebuilds, dependent module scopes should log `[cache.module.stale]` or
+  `[cache.module.untracked]` and be rebuilt.
+- `Ext2` should stop holding method/type scopes from before `Ext1` finished its common-module scope rebuild.
+
+Build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 10:40:04 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `92364` bytes.

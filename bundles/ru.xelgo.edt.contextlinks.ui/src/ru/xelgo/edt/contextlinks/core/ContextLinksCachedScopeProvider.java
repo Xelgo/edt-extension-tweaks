@@ -82,6 +82,7 @@ public class ContextLinksCachedScopeProvider
     @Override
     public void addScope(Block block, Environments environments, BslCachedScopeType scopeType, IScope scope)
     {
+        bumpProjectScopeVersion(projectFromBlock(block), "add-module-scope-" + scopeType); //$NON-NLS-1$
         rememberModuleScope(block, environments, scopeType, scope);
         super.addScope(block, environments, scopeType, scope);
     }
@@ -110,6 +111,7 @@ public class ContextLinksCachedScopeProvider
 
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.clear] module=" + blockUniqueName(module) //$NON-NLS-1$
             + " removed=" + removedCount); //$NON-NLS-1$
+        bumpProjectScopeVersion(projectFromBlock(module), "clear-module-scopes"); //$NON-NLS-1$
         super.clearScopes(module);
     }
 
@@ -280,7 +282,12 @@ public class ContextLinksCachedScopeProvider
 
         String cachedVersion = moduleScopeVersions.get(key);
         if (cachedVersion == null)
-            return true;
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.untracked] block=" + blockUniqueName(block) //$NON-NLS-1$
+                + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
+                + " current=" + moduleScopeVersion(block)); //$NON-NLS-1$
+            return false;
+        }
 
         String currentVersion = moduleScopeVersion(block);
         boolean current = cachedVersion.equals(currentVersion);
