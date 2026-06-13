@@ -722,3 +722,42 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `95471` bytes.
+
+## 2026-06-13 - Refresh Dependent Extensions On Linked Project Resource Changes
+
+User observation:
+
+- Adding an attribute to `Extension2` (`Document Расш2_Документ.Реквизит3`) starts an EDT background model rebuild.
+- During that rebuild `Extension1` loses the linked context completely.
+- A trivial manual edit inside an `Extension1` module restores the context.
+
+Analysis:
+
+- This looks like a missing reverse invalidation, not like a missing context setting.
+- The current code mostly works when the active project asks for its configured links.
+- When a linked project changes (`Extension2`), the dependent project (`Extension1`) is not forced to rebuild/revalidate early enough.
+- The user's manual whitespace edit is effectively an incremental build/revalidation of the dependent project after the linked project changed.
+
+Implementation attempt:
+
+- Add `ContextLinksDependencyRefresh`, a workspace resource-change listener.
+- Register it from both `ContextLinksStartup` and `ContextLinksBslRuntimeModule`; this gives us a fallback if the UI startup extension is late.
+- Watch only content/resource changes under extension project `src` and `DT-INF` folders.
+- Coalesce changed projects for `2500 ms`.
+- For each changed extension project, run an incremental build for:
+  - the changed extension project itself;
+  - every accessible extension project whose individual context settings include that changed project.
+
+Expected next log check:
+
+- On changing `Extension2`, log should show:
+  `EDT Context Links dependency refresh changed=[...] projects=[..., ...]`.
+- The project list should include `Extension1` when `Extension1` has `Extension2` in its configured context links.
+- `Extension1` should no longer require a manual whitespace edit to restore linked context after `Extension2` metadata changes.
+
+Build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 17:18:16 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `103640` bytes.

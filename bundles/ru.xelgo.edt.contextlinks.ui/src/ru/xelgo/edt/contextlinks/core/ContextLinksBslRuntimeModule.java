@@ -15,6 +15,7 @@ public class ContextLinksBslRuntimeModule
 {
     public ContextLinksBslRuntimeModule()
     {
+        ContextLinksDependencyRefresh.install("bsl-runtime-module"); //$NON-NLS-1$
         ContextLinks.logDebug("EDT Context Links BSL runtime module constructed"); //$NON-NLS-1$
     }
 
