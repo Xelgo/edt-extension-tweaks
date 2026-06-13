@@ -6,6 +6,11 @@ param(
     [string]$LauncherVm = "C:\Program Files\1C\1CE\components\1c-edt-start-0.9.0+277-x86_64\jre\bin\javaw.exe",
     [string]$Maven = "C:\Users\Xelgo\Documents\New project\.tools\apache-maven-3.9.9\bin\mvn.cmd",
     [string]$InstallIU = "ru.xelgo.edt.contextlinks.feature.feature.group",
+    [string[]]$DependencyRepositories = @(
+        "https://edt.1c.ru/downloads/releases/ruby/2025.2/",
+        "https://download.eclipse.org/releases/2023-12/",
+        "http://download.eclipse.org/cbi/updates/license/2.0.2.v20181016-2210"
+    ),
     [switch]$SkipBuild,
     [switch]$NoRestart,
     [switch]$ForceKill,
@@ -114,13 +119,25 @@ function Clear-WorkspaceLog {
 Set-Location -LiteralPath $ProjectRoot
 
 $edtExe = Join-Path $EdtHome "1cedt.exe"
+$edtConsoleExe = Join-Path $EdtHome "1cedtc.exe"
 $repoZip = Join-Path $ProjectRoot "repositories\ru.xelgo.edt.contextlinks.repository\target\ru.xelgo.edt.contextlinks.repository.zip"
 $profile = "C__Users_Xelgo_AppData_Local_1C_1cedtstart_installations_1C_EDT 2025.2_1cedt"
 $bundlePool = Join-Path $env:USERPROFILE ".p2\pool"
+$javaBin = Split-Path -Parent $LauncherVm
 
 if (-not (Test-Path -LiteralPath $edtExe)) {
     throw "EDT executable not found: $edtExe"
 }
+
+if (-not (Test-Path -LiteralPath $edtConsoleExe)) {
+    throw "EDT console executable not found: $edtConsoleExe"
+}
+
+if (-not (Test-Path -LiteralPath (Join-Path $javaBin "java.exe"))) {
+    throw "java.exe not found near launcher VM: $javaBin"
+}
+
+$env:Path = $javaBin + ";" + $env:Path
 
 if (-not $SkipBuild) {
     $env:JAVA_HOME = $JavaHome
@@ -134,10 +151,11 @@ if (-not (Test-Path -LiteralPath $repoZip)) {
 Stop-EdtWorkspace
 
 $repoUri = "jar:file:/$(Convert-ToFileUriPath $repoZip)!/"
+$repositories = (@($repoUri) + $DependencyRepositories) -join ","
 $directorArgs = @(
     "-nosplash",
     "-application", "org.eclipse.equinox.p2.director",
-    "-repository", $repoUri,
+    "-repository", $repositories,
     "-installIU", $InstallIU,
     "-profile", $profile,
     "-destination", $EdtHome,
@@ -149,7 +167,14 @@ $directorArgs = @(
     "-consoleLog"
 )
 
-Invoke-Step $edtExe $directorArgs $EdtHome
+$installError = $null
+try {
+    Invoke-Step $edtConsoleExe $directorArgs $EdtHome
+}
+catch {
+    $installError = $_
+}
+
 Clear-WorkspaceLog
 
 if (-not $NoRestart) {
@@ -165,7 +190,10 @@ if (-not $NoRestart) {
 
     Write-Step "Starting EDT for workspace $Workspace"
     if (-not $DryRun) {
-        $argumentLine = ($startArgs | ForEach-Object { Format-Argument $_ }) -join " "
-        Start-Process -FilePath $edtExe -ArgumentList $argumentLine -WorkingDirectory $EdtHome | Out-Null
+        Start-Process -FilePath $edtExe -ArgumentList $startArgs -WorkingDirectory $EdtHome | Out-Null
     }
+}
+
+if ($installError) {
+    throw $installError
 }

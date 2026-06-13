@@ -1452,3 +1452,26 @@ Dry-run correctly detected only the workspace EDT processes and prepared this p2
   -destination ...\1C_EDT 2025.2\1cedt
   -bundlepool C:\Users\Xelgo\.p2\pool
 ```
+
+Follow-up after first real redeploy attempt:
+
+- GUI `1cedt.exe` was not suitable for headless p2 director: it returned without updating `.p2\pool`.
+- Console `1cedtc.exe` needs `java.exe` in `PATH`; otherwise it shows a Java Runtime Environment / JDK missing dialog.
+- Added `C:\Program Files\1C\1CE\components\1c-edt-start-0.9.0+277-x86_64\jre\bin` to the user `PATH`.
+- Verified:
+
+```text
+java -version
+openjdk version "17.0.16" 2025-07-15 LTS
+```
+
+Script adjustments:
+
+- Use `1cedtc.exe` for p2 director.
+- Prepend the EDT Start JRE `bin` path to the script process `PATH` before running director.
+- Add target-platform repositories as dependency sources:
+  - `https://edt.1c.ru/downloads/releases/ruby/2025.2/`
+  - `https://download.eclipse.org/releases/2023-12/`
+  - `http://download.eclipse.org/cbi/updates/license/2.0.2.v20181016-2210`
+- Restart EDT even if the p2 director step fails, then rethrow the install error so the failure is still visible.
+- Use array arguments for the GUI restart so the `-vm` path with spaces is passed correctly.
