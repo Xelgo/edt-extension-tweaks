@@ -55,10 +55,11 @@ public class ContextLinksModuleContextDefService
 
             ContextDef contextDef = provider.getContextDef(module);
             logCommonModuleContext("provider", module, provider, contextDef, "matched"); //$NON-NLS-1$ //$NON-NLS-2$
-            ContextDef fallbackContextDef = createFallbackContextDef(module, contextDef);
+            ContextDef fallbackContextDef = ensureFallbackContextDef(module, contextDef);
             if (fallbackContextDef != null)
             {
-                logCommonModuleContext("fallback", module, provider, fallbackContextDef, "export-methods-from-bsl"); //$NON-NLS-1$ //$NON-NLS-2$
+                logCommonModuleContext("fallback", module, provider, fallbackContextDef, //$NON-NLS-1$
+                    "resource-backed-export-methods-from-bsl"); //$NON-NLS-1$
                 return fallbackContextDef;
             }
             return contextDef;
@@ -83,10 +84,10 @@ public class ContextLinksModuleContextDefService
         return List.of();
     }
 
-    private static ContextDef createFallbackContextDef(Module module, ContextDef contextDef)
+    private static ContextDef ensureFallbackContextDef(Module module, ContextDef contextDef)
     {
         EObject owner = module != null ? module.getOwner() : null;
-        if (!(owner instanceof CommonModule))
+        if (!(owner instanceof CommonModule commonModule))
             return null;
 
         if (contextDef != null && !contextDef.allMethods().isEmpty())
@@ -99,8 +100,21 @@ public class ContextLinksModuleContextDefService
         if (exportMethods.isEmpty())
             return null;
 
-        ContextDef fallbackContextDef = McoreFactory.eINSTANCE.createContextDef();
-        fallbackContextDef.setEnvironments(Environments.ALL);
+        ContextDef fallbackContextDef = contextDef;
+        if (fallbackContextDef == null)
+        {
+            fallbackContextDef = McoreFactory.eINSTANCE.createContextDef();
+            fallbackContextDef.setEnvironments(Environments.ALL);
+            commonModule.setContextDef(fallbackContextDef);
+        }
+        else if (fallbackContextDef.eResource() == null && commonModule.eResource() != null)
+        {
+            commonModule.setContextDef(fallbackContextDef);
+        }
+
+        if (fallbackContextDef.eResource() == null)
+            return null;
+
         exportMethods.stream()
             .map(ContextLinksModuleContextDefService::createFallbackMethod)
             .forEach(fallbackContextDef.getMethods()::add);
@@ -182,7 +196,8 @@ public class ContextLinksModuleContextDefService
             + ",methods=" + safeSize(contextDef.getMethods()) //$NON-NLS-1$
             + ",allProperties=" + safeSize(contextDef.allProperties()) //$NON-NLS-1$
             + ",allMethods=" + safeSize(contextDef.allMethods()) //$NON-NLS-1$
-            + ",refs=" + safeSize(contextDef.getRefContextDefs()) + "}"; //$NON-NLS-1$ //$NON-NLS-2$
+            + ",refs=" + safeSize(contextDef.getRefContextDefs()) //$NON-NLS-1$
+            + ",resource=" + (contextDef.eResource() != null ? contextDef.eResource().getURI() : "NULL") + "}"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 
     private static String sampleMethods(ContextDef contextDef)

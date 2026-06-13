@@ -555,3 +555,42 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `92142` bytes.
+
+## 2026-06-13 - Resource-Backed Fallback ContextDef Attempt
+
+Latest user check:
+
+- The problem remains after commit `26a8797`.
+- The current `.metadata/.log` has no `[module.context.fallback]` lines in the visible active log segment, but it does
+  show an EDT hover crash:
+  `NullPointerException: Cannot invoke "org.eclipse.emf.ecore.resource.Resource.getURI()" because ... eResource() is null`.
+- The stack is inside EDT documentation/hover code:
+  `BslDocumentationProvider.getDocByNotFormalParamVariable(...)`.
+
+Analysis:
+
+- Returning a standalone `McoreFactory.createContextDef()` is unsafe because its methods and parameters are transient
+  EMF objects without `eResource`.
+- Completion may accept those objects, but EDT hover/documentation expects semantic objects to belong to a resource.
+
+Implementation attempt:
+
+- Do not return a standalone transient fallback context definition.
+- If EDT returns an empty `ContextDef`, add fallback methods into that existing context definition.
+- If EDT returns `null`, create a fallback `ContextDef` and attach it through `CommonModule.setContextDef(...)`.
+- If the resulting `ContextDef` still has no `eResource`, skip fallback entirely.
+- Extend context logging with `ContextDef.eResource()` so the next log proves whether fallback objects are resource-backed.
+
+Expected next log check:
+
+- `[module.context.fallback] ... context=...resource=platform:/resource/...` should appear.
+- The previous hover NPE about `EObject.eResource().getURI()` should disappear.
+
+Build:
+
+- First build attempt failed at `2026-06-13 10:33:49 +04:00` because EDT/another process locked the previous update
+  site zip and Maven could not delete it during `clean`.
+- After closing EDT, `mvn package -DskipTests` completed successfully at `2026-06-13 10:35:04 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `92122` bytes.
