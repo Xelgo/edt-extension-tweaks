@@ -193,3 +193,74 @@ Next useful log checks after installing `5268488`:
 - Confirm `[bsl.scope] project=Configuration.Rest2 context=FeatureEntry reference=feature` includes `Ext1_CommonModule`.
 - Confirm `[bsl.scope] project=Configuration.Rest1 context=FeatureEntry reference=feature` includes `Ext2_CommonModule`.
 - Check whether repeated `cache.module.clear` after creating a new common module is followed by new `cache.module.add` and updated samples.
+
+## 2026-06-13 - Live Scope Broke Sliced Scope Contract
+
+Workspace log inspected:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\file\.metadata\.log
+Length: 926193
+LastWriteTime: 2026-06-13 09:59:29 +04:00
+```
+
+User-visible change after installing `5268488`:
+
+- The previous missing-method diagnostics appear to be gone, so common-module context model construction improved.
+- Content assist is now broken and new diagnostics appear.
+
+Key EDT error:
+
+```text
+org.eclipse.xtext.ui.editor.model.XtextDocument - Error in IXtextModelListener
+java.lang.ClassCastException:
+ru.xelgo.edt.contextlinks.core.ContextLinksCachedScopeProvider$ContextLinksProjectScope
+cannot be cast to com._1c.g5.modeling.xtext.scoping.ISlicedScope
+```
+
+Content-assist path:
+
+```text
+org.eclipse.xtext.ui.editor.contentassist.AbstractJavaBasedContentProposalProvider
+Error in polymorphic dispatcher:
+ContextLinksProjectScope cannot be cast to ISlicedScope
+```
+
+Important stack frame:
+
+```text
+com._1c.g5.v8.dt.bsl.bm.scoping.BmAwareBslGlobalScopeProvider.getDefaultGlobalScope(BmAwareBslGlobalScopeProvider.java:116)
+```
+
+Conclusion:
+
+The live scope idea is still useful for avoiding the initialization race, but the wrapper returned by
+`getPropertyScope()` and `getTypeItemScope()` must preserve EDT's `ISlicedScope` contract. The previous
+implementation only implemented Xtext `IScope`, so EDT failed when BSL derived-state and content-assist code
+cast the returned global scope to `ISlicedScope`.
+
+Implemented fix in the next attempt:
+
+- Make `ContextLinksProjectScope` implement `ISlicedScope`.
+- Forward sliced calls to linked scopes when those scopes also implement `ISlicedScope`.
+- Fall back to plain `IScope` methods for non-sliced scopes.
+
+Build result:
+
+```text
+BUILD SUCCESS
+Finished at: 2026-06-13T10:02:24+04:00
+```
+
+Update site:
+
+```text
+repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip
+Length: 89290
+LastWriteTime: 2026-06-13 10:02:24 +04:00
+```
+
+Expected next log check:
+
+- `ClassCastException ... ContextLinksProjectScope cannot be cast to ... ISlicedScope` should disappear.
+- Then re-check whether `Configuration.Rest2` content assist includes `Ext1_CommonModule`.

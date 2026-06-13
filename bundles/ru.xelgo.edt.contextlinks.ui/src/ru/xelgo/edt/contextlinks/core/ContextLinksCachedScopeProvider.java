@@ -1,6 +1,7 @@
 package ru.xelgo.edt.contextlinks.core;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -20,6 +21,8 @@ import com._1c.g5.v8.dt.core.platform.IConfigurationProject;
 import com._1c.g5.v8.dt.core.platform.IV8Project;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.mcore.util.Environments;
+import com._1c.g5.modeling.xtext.scoping.ISliceFilter;
+import com._1c.g5.modeling.xtext.scoping.ISlicedScope;
 import com._1c.g5.wiring.ServiceAccess;
 
 /**
@@ -315,7 +318,7 @@ public class ContextLinksCachedScopeProvider
     }
 
     private static final class ContextLinksProjectScope
-        implements IScope
+        implements IScope, ISlicedScope
     {
         private final ContextLinksCachedScopeProvider provider;
         private final IProject project;
@@ -336,13 +339,29 @@ public class ContextLinksCachedScopeProvider
         @Override
         public IEObjectDescription getSingleElement(QualifiedName name)
         {
-            IEObjectDescription ownElement = ownScope.getSingleElement(name);
+            IEObjectDescription ownElement = getSingleElement(ownScope, name, null);
             if (ownElement != null)
                 return ownElement;
 
             for (IScope linkedScope : getLinkedScopes())
             {
-                IEObjectDescription linkedElement = linkedScope.getSingleElement(name);
+                IEObjectDescription linkedElement = getSingleElement(linkedScope, name, null);
+                if (linkedElement != null)
+                    return linkedElement;
+            }
+            return null;
+        }
+
+        @Override
+        public IEObjectDescription getSingleElement(QualifiedName name, Collection<ISliceFilter> filters)
+        {
+            IEObjectDescription ownElement = getSingleElement(ownScope, name, filters);
+            if (ownElement != null)
+                return ownElement;
+
+            for (IScope linkedScope : getLinkedScopes())
+            {
+                IEObjectDescription linkedElement = getSingleElement(linkedScope, name, filters);
                 if (linkedElement != null)
                     return linkedElement;
             }
@@ -353,9 +372,19 @@ public class ContextLinksCachedScopeProvider
         public Iterable<IEObjectDescription> getElements(QualifiedName name)
         {
             List<IEObjectDescription> result = new ArrayList<>();
-            ownScope.getElements(name).forEach(result::add);
+            getElements(ownScope, name, null).forEach(result::add);
             for (IScope linkedScope : getLinkedScopes())
-                linkedScope.getElements(name).forEach(result::add);
+                getElements(linkedScope, name, null).forEach(result::add);
+            return result;
+        }
+
+        @Override
+        public Iterable<IEObjectDescription> getElements(QualifiedName name, Collection<ISliceFilter> filters)
+        {
+            List<IEObjectDescription> result = new ArrayList<>();
+            getElements(ownScope, name, filters).forEach(result::add);
+            for (IScope linkedScope : getLinkedScopes())
+                getElements(linkedScope, name, filters).forEach(result::add);
             return result;
         }
 
@@ -379,9 +408,19 @@ public class ContextLinksCachedScopeProvider
         public Iterable<IEObjectDescription> getElements(EObject object)
         {
             List<IEObjectDescription> result = new ArrayList<>();
-            ownScope.getElements(object).forEach(result::add);
+            getElements(ownScope, object, null).forEach(result::add);
             for (IScope linkedScope : getLinkedScopes())
-                linkedScope.getElements(object).forEach(result::add);
+                getElements(linkedScope, object, null).forEach(result::add);
+            return result;
+        }
+
+        @Override
+        public Iterable<IEObjectDescription> getElements(EObject object, Collection<ISliceFilter> filters)
+        {
+            List<IEObjectDescription> result = new ArrayList<>();
+            getElements(ownScope, object, filters).forEach(result::add);
+            for (IScope linkedScope : getLinkedScopes())
+                getElements(linkedScope, object, filters).forEach(result::add);
             return result;
         }
 
@@ -389,9 +428,19 @@ public class ContextLinksCachedScopeProvider
         public Iterable<IEObjectDescription> getAllElements()
         {
             List<IEObjectDescription> result = new ArrayList<>();
-            ownScope.getAllElements().forEach(result::add);
+            getAllElements(ownScope, null).forEach(result::add);
             for (IScope linkedScope : getLinkedScopes())
-                linkedScope.getAllElements().forEach(result::add);
+                getAllElements(linkedScope, null).forEach(result::add);
+            return result;
+        }
+
+        @Override
+        public Iterable<IEObjectDescription> getAllElements(Collection<ISliceFilter> filters)
+        {
+            List<IEObjectDescription> result = new ArrayList<>();
+            getAllElements(ownScope, filters).forEach(result::add);
+            for (IScope linkedScope : getLinkedScopes())
+                getAllElements(linkedScope, filters).forEach(result::add);
             return result;
         }
 
@@ -409,6 +458,36 @@ public class ContextLinksCachedScopeProvider
                     scopes.add(linkedScope);
             }
             return scopes;
+        }
+
+        private IEObjectDescription getSingleElement(IScope scope, QualifiedName name, Collection<ISliceFilter> filters)
+        {
+            if (scope instanceof ISlicedScope && filters != null)
+                return ((ISlicedScope)scope).getSingleElement(name, filters);
+            return scope.getSingleElement(name);
+        }
+
+        private Iterable<IEObjectDescription> getElements(IScope scope, QualifiedName name,
+            Collection<ISliceFilter> filters)
+        {
+            if (scope instanceof ISlicedScope && filters != null)
+                return ((ISlicedScope)scope).getElements(name, filters);
+            return scope.getElements(name);
+        }
+
+        private Iterable<IEObjectDescription> getElements(IScope scope, EObject object,
+            Collection<ISliceFilter> filters)
+        {
+            if (scope instanceof ISlicedScope && filters != null)
+                return ((ISlicedScope)scope).getElements(object, filters);
+            return scope.getElements(object);
+        }
+
+        private Iterable<IEObjectDescription> getAllElements(IScope scope, Collection<ISliceFilter> filters)
+        {
+            if (scope instanceof ISlicedScope && filters != null)
+                return ((ISlicedScope)scope).getAllElements(filters);
+            return scope.getAllElements();
         }
     }
 
