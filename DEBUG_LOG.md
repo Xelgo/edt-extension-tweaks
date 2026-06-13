@@ -1084,3 +1084,67 @@ Recovery build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `115682` bytes.
+
+## 2026-06-13 - QL BM Scope Wrapper Experiment
+
+Further runtime-platform research:
+
+- `BmAwareQlModule` is the existing singleton QL runtime module.
+- It binds `IGlobalScopeProvider` to `com._1c.g5.v8.dt.ql.bm.scoping.QlGlobalScopeProvider`.
+- `QlGlobalScopeProvider` builds this scope order:
+  - platform scope;
+  - parent configuration scope for extension projects;
+  - current QL resource project scope.
+- It never adds sibling extension projects configured by this plugin.
+
+Lower-level provider chain:
+
+- `QlGlobalScopeProvider` injects `IV8GlobalScopeProvider`.
+- The registered EDT service is `com.e1c.g5.dt.core.legacy.internal.scoping.V8GlobalScopeProvider`.
+- That service delegates to `IDtProjectGlobalScopeProvider`.
+- `IDtProjectGlobalScopeProvider` has `getScope(IDtProject, ...)` / `getScope(Resource, ...)`, while
+  `IV8GlobalScopeProvider` also exposes `getScope(IProject, ...)`.
+
+Implementation experiment:
+
+- Do not add another `qlRuntimeModuleExtension`.
+- Register a narrow `IV8GlobalScopeProvider` wrapper with higher OSGi service ranking.
+- The wrapper delegates all calls to the original EDT provider.
+- Only for resources whose runtime class starts with `com._1c.g5.v8.dt.ql.` and whose project is an extension with configured
+  context links, the wrapper composes:
+  - EDT's own QL BM scope;
+  - `delegate.getScope(linkedIProject, reference, filter)` for each configured linked extension project.
+- The wrapper is registered from both UI startup and BSL runtime module construction so it is available early enough.
+
+Risk:
+
+- This creates a second OSGi service of type `IV8GlobalScopeProvider`.
+- Peaberry-based Guice service lookup should choose the highest-ranked service, but any code using strict
+  `ServiceAccess.get(IV8GlobalScopeProvider.class)` could dislike duplicate services.
+- If that happens, this experiment should be reverted or replaced with a more internal hook.
+
+Build note:
+
+- Direct Java import of `com._1c.g5.v8.dt.core.scoping.IV8GlobalScopeProvider` failed at
+  `2026-06-13 18:15:53 +04:00` because Tycho treats that type as non-API:
+
+```text
+Access restriction: The type 'IV8GlobalScopeProvider' is not API
+```
+
+- The experiment was rewritten as a reflection-based OSGi dynamic proxy registered by service class name.
+
+Build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 18:18:23 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `121218` bytes.
+
+Expected next log check:
+
+- EDT Error Log should not show the previous `Right Ql Runtime Module extension cannot be more then one`.
+- On Query Constructor opening for an extension project, log should show:
+  `EDT Context Links QL BM global scope wrapper registered`
+  and
+  `EDT Context Links QL BM scope project=... linked=[...] skipped=[...]`.
