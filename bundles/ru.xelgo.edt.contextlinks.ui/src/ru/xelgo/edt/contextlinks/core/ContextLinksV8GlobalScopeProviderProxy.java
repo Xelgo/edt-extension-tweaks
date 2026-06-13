@@ -18,6 +18,7 @@ import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.scoping.IScope;
 import org.osgi.framework.Constants;
 import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.ServiceReference;
 
 import com._1c.g5.modeling.xtext.scoping.CompositeScope;
@@ -51,8 +52,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
     {
         try
         {
-            Class<?> serviceClass = Class.forName(SERVICE_CLASS_NAME, false,
-                ContextLinksV8GlobalScopeProviderProxy.class.getClassLoader());
+            Class<?> serviceClass = loadServiceClass(context);
             ContextLinksV8GlobalScopeProviderProxy handler =
                 new ContextLinksV8GlobalScopeProviderProxy(context, serviceClass);
             return Proxy.newProxyInstance(serviceClass.getClassLoader(), new Class<?>[] { serviceClass }, handler);
@@ -62,6 +62,17 @@ final class ContextLinksV8GlobalScopeProviderProxy
             ContextLinks.logError("EDT Context Links failed to create QL BM global scope wrapper", e); //$NON-NLS-1$
             return null;
         }
+    }
+
+    private static Class<?> loadServiceClass(org.osgi.framework.BundleContext context)
+        throws ClassNotFoundException
+    {
+        for (Bundle bundle : context.getBundles())
+        {
+            if ("com._1c.g5.v8.dt.core".equals(bundle.getSymbolicName())) //$NON-NLS-1$
+                return bundle.loadClass(SERVICE_CLASS_NAME);
+        }
+        return Class.forName(SERVICE_CLASS_NAME);
     }
 
     @Override

@@ -1201,3 +1201,43 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `121625` bytes.
+
+Follow-up after installing `6cdcfb6`:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main\.metadata\.log
+Length: 224359
+LastWriteTime: 2026-06-13 19:12:59 +04:00
+```
+
+Observed failure:
+
+```text
+EDT Context Links failed to create QL BM global scope wrapper
+java.lang.ClassNotFoundException:
+com._1c.g5.v8.dt.core.scoping.IV8GlobalScopeProvider cannot be found by ru.xelgo.edt.contextlinks.ui_1.0.0.v202606131510
+```
+
+Conclusion:
+
+- The activator/serviceProvider path did start the plugin earlier.
+- But the reflection proxy tried to load the non-API `IV8GlobalScopeProvider` interface from this plugin's classloader.
+- That package is intentionally not visible to this plugin bundle.
+
+Next adjustment:
+
+- Load the service interface class from the installed `com._1c.g5.v8.dt.core` OSGi bundle via `bundle.loadClass(...)`.
+- Keep the proxy registered by service class name, still avoiding direct Java imports of the non-API type.
+
+Implementation:
+
+- `ContextLinksV8GlobalScopeProviderProxy.loadServiceClass(...)` now scans installed OSGi bundles and loads
+  `com._1c.g5.v8.dt.core.scoping.IV8GlobalScopeProvider` from bundle `com._1c.g5.v8.dt.core`.
+- This avoids using the plugin bundle classloader for a non-API class it cannot see.
+
+Build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 19:14:24 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `124488` bytes.
