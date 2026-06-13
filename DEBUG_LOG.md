@@ -1710,3 +1710,95 @@ project=Конфигурация.Расш1 ql=true
 - Remaining work:
   - re-test a clean field-selection scenario in UI;
   - address the adoption prompt for actual foreign-extension fields after the base Query Wizard open path stays stable.
+
+Attempt in progress, 2026-06-14:
+
+- User confirmed `Расш2_Справочник` and `Расш2_Документ` are visible when the Query Wizard button hiding base-configuration
+  fields is toggled off. They are gray, which is acceptable.
+- Actual remaining defect: after selecting linked extension objects/fields, Query Wizard shows:
+
+```text
+Запрос использует объекты, отсутствующие в расширении конфигурации.
+Добавить используемые объекты в расширение конфигурации?
+```
+
+- Desired behavior:
+  - objects/attributes from the base configuration may still be adopted into the current extension;
+  - objects/attributes from another linked extension must not be adopted into the current extension;
+  - this must apply both to root metadata objects like `Расш2_Справочник`/`Расш2_Документ` and their fields.
+- New attempt:
+  - add a separate `IModelObjectAdopter` OSGi wrapper, without restoring the failed common `ContextLinksServiceRegistrars`;
+  - register the wrapper only after the original delegate service is available;
+  - inside `QueryWizardAdoptSupport`, report foreign-extension objects as already adopted and filter them from
+    `adoptAndAttach(List, IExtensionProject, monitor)`;
+  - keep normal EDT adoption for base-configuration objects;
+  - log `EDT Context Links adoption.skipForeignExtension ...` for every skipped foreign-extension object.
+
+Follow-up for attempt `v202606132118`:
+
+- Built and redeployed successfully.
+- Fresh workspace log showed:
+
+```text
+EDT Context Links QL BM global scope wrapper registered
+EDT Context Links model object adopter wrapper not registered: delegate unavailable
+EDT Context Links model object adopter wrapper registered
+```
+
+- User-visible result is bad: pressing `OK` no longer closes Query Wizard.
+- Root cause from workspace log:
+
+```text
+com._1c.g5.wiring.ServiceUnavailableException:
+Multiple services were registered for com._1c.g5.v8.dt.md.extension.adopt.IModelObjectAdopter type
+    at com._1c.g5.wiring.ServiceAccess.get(ServiceAccess.java:98)
+    at com._1c.g5.v8.dt.internal.qw.ui.QueryWizardAdoptSupport.<init>(QueryWizardAdoptSupport.java:75)
+```
+
+- Conclusion:
+  - `IModelObjectAdopter` cannot be wrapped as a second OSGi service because EDT's `ServiceAccess.get(...)` does not use
+    service ranking here; it requires exactly one matching service.
+  - This path must be reverted before continuing.
+- Bytecode inspection of `QueryWizardAdoptSupport` explains the prompt:
+  - `collectObjectsToAdopt()` reads `computeDbView.getMdObject()`;
+  - then it calls `IV8ProjectManager.getProject(mdObject)`;
+  - any md object whose project differs from the current `IExtensionProject` is placed into the adoption candidate set;
+  - only after the user accepts the prompt does EDT call `IModelObjectAdopter.isAdopted(...)` and `adoptAndAttach(...)`.
+- Next direction:
+  - do not register another `IModelObjectAdopter`;
+  - either influence `computeDbView.getMdObject()` only during `QueryWizardAdoptSupport.collectObjectsToAdopt()` for linked
+    extension objects, or find a single-service replacement/in-place wrapping point.
+
+Computer Use check, 2026-06-14:
+
+- `tool_search` did not expose a direct Computer Use tool, but the bundled plugin exists at:
+
+```text
+C:\Users\USER\.codex\plugins\cache\openai-bundled\computer-use\26.602.40724
+```
+
+- The current script is present at `scripts\computer-use-client.mjs`.
+- Bootstrap through the documented Node-backed entrypoint failed twice with:
+
+```text
+Computer Use native pipe path is unavailable
+```
+
+- Conclusion:
+  - Computer Use is installed on disk but unavailable in this Codex turn because the native pipe environment is missing;
+  - this is separate from EDT and the plugin code.
+
+Follow-up after user restarted Computer Use/Codex plugin runtime:
+
+- Retried the documented bootstrap twice after `@Компьютер` was explicitly invoked.
+- `tool_search` still exposed the Node-backed bootstrap path, not a separate direct Computer Use tool.
+- Both bootstrap attempts still failed with:
+
+```text
+Computer Use native pipe path is unavailable
+```
+
+- Recovery redeploy after the failed adopter-service attempt:
+  - removed the second `IModelObjectAdopter` service registration path;
+  - rebuilt and redeployed `ru.xelgo.edt.contextlinks.feature 1.0.0.v202606132126`;
+  - this should remove the immediate `Multiple services were registered for IModelObjectAdopter` regression.
