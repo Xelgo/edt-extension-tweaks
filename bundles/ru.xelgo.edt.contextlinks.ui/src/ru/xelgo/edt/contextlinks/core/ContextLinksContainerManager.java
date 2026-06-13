@@ -30,7 +30,7 @@ public class ContextLinksContainerManager
 
     public ContextLinksContainerManager()
     {
-        ContextLinks.logWarning("EDT Context Links container manager constructed"); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Context Links container manager constructed"); //$NON-NLS-1$
     }
 
     @Override
@@ -121,11 +121,14 @@ public class ContextLinksContainerManager
         String standardVisible, Set<String> linkedProjectNames, List<String> addedHandles,
         List<String> unresolvedProjects)
     {
+        if (!ContextLinks.isDebugLoggingEnabled())
+            return;
+
         String key = currentProject.getName() + "|" + currentHandle + "|" + linkedProjectNames //$NON-NLS-1$ //$NON-NLS-2$
             + "|" + addedHandles + "|" + unresolvedProjects; //$NON-NLS-1$ //$NON-NLS-2$
         if (loggedContainerKeys.add(key))
         {
-            ContextLinks.logWarning("EDT Context Links containers: project=" + currentProject.getName() //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Context Links containers: project=" + currentProject.getName() //$NON-NLS-1$
                 + ", resource=" + resourceUri //$NON-NLS-1$
                 + ", currentHandle=" + currentHandle //$NON-NLS-1$
                 + ", standardVisible=" + standardVisible //$NON-NLS-1$

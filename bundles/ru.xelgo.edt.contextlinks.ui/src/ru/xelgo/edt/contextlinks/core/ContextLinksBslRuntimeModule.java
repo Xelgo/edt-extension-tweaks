@@ -15,33 +15,33 @@ public class ContextLinksBslRuntimeModule
 {
     public ContextLinksBslRuntimeModule()
     {
-        ContextLinks.logWarning("EDT Context Links BSL runtime module constructed"); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Context Links BSL runtime module constructed"); //$NON-NLS-1$
     }
 
     public Class<? extends BslCachedScopeProvider> bindBslCachedScopeProvider()
     {
-        ContextLinks.logWarning("EDT Context Links BSL runtime module binding BslCachedScopeProvider -> " //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Context Links BSL runtime module binding BslCachedScopeProvider -> " //$NON-NLS-1$
             + ContextLinksCachedScopeProvider.class.getName());
         return ContextLinksCachedScopeProvider.class;
     }
 
     public Class<? extends IScopeProvider> bindIScopeProvider()
     {
-        ContextLinks.logWarning("EDT Context Links BSL runtime module binding IScopeProvider -> " //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Context Links BSL runtime module binding IScopeProvider -> " //$NON-NLS-1$
             + ContextLinksBslScopeProvider.class.getName());
         return ContextLinksBslScopeProvider.class;
     }
 
     public Class<? extends IBslModuleContextDefService> bindIBslModuleContextDefService()
     {
-        ContextLinks.logWarning("EDT Context Links BSL runtime module binding IBslModuleContextDefService -> " //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Context Links BSL runtime module binding IBslModuleContextDefService -> " //$NON-NLS-1$
             + ContextLinksModuleContextDefService.class.getName());
         return ContextLinksModuleContextDefService.class;
     }
 
     public Class<? extends IContainer.Manager> bindIContainer$Manager()
     {
-        ContextLinks.logWarning("EDT Context Links BSL runtime module binding IContainer.Manager -> " //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Context Links BSL runtime module binding IContainer.Manager -> " //$NON-NLS-1$
             + ContextLinksContainerManager.class.getName());
         return ContextLinksContainerManager.class;
     }

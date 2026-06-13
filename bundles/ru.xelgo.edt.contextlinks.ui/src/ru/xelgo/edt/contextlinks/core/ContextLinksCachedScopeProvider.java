@@ -42,13 +42,14 @@ public class ContextLinksCachedScopeProvider
 
     public ContextLinksCachedScopeProvider()
     {
-        ContextLinks.logWarning("EDT Context Links cached scope provider constructed"); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Context Links cached scope provider constructed"); //$NON-NLS-1$
     }
 
     @Override
     public void clearTypeItemsScopes(IProject project)
     {
-        ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearTypeItems] project=" + describeProject(project)); //$NON-NLS-1$
+        if (ContextLinks.isDebugLoggingEnabled())
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearTypeItems] project=" + describeProject(project)); //$NON-NLS-1$
         super.clearTypeItemsScopes(project);
         bumpProjectScopeVersion(project, "clear-type-item"); //$NON-NLS-1$
     }
@@ -56,7 +57,8 @@ public class ContextLinksCachedScopeProvider
     @Override
     public void clearPropertyScopes(IProject project)
     {
-        ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearProperties] project=" + describeProject(project)); //$NON-NLS-1$
+        if (ContextLinks.isDebugLoggingEnabled())
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearProperties] project=" + describeProject(project)); //$NON-NLS-1$
         super.clearPropertyScopes(project);
         bumpProjectScopeVersion(project, "clear-property"); //$NON-NLS-1$
     }
@@ -64,8 +66,11 @@ public class ContextLinksCachedScopeProvider
     @Override
     public void addTypeItemScope(IProject project, IScope scope)
     {
-        ContextLinks.logDebug("EDT Context Links DEBUG [cache.addTypeItem] project=" + describeProject(project) //$NON-NLS-1$
-            + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
+        if (ContextLinks.isDebugLoggingEnabled())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.addTypeItem] project=" + describeProject(project) //$NON-NLS-1$
+                + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
+        }
         super.addTypeItemScope(project, scope);
         bumpProjectScopeVersion(project, "add-type-item"); //$NON-NLS-1$
     }
@@ -73,8 +78,11 @@ public class ContextLinksCachedScopeProvider
     @Override
     public void addPropertyScope(IProject project, IScope scope)
     {
-        ContextLinks.logDebug("EDT Context Links DEBUG [cache.addProperty] project=" + describeProject(project) //$NON-NLS-1$
-            + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
+        if (ContextLinks.isDebugLoggingEnabled())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.addProperty] project=" + describeProject(project) //$NON-NLS-1$
+                + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
+        }
         super.addPropertyScope(project, scope);
         bumpProjectScopeVersion(project, "add-property"); //$NON-NLS-1$
     }
@@ -109,8 +117,11 @@ public class ContextLinksCachedScopeProvider
         if (module != null)
             module.allMethods().forEach(method -> forgetModuleScope(method.getUniqueName()));
 
-        ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.clear] module=" + blockUniqueName(module) //$NON-NLS-1$
-            + " removed=" + removedCount); //$NON-NLS-1$
+        if (ContextLinks.isDebugLoggingEnabled())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.clear] module=" + blockUniqueName(module) //$NON-NLS-1$
+                + " removed=" + removedCount); //$NON-NLS-1$
+        }
         bumpProjectScopeVersion(projectFromBlock(module), "clear-module-scopes"); //$NON-NLS-1$
         super.clearScopes(module);
     }
@@ -137,8 +148,11 @@ public class ContextLinksCachedScopeProvider
 
     private boolean canExtend(IProject project, IScope ownScope, String kind)
     {
-        ContextLinks.logDebug("EDT Context Links DEBUG [cache.get." + kind + "] project=" //$NON-NLS-1$ //$NON-NLS-2$
-            + describeProject(project) + " own=" + describeScope(ownScope)); //$NON-NLS-1$
+        if (ContextLinks.isDebugLoggingEnabled())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.get." + kind + "] project=" //$NON-NLS-1$ //$NON-NLS-2$
+                + describeProject(project) + " own=" + describeScope(ownScope)); //$NON-NLS-1$
+        }
 
         if (project == null || ownScope == null || !project.isAccessible())
             return false;
@@ -199,6 +213,9 @@ public class ContextLinksCachedScopeProvider
 
     private void logScopeDetails(ScopeKind kind, IProject project, IProject linkedProject, IScope linkedScope)
     {
+        if (!ContextLinks.isDebugLoggingEnabled())
+            return;
+
         String key = kind.name() + "|" + project.getName() + "|" + linkedProject.getName() + "|" //$NON-NLS-1$ //$NON-NLS-2$
             + describeScope(linkedScope) + "|" + countElements(linkedScope); //$NON-NLS-1$
         if (loggedScopeDetails.add(key))
@@ -212,12 +229,15 @@ public class ContextLinksCachedScopeProvider
     private void logComposedScope(ScopeKind kind, IProject project, Set<String> configuredProjects,
         List<String> addedProjects, List<String> missingProjects)
     {
+        if (!ContextLinks.isDebugLoggingEnabled())
+            return;
+
         String key = project.getName() + "|" + new LinkedHashSet<>(configuredProjects) + "|" + addedProjects //$NON-NLS-1$ //$NON-NLS-2$
             + "|" + missingProjects; //$NON-NLS-1$
         Set<String> targetLog = kind == ScopeKind.TYPE_ITEM ? loggedTypeScopeKeys : loggedPropertyScopeKeys;
         if (targetLog.add(key))
         {
-            ContextLinks.logWarning("EDT Context Links " + kind.logName + " scope: project=" + project.getName() //$NON-NLS-1$ //$NON-NLS-2$
+            ContextLinks.logDebug("EDT Context Links " + kind.logName + " scope: project=" + project.getName() //$NON-NLS-1$ //$NON-NLS-2$
                 + ", configured=" + configuredProjects //$NON-NLS-1$
                 + ", added=" + addedProjects //$NON-NLS-1$
                 + ", missing=" + missingProjects); //$NON-NLS-1$
@@ -283,9 +303,12 @@ public class ContextLinksCachedScopeProvider
         String cachedVersion = moduleScopeVersions.get(key);
         if (cachedVersion == null)
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.untracked] block=" + blockUniqueName(block) //$NON-NLS-1$
-                + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
-                + " current=" + moduleScopeVersion(block)); //$NON-NLS-1$
+            if (ContextLinks.isDebugLoggingEnabled())
+            {
+                ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.untracked] block=" + blockUniqueName(block) //$NON-NLS-1$
+                    + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
+                    + " current=" + moduleScopeVersion(block)); //$NON-NLS-1$
+            }
             return false;
         }
 
@@ -293,9 +316,12 @@ public class ContextLinksCachedScopeProvider
         boolean current = cachedVersion.equals(currentVersion);
         if (!current)
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.stale] block=" + blockUniqueName(block) //$NON-NLS-1$
-                + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
-                + " cached=" + cachedVersion + " current=" + currentVersion); //$NON-NLS-1$ //$NON-NLS-2$
+            if (ContextLinks.isDebugLoggingEnabled())
+            {
+                ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.stale] block=" + blockUniqueName(block) //$NON-NLS-1$
+                    + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
+                    + " cached=" + cachedVersion + " current=" + currentVersion); //$NON-NLS-1$ //$NON-NLS-2$
+            }
         }
         return current;
     }
@@ -306,8 +332,11 @@ public class ContextLinksCachedScopeProvider
             return;
 
         long version = projectScopeVersions.computeIfAbsent(project.getName(), name -> new AtomicLong()).incrementAndGet();
-        ContextLinks.logDebug("EDT Context Links DEBUG [cache.project.version] project=" + project.getName() //$NON-NLS-1$
-            + " version=" + version + " reason=" + reason); //$NON-NLS-1$ //$NON-NLS-2$
+        if (ContextLinks.isDebugLoggingEnabled())
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.project.version] project=" + project.getName() //$NON-NLS-1$
+                + " version=" + version + " reason=" + reason); //$NON-NLS-1$ //$NON-NLS-2$
+        }
     }
 
     private String moduleScopeVersion(Block block)
@@ -353,6 +382,9 @@ public class ContextLinksCachedScopeProvider
     private void logModuleScope(String phase, Block block, Environments environments, BslCachedScopeType scopeType,
         IScope scope)
     {
+        if (!ContextLinks.isDebugLoggingEnabled())
+            return;
+
         String key = phase + "|" + blockUniqueName(block) + "|" + environments + "|" + scopeType //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             + "|" + describeScope(scope) + "|" + countElements(scope); //$NON-NLS-1$ //$NON-NLS-2$
         if (loggedModuleScopeKeys.add(key))

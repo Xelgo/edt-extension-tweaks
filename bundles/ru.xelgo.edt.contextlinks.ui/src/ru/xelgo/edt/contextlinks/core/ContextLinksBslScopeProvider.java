@@ -25,7 +25,7 @@ public class ContextLinksBslScopeProvider
 
     public ContextLinksBslScopeProvider()
     {
-        ContextLinks.logWarning("EDT Context Links BSL scope provider constructed"); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Context Links BSL scope provider constructed"); //$NON-NLS-1$
     }
 
     @Override
@@ -38,6 +38,9 @@ public class ContextLinksBslScopeProvider
 
     private static void logCommonModuleScope(EObject context, EReference reference, IScope scope)
     {
+        if (!ContextLinks.isDebugLoggingEnabled())
+            return;
+
         Module module = context != null ? EcoreUtil2.getContainerOfType(context, Module.class) : null;
         URI moduleUri = module != null && module.eResource() != null ? module.eResource().getURI() : null;
         if (moduleUri == null || !String.valueOf(moduleUri).contains("/CommonModules/")) //$NON-NLS-1$

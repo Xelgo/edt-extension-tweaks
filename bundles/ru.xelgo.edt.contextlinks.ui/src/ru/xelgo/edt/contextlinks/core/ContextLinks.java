@@ -27,6 +27,7 @@ import com._1c.g5.wiring.ServiceAccess;
 public final class ContextLinks
 {
     public static final String PLUGIN_ID = "ru.xelgo.edt.contextlinks.ui"; //$NON-NLS-1$
+    private static final boolean DEBUG_LOG_ENABLED = Boolean.getBoolean(PLUGIN_ID + ".debug"); //$NON-NLS-1$
 
     private static final QualifiedName CONTEXT_PROJECTS =
         new QualifiedName(PLUGIN_ID, "contextProjects"); //$NON-NLS-1$
@@ -98,7 +99,7 @@ public final class ContextLinks
             .distinct()
             .collect(Collectors.joining("\n")); //$NON-NLS-1$
         project.setPersistentProperty(CONTEXT_PROJECTS, value.isEmpty() ? null : value);
-        logWarning("Saved EDT context links for " + project.getName() + ": " + names); //$NON-NLS-1$ //$NON-NLS-2$
+        logDebug("Saved EDT context links for " + project.getName() + ": " + names); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     public static String describeWorkspaceSettings()
@@ -198,8 +199,16 @@ public final class ContextLinks
             .log(new Status(IStatus.WARNING, PLUGIN_ID, message));
     }
 
+    public static boolean isDebugLoggingEnabled()
+    {
+        return DEBUG_LOG_ENABLED;
+    }
+
     public static void logDebug(String message)
     {
+        if (!DEBUG_LOG_ENABLED)
+            return;
+
         Platform.getLog(ContextLinks.class)
             .log(new Status(IStatus.INFO, PLUGIN_ID, message));
     }

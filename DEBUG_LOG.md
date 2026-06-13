@@ -682,3 +682,43 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `95058` bytes.
+
+## 2026-06-13 - Quiet Heavy Diagnostic Logging
+
+Latest user check:
+
+- Warm-up appears to have triggered at least partially, but the EDT Error Log became too noisy.
+- The `.metadata/.log` file is expensive to inspect because the plugin writes thousands of diagnostic `INFO` entries from hot
+  scope/cache paths.
+
+Analysis:
+
+- The most expensive log source is `ContextLinks.logDebug(...)`, especially cache version bumps, module stale/untracked checks,
+  linked scope summaries, container visibility traces, and common-module scope samples.
+- Some messages were also logged as `WARNING` even though they were lifecycle/debug markers, not problems.
+- Keeping all this in the Error Log makes each next investigation slower and can hide real EDT errors.
+
+Implementation attempt:
+
+- Disable `ContextLinks.logDebug(...)` by default.
+- Keep the debug channel available with JVM flag:
+  `-Dru.xelgo.edt.contextlinks.ui.debug=true`.
+- Guard the heaviest scope/sample logging so it does not enumerate scope elements while debug is disabled.
+- Downgrade provider construction/binding and diagnostic scope/container summaries from `WARNING` to debug.
+- Keep visible warnings for startup warm-up passes, failed settings reads, failed container handle resolution, and configuration save
+  through the UI.
+
+Expected next log check:
+
+- Fresh `.metadata/.log` should no longer contain thousands of `EDT Context Links DEBUG [...]` `INFO` entries.
+- The useful startup markers should remain:
+  `EDT Context Links startup warm-up scheduled`,
+  `EDT Context Links startup warm-up pass=...`,
+  `EDT Context Links startup warm-up build pass=...`.
+
+Build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 17:08:58 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `95471` bytes.

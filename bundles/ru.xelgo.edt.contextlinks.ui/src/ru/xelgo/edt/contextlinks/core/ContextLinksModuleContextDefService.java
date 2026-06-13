@@ -36,7 +36,7 @@ public class ContextLinksModuleContextDefService
 
     public ContextLinksModuleContextDefService()
     {
-        ContextLinks.logWarning("EDT Context Links module context definition service constructed"); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Context Links module context definition service constructed"); //$NON-NLS-1$
     }
 
     @Override
@@ -157,6 +157,9 @@ public class ContextLinksModuleContextDefService
     private static void logCommonModuleContext(String stage, Module module, IBslModuleContextDefExtension provider,
         ContextDef contextDef, String reason)
     {
+        if (!ContextLinks.isDebugLoggingEnabled())
+            return;
+
         EObject owner = module != null ? module.getOwner() : null;
         if (!(owner instanceof CommonModule commonModule))
             return;
