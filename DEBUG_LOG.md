@@ -480,3 +480,46 @@ repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlin
 Length: 88011
 LastWriteTime: 2026-06-13 10:21:19 +04:00
 ```
+
+Verification after installing `5aa1d0a`:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\file\.metadata\.log
+Length: 1008787
+LastWriteTime: 2026-06-13 10:23:15 +04:00
+```
+
+The linked-extension context returned. Late log entries again show linked property/type scopes in both directions:
+
+```text
+[cache.linked.property] project=Configuration.Rest1 linked=Configuration.Rest2 scope=... elements=1556
+[cache.linked.type-item] project=Configuration.Rest1 linked=Configuration.Rest2 scope=... elements=10504
+[cache.linked.property] project=Configuration.Rest2 linked=Configuration.Rest1 scope=... elements=3100
+[cache.linked.type-item] project=Configuration.Rest2 linked=Configuration.Rest1 scope=... elements=10498
+```
+
+BSL type scopes also returned to the live wrapper path:
+
+```text
+[bsl.scope] project=Configuration.Rest2 ... context=Module reference=retValType
+scope=ru.xelgo.edt.contextlinks.core.ContextLinksCachedScopeProvider$ContextLinksProjectScope@...
+
+[bsl.scope] project=Configuration.Rest2 ... context=Procedure reference=types
+scope=ru.xelgo.edt.contextlinks.core.ContextLinksCachedScopeProvider$ContextLinksProjectScope@...
+```
+
+Residual problem remains:
+
+```text
+[module.context.provider] project=Configuration.Rest2
+moduleUri=platform:/resource/Configuration.Rest2/src/CommonModules/Ext2_ОбщийМодуль3/Module.bsl
+context=...{allMethods=0}
+methods=[]
+```
+
+Conclusion:
+
+`5aa1d0a` restores the cross-extension context. The remaining bug is narrower: a freshly created common module can
+be visible as a module/type item while its exported method context is still empty in EDT's `CommonModule.getContextDef()`
+path. Next attempts should target fresh common-module `ContextDef` refresh or delayed resolution without global
+project-scope clearing.
