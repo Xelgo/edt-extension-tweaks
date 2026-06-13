@@ -421,3 +421,62 @@ Expected next log check:
 - Then `[cache.clearProperties]`, `[cache.clearTypeItems]`, and `[cache.project.version]` should follow for that
   project.
 - The next `[module.context.provider]` for the fresh common module should report `allMethods > 0`.
+
+Follow-up after installing `260c792`:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\file\.metadata\.log
+Length: 87909
+LastWriteTime: 2026-06-13 10:19:39 +04:00
+```
+
+The attempt broke the previously working linked-extension context. Logs showed that
+`[cache.project.clear-for-module]` fired repeatedly for normal common-module clear events:
+
+```text
+[cache.project.clear-for-module] project=Configuration.Rest2 module=.../Ext2_test2/Module.bsl#/0
+[cache.clearProperties] project=Configuration.Rest2
+[cache.clearTypeItems] project=Configuration.Rest2
+```
+
+Immediately after that, EDT often requested scopes while the owning project scope was still empty:
+
+```text
+[cache.get.property] project=Configuration.Rest2{accessible=true} own=NULL
+[cache.get.type-item] project=Configuration.Rest2{accessible=true} own=NULL
+```
+
+The resulting BSL type scope lost the context-link wrapper and became a plain own-project scope:
+
+```text
+[bsl.scope] project=Configuration.Rest2 ... reference=types
+scope=com._1c.g5.modeling.xtext.scoping.NonShadowedSelectableBasedScope@...
+```
+
+Conclusion:
+
+Clearing project-level property/type scopes from inside every common-module `clearScopes()` call is too aggressive.
+It races EDT's own lazy rebuild and can temporarily remove the owning scope at exactly the moment BSL asks for it,
+which prevents `ContextLinksProjectScope` from being returned and drops linked extension context.
+
+Action:
+
+- Revert the code part of `260c792`.
+- Keep the diagnostics and the failed-attempt analysis in this log.
+- Next attempt should avoid clearing global project scopes from module clear events; it needs a narrower fix for
+  stale common-module `ContextDef`.
+
+Recovery build:
+
+```text
+BUILD SUCCESS
+Finished at: 2026-06-13T10:21:20+04:00
+```
+
+Update site:
+
+```text
+repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip
+Length: 88011
+LastWriteTime: 2026-06-13 10:21:19 +04:00
+```
