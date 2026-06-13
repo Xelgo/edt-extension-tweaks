@@ -1,10 +1,11 @@
 param(
     [string]$ProjectRoot = (Resolve-Path "$PSScriptRoot\..").Path,
-    [string]$Workspace = "C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main",
-    [string]$EdtHome = "C:\Users\Xelgo\AppData\Local\1C\1cedtstart\installations\1C_EDT 2025.2\1cedt",
+    [string]$Workspace = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\projects\EDT DEV"),
+    [string]$EdtHome = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\installations\1C_EDT (Lite) 2025.2\1cedt"),
     [string]$JavaHome = "C:\Program Files\1C\1CE\components\axiom-jdk-full-17.0.16+12-x86_64",
-    [string]$LauncherVm = "C:\Program Files\1C\1CE\components\1c-edt-start-0.9.0+277-x86_64\jre\bin\javaw.exe",
-    [string]$Maven = "C:\Users\Xelgo\Documents\New project\.tools\apache-maven-3.9.9\bin\mvn.cmd",
+    [string]$LauncherVm = "C:\Program Files\1C\1CE\components\axiom-jdk-full-17.0.16+12-x86_64\bin\javaw.exe",
+    [string]$Maven = (Join-Path (Resolve-Path "$PSScriptRoot\..\..").Path ".tools\apache-maven-3.9.9\bin\mvn.cmd"),
+    [string]$Profile = "",
     [string]$InstallIU = "ru.xelgo.edt.contextlinks.feature.feature.group",
     [string]$UninstallIU = "ru.xelgo.edt.contextlinks.feature.feature.group",
     [string[]]$DependencyRepositories = @(
@@ -51,8 +52,41 @@ function Invoke-Step($FilePath, [string[]]$Arguments, $WorkingDirectory = $Proje
     }
 }
 
+function Invoke-OptionalStep($FilePath, [string[]]$Arguments, $WorkingDirectory = $ProjectRoot) {
+    $display = (Format-Argument $FilePath) + " " + (($Arguments | ForEach-Object { Format-Argument $_ }) -join " ")
+    Write-Step $display
+    if ($DryRun) {
+        return
+    }
+
+    Push-Location -LiteralPath $WorkingDirectory
+    try {
+        & $FilePath @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            Write-Step "Optional command failed with exit code ${LASTEXITCODE}; continuing"
+        }
+    }
+    finally {
+        Pop-Location
+    }
+}
+
 function Convert-ToFileUriPath($Path) {
     return (Resolve-Path -LiteralPath $Path).Path.Replace("\", "/")
+}
+
+function Convert-ToP2ProfileName($Path) {
+    return (Resolve-Path -LiteralPath $Path).Path.Replace(":", "_").Replace("\", "_")
+}
+
+function Ensure-BuildPlaceholders {
+    $resources = Join-Path $ProjectRoot "bundles\ru.xelgo.edt.contextlinks.ui\resources"
+    if (-not (Test-Path -LiteralPath $resources)) {
+        Write-Step "Creating missing bundle resources directory $resources"
+        if (-not $DryRun) {
+            New-Item -ItemType Directory -Force -Path $resources | Out-Null
+        }
+    }
 }
 
 function Get-EdtWorkspaceProcesses {
@@ -72,37 +106,12 @@ function Stop-EdtWorkspace {
         return
     }
 
-    Write-Step "Stopping EDT processes for workspace ${Workspace}: $($processes.ProcessId -join ', ')"
+    Write-Step "Force killing EDT processes for workspace ${Workspace}: $($processes.ProcessId -join ', ')"
     if ($DryRun) {
         return
     }
 
     foreach ($cimProcess in $processes) {
-        $process = Get-Process -Id $cimProcess.ProcessId -ErrorAction SilentlyContinue
-        if ($process -and $process.MainWindowHandle -ne 0) {
-            [void]$process.CloseMainWindow()
-        }
-    }
-
-    $deadline = (Get-Date).AddSeconds($ShutdownTimeoutSec)
-    while ((Get-Date) -lt $deadline) {
-        Start-Sleep -Milliseconds 500
-        if (@(Get-EdtWorkspaceProcesses).Count -eq 0) {
-            return
-        }
-    }
-
-    $remaining = @(Get-EdtWorkspaceProcesses)
-    if ($remaining.Count -eq 0) {
-        return
-    }
-
-    if (-not $ForceKill) {
-        throw "EDT did not close in $ShutdownTimeoutSec seconds. Re-run with -ForceKill or close it manually."
-    }
-
-    Write-Step "Force killing EDT processes: $($remaining.ProcessId -join ', ')"
-    foreach ($cimProcess in $remaining) {
         Stop-Process -Id $cimProcess.ProcessId -Force -ErrorAction SilentlyContinue
     }
 }
@@ -167,7 +176,7 @@ Set-Location -LiteralPath $ProjectRoot
 $edtExe = Join-Path $EdtHome "1cedt.exe"
 $edtConsoleExe = Join-Path $EdtHome "1cedtc.exe"
 $repoZip = Join-Path $ProjectRoot "repositories\ru.xelgo.edt.contextlinks.repository\target\ru.xelgo.edt.contextlinks.repository.zip"
-$profile = "C__Users_Xelgo_AppData_Local_1C_1cedtstart_installations_1C_EDT 2025.2_1cedt"
+$profile = if ($Profile) { $Profile } else { Convert-ToP2ProfileName $EdtHome }
 $bundlePool = Join-Path $env:USERPROFILE ".p2\pool"
 $javaBin = Split-Path -Parent $LauncherVm
 
@@ -187,6 +196,7 @@ $env:Path = $javaBin + ";" + $env:Path
 
 if (-not $SkipBuild) {
     $env:JAVA_HOME = $JavaHome
+    Ensure-BuildPlaceholders
     Invoke-Step $Maven @("clean", "package", "-DskipTests")
 }
 
@@ -215,7 +225,7 @@ $installError = $null
 try {
     if ($UninstallIU) {
         $uninstallArgs = $directorBaseArgs + @("-uninstallIU", $UninstallIU)
-        Invoke-Step $edtConsoleExe $uninstallArgs $EdtHome
+        Invoke-OptionalStep $edtConsoleExe $uninstallArgs $EdtHome
     }
 
     $installArgs = $directorBaseArgs + @("-repository", $repositories, "-installIU", $InstallIU)
@@ -234,13 +244,15 @@ if (-not $NoRestart) {
         "--launcher.appendVmargs",
         "-vmargs",
         "-Djava.library.path=",
+        "-Dru.xelgo.edt.contextlinks.ui.debug=true",
         "-Duser.language=ru",
         "-Xmx8192m"
     )
 
     Write-Step "Starting EDT for workspace $Workspace"
     if (-not $DryRun) {
-        Start-Process -FilePath $edtExe -ArgumentList $startArgs -WorkingDirectory $EdtHome | Out-Null
+        $startArgumentLine = ($startArgs | ForEach-Object { Format-Argument $_ }) -join " "
+        Start-Process -FilePath $edtExe -ArgumentList $startArgumentLine -WorkingDirectory $EdtHome | Out-Null
     }
 }
 

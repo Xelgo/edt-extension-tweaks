@@ -56,6 +56,16 @@ final class ProjectSelection
         return result;
     }
 
+    static boolean isContextConfigurableProject(Object selected)
+    {
+        IProject project = getProject(selected);
+        boolean result = ContextLinks.isContextConfigurableProject(project);
+        ContextLinks.logDebug("EDT Context Links DEBUG [ui.visible.configurable] selected=" + describeObject(selected) //$NON-NLS-1$
+            + " project=" + (project != null ? project.getName() : "NULL") //$NON-NLS-1$ //$NON-NLS-2$
+            + " result=" + result); //$NON-NLS-1$
+        return result;
+    }
+
     private static EObject getModelObject(Object selected)
     {
         EObject modelObject = adapt(selected, EObject.class);

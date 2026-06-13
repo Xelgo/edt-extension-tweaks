@@ -27,6 +27,7 @@ import com._1c.g5.wiring.ServiceAccess;
 public final class ContextLinks
 {
     public static final String PLUGIN_ID = "ru.xelgo.edt.contextlinks.ui"; //$NON-NLS-1$
+    private static final String V8_EXTERNAL_OBJECTS_NATURE = "com._1c.g5.v8.dt.core.V8ExternalObjectsNature"; //$NON-NLS-1$
     private static final boolean DEBUG_LOG_ENABLED = Boolean.getBoolean(PLUGIN_ID + ".debug"); //$NON-NLS-1$
 
     private static final QualifiedName CONTEXT_PROJECTS =
@@ -131,6 +132,36 @@ public final class ContextLinks
         return result;
     }
 
+    public static boolean isExternalObjectsProject(IProject project)
+    {
+        if (project == null || !project.isAccessible())
+            return false;
+
+        try
+        {
+            boolean result = project.hasNature(V8_EXTERNAL_OBJECTS_NATURE);
+            logDebug("EDT Context Links DEBUG [project.kind.external] project=" + project.getName() //$NON-NLS-1$
+                + " externalObjects=" + result); //$NON-NLS-1$
+            return result;
+        }
+        catch (CoreException e)
+        {
+            logWarning("Failed to detect EDT external objects project " + project.getName() + ": " + e.getMessage()); //$NON-NLS-1$ //$NON-NLS-2$
+            return false;
+        }
+    }
+
+    public static boolean isContextConfigurableProject(IProject project)
+    {
+        boolean extension = isExtensionProject(project);
+        boolean externalObjects = !extension && isExternalObjectsProject(project);
+        boolean result = extension || externalObjects;
+        logDebug("EDT Context Links DEBUG [project.kind.configurable] project=" //$NON-NLS-1$
+            + (project != null ? project.getName() : "NULL") //$NON-NLS-1$
+            + " extension=" + extension + " externalObjects=" + externalObjects + " result=" + result); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        return result;
+    }
+
     public static IProject getProject(URI uri)
     {
         if (uri == null)
@@ -178,9 +209,12 @@ public final class ContextLinks
             return project;
         }
 
-        String[] segments = platformPath.split("/"); //$NON-NLS-1$
-        IProject project = segments.length > 0 && !segments[0].isEmpty()
-            ? ResourcesPlugin.getWorkspace().getRoot().getProject(segments[0])
+        String projectName = Arrays.stream(platformPath.split("/")) //$NON-NLS-1$
+            .filter(segment -> !segment.isEmpty())
+            .findFirst()
+            .orElse(null);
+        IProject project = projectName != null
+            ? ResourcesPlugin.getWorkspace().getRoot().getProject(projectName)
             : null;
         logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri + " fallbackProject=" //$NON-NLS-1$ //$NON-NLS-2$
             + (project != null ? project.getName() : "NULL")); //$NON-NLS-1$

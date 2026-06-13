@@ -9,13 +9,17 @@ public class ContextLinksProjectPropertyTester
     extends PropertyTester
 {
     private static final String IS_EXTENSION_PROJECT = "isExtensionProject"; //$NON-NLS-1$
+    private static final String IS_CONTEXT_CONFIGURABLE_PROJECT = "isContextConfigurableProject"; //$NON-NLS-1$
 
     @Override
     public boolean test(Object receiver, String property, Object[] args, Object expectedValue)
     {
-        if (!IS_EXTENSION_PROJECT.equals(property))
-            return false;
+        if (IS_EXTENSION_PROJECT.equals(property))
+            return ProjectSelection.isExtensionProject(receiver);
 
-        return ProjectSelection.isExtensionProject(receiver);
+        if (IS_CONTEXT_CONFIGURABLE_PROJECT.equals(property))
+            return ProjectSelection.isContextConfigurableProject(receiver);
+
+        return false;
     }
 }

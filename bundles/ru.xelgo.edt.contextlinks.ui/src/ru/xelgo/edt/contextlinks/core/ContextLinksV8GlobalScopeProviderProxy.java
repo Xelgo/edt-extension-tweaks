@@ -9,9 +9,11 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -61,6 +63,8 @@ final class ContextLinksV8GlobalScopeProviderProxy
     private static final Set<String> loggedDelegateFailures = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedProbeResults = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedResourceCalls = ConcurrentHashMap.newKeySet();
+    private static final ConcurrentHashMap<String, EObject> friendlyDbViewObjects = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Object> friendlyDbViewElements = new ConcurrentHashMap<>();
 
     private final org.osgi.framework.BundleContext context;
     private final Method projectScopeMethod;
@@ -140,7 +144,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
         if (linkedProjectNames.isEmpty())
             return ownScope;
 
-        Map<String, EObject> currentMdObjects = collectCurrentMdObjects(ownScope);
+        CurrentMdObjects currentMdObjects = collectCurrentMdObjects(ownScope, false);
         CompositeScope result = new CompositeScope(ownScope != null ? ownScope : ISlicedScope.NULLSCOPE, true);
         List<String> addedProjects = new ArrayList<>();
         List<String> skippedProjects = new ArrayList<>();
@@ -171,12 +175,12 @@ final class ContextLinksV8GlobalScopeProviderProxy
         logComposition(project, addedProjects, skippedProjects);
         if (!addedProjects.isEmpty())
             logProbe("composite", project, null, reference, result, resource); //$NON-NLS-1$
-        return addedProjects.isEmpty() ? ownScope : result;
+        return addedProjects.isEmpty() ? ownScope : new DeduplicatingRichestScope(result);
     }
 
-    private Map<String, EObject> collectCurrentMdObjects(IScope ownScope)
+    private CurrentMdObjects collectCurrentMdObjects(IScope ownScope, boolean allowClassFallback)
     {
-        Map<String, EObject> result = new HashMap<>();
+        CurrentMdObjects result = new CurrentMdObjects(allowClassFallback);
         if (ownScope == null)
             return result;
 
@@ -186,9 +190,13 @@ final class ContextLinksV8GlobalScopeProviderProxy
             if (!(object instanceof DbViewDef))
                 continue;
 
-            EObject mdObject = ((DbViewDef)object).getMdObject();
+            DbViewDef dbView = (DbViewDef)object;
+            EObject mdObject = dbView.getMdObject();
             if (mdObject != null && mdObject.eClass() != null && !mdObject.eIsProxy())
-                result.putIfAbsent(mdObject.eClass().getName(), mdObject);
+            {
+                result.byViewName.putIfAbsent(dbView.getName(), mdObject);
+                result.byClassName.putIfAbsent(mdObject.eClass().getName(), mdObject);
+            }
         }
         return result;
     }
@@ -215,7 +223,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
 
     private boolean shouldExtendQlScope(Resource resource, IProject project)
     {
-        return isQlResource(resource) && ContextLinks.isExtensionProject(project)
+        return isQlResource(resource) && ContextLinks.isContextConfigurableProject(project)
             && !ContextLinks.getContextProjectNames(project).isEmpty();
     }
 
@@ -513,13 +521,127 @@ final class ContextLinksV8GlobalScopeProviderProxy
         private final List<String> firstElements = new ArrayList<>();
     }
 
+    private static final class CurrentMdObjects
+    {
+        private final boolean allowClassFallback;
+        private final Map<String, EObject> byViewName = new HashMap<>();
+        private final Map<String, EObject> byClassName = new HashMap<>();
+
+        CurrentMdObjects(boolean allowClassFallback)
+        {
+            this.allowClassFallback = allowClassFallback;
+        }
+
+        EObject find(DbViewDef dbView, EObject mdObject)
+        {
+            EObject result = byViewName.get(dbView.getName());
+            if (result == null && allowClassFallback && mdObject != null && mdObject.eClass() != null)
+                result = byClassName.get(mdObject.eClass().getName());
+            return result;
+        }
+    }
+
+    private static final class DeduplicatingRichestScope
+        implements IScope
+    {
+        private final IScope delegate;
+
+        DeduplicatingRichestScope(IScope delegate)
+        {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public IEObjectDescription getSingleElement(QualifiedName name)
+        {
+            return richest(delegate.getElements(name));
+        }
+
+        @Override
+        public Iterable<IEObjectDescription> getElements(QualifiedName name)
+        {
+            IEObjectDescription description = richest(delegate.getElements(name));
+            List<IEObjectDescription> result = new ArrayList<>();
+            if (description != null)
+                result.add(description);
+            return result;
+        }
+
+        @Override
+        public IEObjectDescription getSingleElement(EObject object)
+        {
+            return richest(delegate.getElements(object));
+        }
+
+        @Override
+        public Iterable<IEObjectDescription> getElements(EObject object)
+        {
+            return deduplicate(delegate.getElements(object));
+        }
+
+        @Override
+        public Iterable<IEObjectDescription> getAllElements()
+        {
+            return deduplicate(delegate.getAllElements());
+        }
+
+        private static List<IEObjectDescription> deduplicate(Iterable<IEObjectDescription> descriptions)
+        {
+            Map<QualifiedName, IEObjectDescription> result = new LinkedHashMap<>();
+            for (IEObjectDescription description : descriptions)
+            {
+                if (description == null)
+                    continue;
+
+                QualifiedName name = description.getQualifiedName();
+                if (name == null)
+                    name = description.getName();
+                IEObjectDescription current = result.get(name);
+                if (current == null || richness(description) > richness(current))
+                    result.put(name, description);
+            }
+            return new ArrayList<>(result.values());
+        }
+
+        private static IEObjectDescription richest(Iterable<IEObjectDescription> descriptions)
+        {
+            IEObjectDescription result = null;
+            for (IEObjectDescription description : descriptions)
+            {
+                if (description != null && (result == null || richness(description) > richness(result)))
+                    result = description;
+            }
+            return result;
+        }
+
+        private static int richness(IEObjectDescription description)
+        {
+            if (description == null)
+                return -1;
+
+            try
+            {
+                EObject object = description.getEObjectOrProxy();
+                if (!(object instanceof DbViewDef))
+                    return 0;
+
+                EList<?> fields = ((DbViewDef)object).getFields();
+                return fields != null ? fields.size() : 0;
+            }
+            catch (RuntimeException e)
+            {
+                return 0;
+            }
+        }
+    }
+
     private static final class CurrentProjectFriendlyScope
         implements IScope
     {
         private final IScope delegate;
-        private final Map<String, EObject> currentMdObjects;
+        private final CurrentMdObjects currentMdObjects;
 
-        CurrentProjectFriendlyScope(IScope delegate, Map<String, EObject> currentMdObjects)
+        CurrentProjectFriendlyScope(IScope delegate, CurrentMdObjects currentMdObjects)
         {
             this.delegate = delegate;
             this.currentMdObjects = currentMdObjects;
@@ -577,7 +699,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
             if (mdObject == null || mdObject.eClass() == null)
                 return description;
 
-            EObject currentMdObject = currentMdObjects.get(mdObject.eClass().getName());
+            EObject currentMdObject = currentMdObjects.find(dbView, mdObject);
             if (currentMdObject == null)
                 return description;
 
@@ -594,9 +716,18 @@ final class ContextLinksV8GlobalScopeProviderProxy
         CurrentProjectFriendlyDescription(IEObjectDescription delegate, DbViewDef dbView, EObject currentMdObject)
         {
             this.delegate = delegate;
-            this.friendlyObject = (EObject)Proxy.newProxyInstance(dbView.getClass().getClassLoader(),
-                new Class<?>[] { DbViewDef.class, DbViewTableDef.class, Table.class, InternalEObject.class },
-                new FriendlyDbViewInvocationHandler(dbView, currentMdObject));
+            Set<Class<?>> interfaces = new HashSet<>();
+            collectPublicInterfaces(dbView.getClass(), interfaces);
+            interfaces.add(DbViewDef.class);
+            interfaces.add(DbViewTableDef.class);
+            interfaces.add(Table.class);
+            interfaces.add(EObject.class);
+            interfaces.add(InternalEObject.class);
+
+            this.friendlyObject = friendlyDbViewObjects.computeIfAbsent(proxyKey(dbView, currentMdObject),
+                key -> (EObject)Proxy.newProxyInstance(dbView.getClass().getClassLoader(),
+                    interfaces.toArray(new Class<?>[interfaces.size()]),
+                    new FriendlyDbViewInvocationHandler(dbView, currentMdObject, key)));
         }
 
         @Override
@@ -614,7 +745,9 @@ final class ContextLinksV8GlobalScopeProviderProxy
         @Override
         public EObject getEObjectOrProxy()
         {
-            return friendlyObject;
+            if (isQueryWizardProjectMembershipCheck() || isQuerySchemaBuilderStack())
+                return friendlyObject;
+            return delegate.getEObjectOrProxy();
         }
 
         @Override
@@ -647,11 +780,13 @@ final class ContextLinksV8GlobalScopeProviderProxy
     {
         private final DbViewDef delegate;
         private final EObject currentMdObject;
+        private final String identityKey;
 
-        FriendlyDbViewInvocationHandler(DbViewDef delegate, EObject currentMdObject)
+        FriendlyDbViewInvocationHandler(DbViewDef delegate, EObject currentMdObject, String identityKey)
         {
             this.delegate = delegate;
             this.currentMdObject = currentMdObject;
+            this.identityKey = identityKey;
         }
 
         @Override
@@ -659,12 +794,12 @@ final class ContextLinksV8GlobalScopeProviderProxy
             throws Throwable
         {
             if (method.getDeclaringClass() == Object.class)
-                return method.invoke(this, args);
+                return invokeObjectMethod(proxy, method, args, delegate, identityKey, currentMdObject);
 
             if ("getMdObject".equals(method.getName()) && method.getParameterCount() == 0) //$NON-NLS-1$
-                return isQueryWizardProjectMembershipCheck() ? currentMdObject : delegate.getMdObject();
+                return shouldExposeCurrentProjectMdObject() ? currentMdObject : delegate.getMdObject();
             if ("getFields".equals(method.getName()) && method.getParameterCount() == 0) //$NON-NLS-1$
-                return wrapDbViewElements((EList<?>)method.invoke(delegate, args), currentMdObject);
+                return wrapDbViewElements((EList<?>)method.invoke(delegate, args), currentMdObject, identityKey);
             Object rootContextValue = currentProjectRootContextValue(method, currentMdObject);
             if (rootContextValue != NO_CONTEXT_VALUE)
                 return rootContextValue;
@@ -720,7 +855,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
         }
     }
 
-    private static Object wrapDbViewElement(DbViewElement element, EObject currentMdObject)
+    private static Object wrapDbViewElement(DbViewElement element, EObject currentMdObject, String ownerIdentityKey)
     {
         if (element == null)
             return null;
@@ -731,12 +866,13 @@ final class ContextLinksV8GlobalScopeProviderProxy
         interfaces.add(EObject.class);
         interfaces.add(InternalEObject.class);
 
-        return Proxy.newProxyInstance(element.getClass().getClassLoader(),
-            interfaces.toArray(new Class<?>[interfaces.size()]),
-            new FriendlyDbViewElementInvocationHandler(element, currentMdObject));
+        return friendlyDbViewElements.computeIfAbsent(proxyKey(element, currentMdObject) + "|" + ownerIdentityKey, //$NON-NLS-1$
+            key -> Proxy.newProxyInstance(element.getClass().getClassLoader(),
+                interfaces.toArray(new Class<?>[interfaces.size()]),
+                new FriendlyDbViewElementInvocationHandler(element, currentMdObject, key, ownerIdentityKey)));
     }
 
-    private static EList<Object> wrapDbViewElements(EList<?> elements, EObject currentMdObject)
+    private static EList<Object> wrapDbViewElements(EList<?> elements, EObject currentMdObject, String ownerIdentityKey)
     {
         BasicEList<Object> result = new BasicEList<>();
         if (elements == null)
@@ -745,7 +881,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
         for (Object element : elements)
         {
             if (element instanceof DbViewElement)
-                result.add(wrapDbViewElement((DbViewElement)element, currentMdObject));
+                result.add(wrapDbViewElement((DbViewElement)element, currentMdObject, ownerIdentityKey));
             else
                 result.add(element);
         }
@@ -771,11 +907,16 @@ final class ContextLinksV8GlobalScopeProviderProxy
     {
         private final DbViewElement delegate;
         private final EObject currentMdObject;
+        private final String identityKey;
+        private final String ownerIdentityKey;
 
-        FriendlyDbViewElementInvocationHandler(DbViewElement delegate, EObject currentMdObject)
+        FriendlyDbViewElementInvocationHandler(DbViewElement delegate, EObject currentMdObject, String identityKey,
+            String ownerIdentityKey)
         {
             this.delegate = delegate;
             this.currentMdObject = currentMdObject;
+            this.identityKey = identityKey;
+            this.ownerIdentityKey = ownerIdentityKey;
         }
 
         @Override
@@ -783,12 +924,17 @@ final class ContextLinksV8GlobalScopeProviderProxy
             throws Throwable
         {
             if (method.getDeclaringClass() == Object.class)
-                return method.invoke(this, args);
+                return invokeObjectMethod(proxy, method, args, delegate, identityKey, currentMdObject);
 
             if ("getMdObject".equals(method.getName()) && method.getParameterCount() == 0) //$NON-NLS-1$
-                return isQueryWizardProjectMembershipCheck() ? currentMdObject : delegate.getMdObject();
+                return shouldExposeCurrentProjectMdObject() ? currentMdObject : delegate.getMdObject();
             if ("getFields".equals(method.getName()) && method.getParameterCount() == 0) //$NON-NLS-1$
-                return wrapDbViewElements((EList<?>)method.invoke(delegate, args), currentMdObject);
+                return wrapDbViewElements((EList<?>)method.invoke(delegate, args), currentMdObject, ownerIdentityKey);
+            if ("eContainer".equals(method.getName()) && method.getParameterCount() == 0) //$NON-NLS-1$
+            {
+                Object owner = friendlyDbViewObjects.get(ownerIdentityKey);
+                return owner != null ? owner : method.invoke(delegate, args);
+            }
 
             try
             {
@@ -810,5 +956,112 @@ final class ContextLinksV8GlobalScopeProviderProxy
                 return true;
         }
         return false;
+    }
+
+    private static boolean shouldExposeCurrentProjectMdObject()
+    {
+        return isQueryWizardProjectMembershipCheck() || isQueryWizardMetadataProjectionStack()
+            || isExtensionAdoptionDecisionStack();
+    }
+
+    private static boolean isQuerySchemaBuilderStack()
+    {
+        for (StackTraceElement element : Thread.currentThread().getStackTrace())
+        {
+            if ("buildQuerySchema".equals(element.getMethodName()) //$NON-NLS-1$
+                && element.getClassName().endsWith("QuerySchemaBuilder")) //$NON-NLS-1$
+                return true;
+        }
+        return false;
+    }
+
+    private static boolean isQueryWizardMetadataProjectionStack()
+    {
+        for (StackTraceElement element : Thread.currentThread().getStackTrace())
+        {
+            String className = element.getClassName();
+            if (className.startsWith("com._1c.g5.v8.dt.qw.") //$NON-NLS-1$
+                || className.startsWith("com._1c.g5.v8.dt.ql.dcs.") //$NON-NLS-1$
+                || className.startsWith("com._1c.g5.v8.dt.ql.resource.")) //$NON-NLS-1$
+                return true;
+        }
+        return false;
+    }
+
+    private static boolean isExtensionAdoptionDecisionStack()
+    {
+        for (StackTraceElement element : Thread.currentThread().getStackTrace())
+        {
+            String className = element.getClassName();
+            if (className.startsWith("com._1c.g5.v8.dt.md.ui.extension.commands.") //$NON-NLS-1$
+                || className.contains(".extension.adopt.")) //$NON-NLS-1$
+                return true;
+        }
+        return false;
+    }
+
+    private static Object invokeObjectMethod(Object proxy, Method method, Object[] args, Object delegate,
+        String identityKey, EObject currentMdObject)
+    {
+        switch (method.getName())
+        {
+        case "toString": //$NON-NLS-1$
+            return delegate.toString();
+        case "hashCode": //$NON-NLS-1$
+            return identityKey != null ? identityKey.hashCode() : delegate.hashCode();
+        case "equals": //$NON-NLS-1$
+            Object other = args != null && args.length == 1 ? args[0] : null;
+            return proxy == other || Objects.equals(identityKey, friendlyIdentityKey(other))
+                || sameCurrentObjectDbView(currentMdObject, other) || delegate.equals(unwrapFriendlyProxy(other));
+        default:
+            throw new IllegalArgumentException("Unsupported Object method: " + method.getName()); //$NON-NLS-1$
+        }
+    }
+
+    private static Object unwrapFriendlyProxy(Object object)
+    {
+        if (object == null || !Proxy.isProxyClass(object.getClass()))
+            return object;
+
+        InvocationHandler handler = Proxy.getInvocationHandler(object);
+        if (handler instanceof FriendlyDbViewInvocationHandler)
+            return ((FriendlyDbViewInvocationHandler)handler).delegate;
+        if (handler instanceof FriendlyDbViewElementInvocationHandler)
+            return ((FriendlyDbViewElementInvocationHandler)handler).delegate;
+        return object;
+    }
+
+    private static String friendlyIdentityKey(Object object)
+    {
+        if (object == null || !Proxy.isProxyClass(object.getClass()))
+            return null;
+
+        InvocationHandler handler = Proxy.getInvocationHandler(object);
+        if (handler instanceof FriendlyDbViewInvocationHandler)
+            return ((FriendlyDbViewInvocationHandler)handler).identityKey;
+        if (handler instanceof FriendlyDbViewElementInvocationHandler)
+            return ((FriendlyDbViewElementInvocationHandler)handler).identityKey;
+        return null;
+    }
+
+    private static boolean sameCurrentObjectDbView(EObject currentMdObject, Object other)
+    {
+        if (currentMdObject == null || !(other instanceof DbViewDef))
+            return false;
+
+        try
+        {
+            EObject otherMdObject = ((DbViewDef)other).getMdObject();
+            return Objects.equals(EcoreUtil.getURI(currentMdObject), EcoreUtil.getURI(otherMdObject));
+        }
+        catch (RuntimeException e)
+        {
+            return false;
+        }
+    }
+
+    private static String proxyKey(EObject delegate, EObject currentMdObject)
+    {
+        return String.valueOf(EcoreUtil.getURI(delegate)) + "|" + String.valueOf(EcoreUtil.getURI(currentMdObject)); //$NON-NLS-1$
     }
 }

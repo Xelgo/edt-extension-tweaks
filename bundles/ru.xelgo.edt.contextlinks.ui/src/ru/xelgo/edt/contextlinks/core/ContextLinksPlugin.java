@@ -14,6 +14,6 @@ public final class ContextLinksPlugin
         throws Exception
     {
         super.start(context);
-        ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
+        ContextLinksServiceRegistrars.ensureRegistered();
     }
 }

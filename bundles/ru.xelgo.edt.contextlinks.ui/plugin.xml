@@ -38,7 +38,7 @@
                         ifEmpty="false"
                         operator="and">
                      <test
-                           property="ru.xelgo.edt.contextlinks.ui.isExtensionProject">
+                           property="ru.xelgo.edt.contextlinks.ui.isContextConfigurableProject">
                      </test>
                   </iterate>
                </with>
@@ -53,7 +53,7 @@
             class="ru.xelgo.edt.contextlinks.ui.ContextLinksProjectPropertyTester"
             id="ru.xelgo.edt.contextlinks.ui.projectPropertyTester"
             namespace="ru.xelgo.edt.contextlinks.ui"
-            properties="isExtensionProject"
+            properties="isExtensionProject,isContextConfigurableProject"
             type="java.lang.Object">
       </propertyTester>
    </extension>

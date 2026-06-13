@@ -1572,6 +1572,16 @@ Conclusion:
 - This is not an EDT/plugin issue; the failure happens before Windows app discovery.
 - Do not continue EDT UI automation through fragile foreground PowerShell/mouse scripts unless explicitly requested.
 
+Attempt in progress, 2026-06-14:
+
+- Added `ContextLinksServiceRegistrars.ensureRegistered()` as the common entrypoint for OSGi service wrappers.
+- Call it from plugin startup, UI startup, BSL runtime module construction, and `ContextLinksCachedScopeProvider` construction.
+- Added registration diagnostics for the QL BM scope wrapper so the workspace log shows whether registration was skipped, failed, or completed.
+- Added an `IModelObjectAdopter` wrapper that only acts from the Query Wizard adoption stack:
+  - `isAdopted(foreignExtensionObject, currentExtension)` returns `true`.
+  - `adoptAndAttach(List, currentExtension, monitor)` filters foreign-extension objects before delegating.
+  - Base configuration metadata is not filtered and should still use EDT's normal adoption path.
+
 Follow-up before handoff, 2026-06-13:
 
 - Current deployed bundle during the last check was `ru.xelgo.edt.contextlinks.ui 1.0.0.v202606131708`.
@@ -1601,3 +1611,49 @@ ru.xelgo.edt.contextlinks.core.ContextLinksV8GlobalScopeProviderProxy$FriendlyDb
     - Or introduce a wrapper that EDT can unwrap before `SourcesEditProvider.add`, but this is harder without patching EDT internals.
     - Check whether the membership filter can be bypassed by wrapping `IEObjectDescription` or `getMdObject()` only during `TablesAndFieldsTab$1.select`, while `getEObjectOrProxy()` returns the real linked object in all other call stacks.
   - Also fix `Object` methods on any remaining proxy (`equals`, `hashCode`, `toString`), because `method.invoke(this, args)` for `Object` methods currently lets the handler identity leak.
+
+Follow-up, 2026-06-14 attempt `v202606132036`:
+
+- Built and redeployed `ru.xelgo.edt.contextlinks.feature 1.0.0.v202606132036`.
+- This attempt removed the broad `projectAnchor` projection that had broken linked objects.
+- Observed after redeploy:
+  - `Справочник_конфигурации` fields are visible again in the database tree.
+  - `Расш2_Документ` and `Расш2_Справочник` are still absent from the Query Wizard database tree opened from `Расш1_ОбщийМодуль`.
+  - `Расш2_Реквизит` is still collected as an adoption candidate when pressing `OK` from `Расш1`; EDT still wants to add it to `Расш1`, which must not happen for metadata owned by another extension.
+  - The middle table list can still show `Справочник_конфигурации`, `Справочник_конфигурации1`, etc. when the user adds fields from the database tree.
+- Log clue:
+  - BSL context-link logs are present (`cache.module.add`, `settings.read`, etc.).
+  - There is no `EDT Context Links QL BM global scope wrapper registered` line and no `EDT Context Links QL probe` line in the current workspace log.
+  - This suggests the BSL scope wrapper is active, but the QL global-scope wrapper is not reliably registered on startup.
+- Next attempt:
+  - Register service wrappers from a class that is definitely constructed during BSL scope setup (`ContextLinksCachedScopeProvider`) in addition to plugin startup.
+  - Add explicit registration diagnostics for wrapper services.
+  - Add an `IModelObjectAdopter` wrapper: inside `QueryWizardAdoptSupport`, treat objects owned by a different `IExtensionProject` as already adopted, so Query Wizard skips the "add to current extension" prompt for `Расш2_*` fields while keeping normal adoption for base configuration objects.
+
+Follow-up, 2026-06-14 attempt `v202606132052`:
+
+- Built and redeployed `ru.xelgo.edt.contextlinks.feature 1.0.0.v202606132052`.
+- Code added:
+  - common `ContextLinksServiceRegistrars.ensureRegistered()` entrypoint;
+  - calls from plugin startup, UI startup, BSL runtime module and cached scope provider construction;
+  - QL wrapper registration diagnostics;
+  - experimental `IModelObjectAdopter` wrapper for Query Wizard adoption filtering;
+  - `redeploy-edt-main.ps1` now force-kills EDT workspace processes immediately instead of first waiting for graceful window close.
+- User-visible result is bad:
+  - `Расш2_Документ` and `Расш2_Справочник` still do not appear in Query Wizard from `Расш1`.
+  - `Справочник_Конфигурации` duplicate/table selection bug remains.
+  - `OK` in Query Wizard regressed and no longer completes normally.
+- Fresh workspace log after the failed check contains BSL/plugin debug entries, but no:
+  - `EDT Context Links QL BM global scope wrapper registered`;
+  - `EDT Context Links QL BM provider call`;
+  - `EDT Context Links QL probe`;
+  - `EDT Context Links model object adopter wrapper registered`;
+  - `EDT Context Links adoption.skipForeignExtension`.
+- Installed jar and `bundles.info` were checked:
+  - `.p2\pool\plugins\ru.xelgo.edt.contextlinks.ui_1.0.0.v202606132052.jar` exists;
+  - `bundles.info` points to that jar;
+  - bytecode of `ContextLinksCachedScopeProvider` calls `ContextLinksServiceRegistrars.ensureRegistered()`.
+- Conclusion:
+  - This attempt did not restore the previously working QL wrapper path documented around `v202606131517`/`v202606131532`.
+  - The `IModelObjectAdopter` idea should be removed or disabled until the base Query Wizard `OK` path is stable again.
+  - Next attempt should follow the successful historical path: make `IV8GlobalScopeProvider` wrapper registration observable again, then address duplicates/adoption separately.

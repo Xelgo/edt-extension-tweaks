@@ -45,9 +45,9 @@ public class ConfigureContextLinksHandler
             return null;
         }
         ContextLinks.logDebug("EDT Context Links configure command selected project " + project.getName()); //$NON-NLS-1$
-        if (!ContextLinks.isExtensionProject(project))
+        if (!ContextLinks.isContextConfigurableProject(project))
         {
-            ContextLinks.logWarning("EDT Context Links configure command ignored non-extension project " //$NON-NLS-1$
+            ContextLinks.logWarning("EDT Context Links configure command ignored non-configurable project " //$NON-NLS-1$
                 + project.getName());
             Messages.showInfo(shell, Messages.ConfigureContextLinksHandler_Title,
                 Messages.ConfigureContextLinksHandler_NotExtensionProject);
