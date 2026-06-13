@@ -1571,3 +1571,33 @@ Conclusion:
 - Computer Use is still unavailable in this Codex runtime.
 - This is not an EDT/plugin issue; the failure happens before Windows app discovery.
 - Do not continue EDT UI automation through fragile foreground PowerShell/mouse scripts unless explicitly requested.
+
+Follow-up before handoff, 2026-06-13:
+
+- Current deployed bundle during the last check was `ru.xelgo.edt.contextlinks.ui 1.0.0.v202606131708`.
+- Good state preserved:
+  - `Ctrl+Alt+Q`, then `Tab`, then right arrows opens Query Wizard and shows linked `Расш1_Справочник`.
+  - Linked catalog fields are visible under the linked root.
+  - `ContextLinksModuleContextDefService.ensureFallbackContextDef` no longer mutates BM model inside read-only validation transactions.
+- Current bug is not fixed:
+  - Clicking/adding linked `Расш1_Справочник` into the center `Tables` area still gives the wrong icon/semantics.
+  - It is still treated like a requisite/nested db view element, not like a real top-level table.
+- Important log clue after adding it:
+
+```text
+java.lang.IllegalArgumentException: Expected an instance of BmObject, but was
+ru.xelgo.edt.contextlinks.core.ContextLinksV8GlobalScopeProviderProxy$FriendlyDbViewInvocationHandler
+    at com._1c.g5.v8.bm.core.internal.transaction.BmPlatformTransaction.toTransactionObject(...)
+    at com._1c.g5.v8.dt.ql.resource.DynamicDbViewFieldComputer.extendDbViewElementIfNecessary(...)
+```
+
+- My next thought:
+  - The `CurrentProjectFriendlyDescription` dynamic proxy is acceptable for the source tree filter, but it must not be written into the QL query schema.
+  - `SourcesEditProvider.add(Object)` takes `TreeItem.getData()` and passes the resulting `DbViewElement` to `QlUtil.createQuerySchemaTable`.
+  - That means the source tree currently exposes the proxy as tree item data, and the proxy leaks into `QuerySchemaTable.tableDbView`.
+  - Next attempt should avoid using a dynamic proxy as the actual `TreeItem` data for add operations.
+  - Possible routes:
+    - Prefer returning the real linked `DbViewDef` from tree data and make only `QueryWizardServiceUtils.isObjectBelongsToCurrentProject` see the current-project surrogate.
+    - Or introduce a wrapper that EDT can unwrap before `SourcesEditProvider.add`, but this is harder without patching EDT internals.
+    - Check whether the membership filter can be bypassed by wrapping `IEObjectDescription` or `getMdObject()` only during `TablesAndFieldsTab$1.select`, while `getEObjectOrProxy()` returns the real linked object in all other call stacks.
+  - Also fix `Object` methods on any remaining proxy (`equals`, `hashCode`, `toString`), because `method.invoke(this, args)` for `Object` methods currently lets the handler identity leak.

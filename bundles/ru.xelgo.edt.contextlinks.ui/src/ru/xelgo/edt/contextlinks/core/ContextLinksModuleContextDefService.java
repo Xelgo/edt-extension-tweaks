@@ -87,7 +87,7 @@ public class ContextLinksModuleContextDefService
     private static ContextDef ensureFallbackContextDef(Module module, ContextDef contextDef)
     {
         EObject owner = module != null ? module.getOwner() : null;
-        if (!(owner instanceof CommonModule commonModule))
+        if (!(owner instanceof CommonModule))
             return null;
 
         if (contextDef != null && !contextDef.allMethods().isEmpty())
@@ -100,21 +100,9 @@ public class ContextLinksModuleContextDefService
         if (exportMethods.isEmpty())
             return null;
 
-        ContextDef fallbackContextDef = contextDef;
-        if (fallbackContextDef == null)
-        {
-            fallbackContextDef = McoreFactory.eINSTANCE.createContextDef();
-            fallbackContextDef.setEnvironments(Environments.ALL);
-            commonModule.setContextDef(fallbackContextDef);
-        }
-        else if (fallbackContextDef.eResource() == null && commonModule.eResource() != null)
-        {
-            commonModule.setContextDef(fallbackContextDef);
-        }
-
-        if (fallbackContextDef.eResource() == null)
-            return null;
-
+        ContextDef fallbackContextDef = McoreFactory.eINSTANCE.createContextDef();
+        fallbackContextDef.setEnvironments(contextDef != null && contextDef.getEnvironments() != null
+            ? contextDef.getEnvironments() : Environments.ALL);
         exportMethods.stream()
             .map(ContextLinksModuleContextDefService::createFallbackMethod)
             .forEach(fallbackContextDef.getMethods()::add);
