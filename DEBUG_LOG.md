@@ -866,3 +866,40 @@ Better direction:
   snapshot until the producer publishes a fresh scope.
 - This should turn "full context loss" into "temporarily stale but still usable linked context", which matches the expected behavior
   during an in-progress background rebuild.
+
+## 2026-06-13 - Use Last Stable Linked Project Scope When EDT Direct Scope Is Null
+
+User decision:
+
+- Do not wait/block inside scope lookup.
+- Try caching the linked project scope and use the cached version when EDT temporarily returns `null`.
+
+Implementation attempt:
+
+- Add `stableProjectScopes` in `ContextLinksCachedScopeProvider`, keyed by project name and scope kind (`TYPE_ITEM` /
+  `PROPERTY`).
+- Update stable project scope snapshots only when EDT gives a non-null direct scope through:
+  `addTypeItemScope(...)`, `addPropertyScope(...)`, or a successful direct lookup.
+- Do not clear stable snapshots on `clearTypeItemsScopes(...)` / `clearPropertyScopes(...)`.
+- For linked project lookup only, `getDirectTypeItemScope(...)` / `getDirectPropertyScope(...)` now returns:
+  - current EDT direct scope if non-null;
+  - otherwise last stable scope for that linked project and kind.
+- Remove the previous resource-change/touch dependency refresh attempt, so this build tests the cache fallback hypothesis without
+  synthetic file touches.
+
+Expected next log check:
+
+- During `Extension2` rebuild, if EDT returns `null` for its direct scope while `Extension1` asks for linked context, log should show:
+  `EDT Context Links stable scope fallback project=... kind=...`.
+- `Extension1` should keep seeing at least the last stable `Extension2` context instead of losing the linked context completely.
+
+Build:
+
+- First `mvn package -DskipTests` attempt failed at `2026-06-13 17:40:22 +04:00`.
+- Java compilation completed, but repository packaging failed because Maven could not delete the locked update-site zip:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`.
+- After the update-site zip was released, `mvn package -DskipTests` completed successfully at
+  `2026-06-13 17:41:07 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `104668` bytes.
