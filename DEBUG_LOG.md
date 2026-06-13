@@ -1553,3 +1553,21 @@ Conclusion:
 
 - Need a Codex restart / plugin runtime reload before using Computer Use reliably in this thread.
 - Until Computer Use starts, avoid continuing fragile foreground PowerShell mouse automation.
+
+Follow-up after retrying Computer Use in the next user turn:
+
+- Re-read the bundled `computer-use` skill and retried the official `scripts/computer-use-client.mjs` bootstrap.
+- Reset the JavaScript runtime and retried once more.
+- Both attempts failed before `sky.list_apps()` with the same bundled runtime export error:
+
+```text
+Package subpath './dist/project/cua/sky_js/src/targets/windows/internal/computer_use_client_base.js'
+is not defined by "exports" in
+C:\Users\Xelgo\AppData\Local\OpenAI\Codex\runtimes\cua_node\789504f803e82e2b\bin\node_modules\@oai\sky\package.json
+```
+
+Conclusion:
+
+- Computer Use is still unavailable in this Codex runtime.
+- This is not an EDT/plugin issue; the failure happens before Windows app discovery.
+- Do not continue EDT UI automation through fragile foreground PowerShell/mouse scripts unless explicitly requested.
