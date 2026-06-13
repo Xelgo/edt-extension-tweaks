@@ -523,3 +523,35 @@ Conclusion:
 be visible as a module/type item while its exported method context is still empty in EDT's `CommonModule.getContextDef()`
 path. Next attempts should target fresh common-module `ContextDef` refresh or delayed resolution without global
 project-scope clearing.
+
+## 2026-06-13 - Fallback ContextDef From Fresh BSL Export Methods
+
+Working hypothesis:
+
+- EDT exposes common module names through project type/property scopes.
+- Exported methods after the dot come from `CommonModule.getContextDef()`.
+- For fresh common modules, EDT can temporarily expose the module name while `CommonModule.getContextDef()` still has
+  `allMethods=0`.
+- Clearing global project scopes from `clearScopes()` is unsafe, so the next attempt must stay local to the module
+  context definition path.
+
+Implementation attempt:
+
+- In `ContextLinksModuleContextDefService`, keep EDT's normal `ContextDef` when it already has methods.
+- If a common module `ContextDef` is `null` or has `allMethods=0`, inspect the live BSL `Module.allMethods()`.
+- If the BSL module contains exported methods, build a minimal transient `mcore.ContextDef` with matching method names
+  and parameter counts.
+- Return this fallback only for common modules and log it as `[module.context.fallback]`.
+
+Expected next log check:
+
+- For a fresh module such as `Ext2_ОбщийМодуль3`, `[module.context.provider]` may still show `allMethods=0`.
+- Immediately after that, `[module.context.fallback]` should show `allMethods > 0` and `methods=[...]`.
+- The linked extension should then see exported methods without losing `ContextLinksProjectScope`.
+
+Build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 10:27:27 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `92142` bytes.

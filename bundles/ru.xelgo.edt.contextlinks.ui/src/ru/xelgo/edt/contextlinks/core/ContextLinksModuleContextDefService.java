@@ -11,9 +11,15 @@ import org.eclipse.emf.ecore.EObject;
 import com._1c.g5.v8.dt.bsl.contextdef.IBslModuleContextDefExtension;
 import com._1c.g5.v8.dt.bsl.contextdef.IBslModuleContextDefRegistry;
 import com._1c.g5.v8.dt.bsl.contextdef.IBslModuleContextDefService;
+import com._1c.g5.v8.dt.bsl.model.FormalParam;
+import com._1c.g5.v8.dt.bsl.model.Function;
 import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.mcore.ContextDef;
 import com._1c.g5.v8.dt.mcore.Event;
+import com._1c.g5.v8.dt.mcore.McoreFactory;
+import com._1c.g5.v8.dt.mcore.ParamSet;
+import com._1c.g5.v8.dt.mcore.Parameter;
+import com._1c.g5.v8.dt.mcore.util.Environments;
 import com._1c.g5.v8.dt.metadata.mdclass.CommonModule;
 import com.google.inject.Inject;
 
@@ -49,6 +55,12 @@ public class ContextLinksModuleContextDefService
 
             ContextDef contextDef = provider.getContextDef(module);
             logCommonModuleContext("provider", module, provider, contextDef, "matched"); //$NON-NLS-1$ //$NON-NLS-2$
+            ContextDef fallbackContextDef = createFallbackContextDef(module, contextDef);
+            if (fallbackContextDef != null)
+            {
+                logCommonModuleContext("fallback", module, provider, fallbackContextDef, "export-methods-from-bsl"); //$NON-NLS-1$ //$NON-NLS-2$
+                return fallbackContextDef;
+            }
             return contextDef;
         }
 
@@ -69,6 +81,63 @@ public class ContextLinksModuleContextDefService
         }
 
         return List.of();
+    }
+
+    private static ContextDef createFallbackContextDef(Module module, ContextDef contextDef)
+    {
+        EObject owner = module != null ? module.getOwner() : null;
+        if (!(owner instanceof CommonModule))
+            return null;
+
+        if (contextDef != null && !contextDef.allMethods().isEmpty())
+            return null;
+
+        List<com._1c.g5.v8.dt.bsl.model.Method> exportMethods = module.allMethods()
+            .stream()
+            .filter(com._1c.g5.v8.dt.bsl.model.Method::isExport)
+            .collect(Collectors.toList());
+        if (exportMethods.isEmpty())
+            return null;
+
+        ContextDef fallbackContextDef = McoreFactory.eINSTANCE.createContextDef();
+        fallbackContextDef.setEnvironments(Environments.ALL);
+        exportMethods.stream()
+            .map(ContextLinksModuleContextDefService::createFallbackMethod)
+            .forEach(fallbackContextDef.getMethods()::add);
+        return fallbackContextDef;
+    }
+
+    private static com._1c.g5.v8.dt.mcore.Method createFallbackMethod(
+        com._1c.g5.v8.dt.bsl.model.Method bslMethod)
+    {
+        com._1c.g5.v8.dt.mcore.Method method = McoreFactory.eINSTANCE.createMethod();
+        method.setName(safeName(bslMethod.getName()));
+        method.setNameRu(safeName(bslMethod.getName()));
+        method.setRetVal(bslMethod instanceof Function);
+        method.setEnvironments(Environments.ALL);
+        method.getParamSet().add(createFallbackParamSet(bslMethod));
+        return method;
+    }
+
+    private static ParamSet createFallbackParamSet(com._1c.g5.v8.dt.bsl.model.Method bslMethod)
+    {
+        ParamSet paramSet = McoreFactory.eINSTANCE.createParamSet();
+        int minParams = 0;
+        for (FormalParam formalParam : bslMethod.getFormalParams())
+        {
+            Parameter parameter = McoreFactory.eINSTANCE.createParameter();
+            parameter.setName(safeName(formalParam.getName()));
+            parameter.setNameRu(safeName(formalParam.getName()));
+            parameter.setDefaultValue(formalParam.getDefaultValue() != null);
+            parameter.setOut(!formalParam.isByValue());
+            paramSet.getParams().add(parameter);
+            if (formalParam.getDefaultValue() == null)
+                minParams++;
+        }
+
+        paramSet.setMinParams(minParams);
+        paramSet.setMaxParams(bslMethod.getFormalParams().size());
+        return paramSet;
     }
 
     private static void logCommonModuleContext(String stage, Module module, IBslModuleContextDefExtension provider,
