@@ -1335,3 +1335,32 @@ Conclusion:
   EDT UI check to confirm whether the query constructor suggestions now show sibling-extension objects.
 - Current log still contains unrelated EDT/p2 noise from stale update-site zip URLs (`repository-v*.zip`) and 1C service
   authentication failures; these are not plugin runtime failures.
+
+Fresh log after deleting `.metadata/.log` and checking again:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main\.metadata\.log
+Length: 272973
+LastWriteTime: 2026-06-13 19:22:44 +04:00
+```
+
+Important plugin lines:
+
+```text
+EDT Context Links QL BM global scope wrapper registered
+EDT Context Links startup warm-up scheduled
+EDT Context Links startup warm-up pass=1 projects=[Конфигурация.Расширение2, Конфигурация.Расширение]
+EDT Context Links startup warm-up build pass=1 project=Конфигурация.Расширение2
+EDT Context Links startup warm-up build pass=1 project=Конфигурация.Расширение
+EDT Context Links QL BM provider call resource=com._1c.g5.v8.dt.ql.dcs.resource.QlDcsResource project=Конфигурация.Расширение2 ql=true uri=platform:/resource/Конфигурация.Расширение2/querywizard_1781364155235.qldcs
+EDT Context Links QL BM scope project=Конфигурация.Расширение2 linked=[Конфигурация.Расширение] skipped=[Конфигурация]
+EDT Context Links startup warm-up pass=2 projects=[Конфигурация.Расширение2, Конфигурация.Расширение]
+```
+
+Conclusion:
+
+- The successful QL/DCS project lookup is reproducible on a fresh log.
+- The wrapper is active before the query constructor scope call.
+- The linked extension scope is still being composed for `Расширение2`.
+- The log size problem is not caused by our diagnostics now; most volume is EDT/p2 repeatedly trying stale update-site zip URLs
+  like `ru.xelgo.edt.contextlinks.repository-v*.zip` plus 1C service authentication errors.
