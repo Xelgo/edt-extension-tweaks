@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -23,6 +24,8 @@ import org.osgi.framework.ServiceReference;
 
 import com._1c.g5.modeling.xtext.scoping.CompositeScope;
 import com._1c.g5.modeling.xtext.scoping.ISlicedScope;
+import com._1c.g5.v8.dt.core.platform.IResourceLookup;
+import com._1c.g5.wiring.ServiceAccess;
 import com.google.common.base.Predicate;
 
 /**
@@ -182,13 +185,33 @@ final class ContextLinksV8GlobalScopeProviderProxy
         {
             ContextLinks.logWarning("EDT Context Links QL BM provider call resource=" //$NON-NLS-1$
                 + resource.getClass().getName() + " project=" + projectName //$NON-NLS-1$
-                + " ql=" + isQlResource(resource)); //$NON-NLS-1$
+                + " ql=" + isQlResource(resource) + " uri=" + resource.getURI()); //$NON-NLS-1$ //$NON-NLS-2$
         }
     }
 
     private IProject workspaceProject(Resource resource)
     {
-        return resource != null ? ContextLinks.getProject(resource.getURI()) : null;
+        if (resource == null)
+            return null;
+
+        IProject project = ContextLinks.getProject(resource.getURI());
+        if (project != null)
+            return project;
+
+        try
+        {
+            IResourceLookup resourceLookup = ServiceAccess.get(IResourceLookup.class);
+            project = resourceLookup.getProject(resource);
+            if (project != null)
+                return project;
+
+            IResource platformResource = resourceLookup.getPlatformResource(resource);
+            return platformResource != null ? platformResource.getProject() : null;
+        }
+        catch (RuntimeException e)
+        {
+            return null;
+        }
     }
 
     private boolean isUsableLinkedExtension(IProject project, IProject linkedProject)

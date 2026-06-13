@@ -1241,3 +1241,69 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `124488` bytes.
+
+Follow-up after installing `ff5a137`:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main\.metadata\.log
+Length: 350828
+LastWriteTime: 2026-06-13 19:15:59 +04:00
+```
+
+Important result:
+
+```text
+EDT Context Links QL BM global scope wrapper registered
+EDT Context Links QL BM provider call resource=com._1c.g5.v8.bm.core.internal.BmResource project=Конфигурация ql=false
+EDT Context Links QL BM provider call resource=com._1c.g5.v8.dt.ql.dcs.resource.QlDcsResource project=NULL ql=true
+```
+
+Conclusion:
+
+- The classloader problem is fixed.
+- The wrapper is now on the QL/DCS execution path.
+- The remaining immediate blocker is project resolution: `QlDcsResource` reaches the wrapper, but `ContextLinks.getProject(uri)`
+  returns `NULL`.
+- Because project is `NULL`, the wrapper cannot check extension settings and cannot add sibling extension scopes.
+
+Next adjustment:
+
+- Resolve the project for QL/DCS resources through EDT `IResourceLookup.getProject(resource)` and
+  `IResourceLookup.getPlatformResource(resource)`, falling back to URI only when possible.
+- Add the resource URI to the one-per-resource diagnostic to understand future embedded resource shapes.
+
+Implementation:
+
+- `ContextLinksV8GlobalScopeProviderProxy.workspaceProject(...)` now first uses the existing URI lookup, then falls back to
+  EDT `IResourceLookup.getProject(resource)` and `IResourceLookup.getPlatformResource(resource)`.
+- QL/BM diagnostics now include the resource URI to identify embedded QL/DCS resource shapes when project lookup still fails.
+
+Build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 19:17:20 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `122400` bytes.
+
+Immediate log check after restart/install attempt:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main\.metadata\.log
+Length: 503506
+LastWriteTime: 2026-06-13 19:18:32 +04:00
+```
+
+Observed:
+
+```text
+NoSuchFileException: ...\target\ru.xelgo.edt.contextlinks.repository-v*.zip
+No repository found containing: osgi.bundle,ru.xelgo.edt.contextlinks.ui,1.0.0.v202606131517
+EDT Context Links QL BM global scope wrapper registered
+```
+
+Conclusion:
+
+- EDT/p2 still has several old update-site zip URLs cached or configured (`repository-v1.zip`, `repository-v2.zip`, etc.).
+- The plugin did start, because the QL BM wrapper registration message is present.
+- There are no fresh `QL BM provider call` lines after that registration yet, so this log does not prove whether the new
+  `IResourceLookup` fallback resolves `QlDcsResource` projects. Need one more query-constructor open/check after this build.
