@@ -1023,3 +1023,64 @@ Next log check:
 - With debug logging enabled, useful signals are:
   - `EDT Context Links QL db-view scope: project=... configured=... added=... missing=...`;
   - `EDT Context Links QL stable db-view fallback project=...`.
+
+## 2026-06-13 - First QL Runtime Extension Attempt Failed
+
+User-visible result after installing `261cd34`:
+
+- Query Constructor did not change.
+- It still showed only the current extension's model.
+
+Fresh EDT workspace log:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main\.metadata\.log
+```
+
+Important error:
+
+```text
+Failed to add extension hover for class com._1c.g5.v8.dt.right.ql.ui.RightQlExecutableExtensionFactory:org.eclipse.xtext.ui.editor.hover.AnnotationWithQuickFixesHover
+Caused by: java.lang.AssertionError: Right Ql Runtime Module extension cannot be more then one
+    at com._1c.g5.v8.dt.internal.right.ql.ui.RightQlUiPlugin.getRuntimeModuleExtension(RightQlUiPlugin.java:130)
+```
+
+Additional runtime-platform inspection:
+
+- The installed EDT has QL BM bundles that were not visible in the earlier target-cache-only research.
+- `com._1c.g5.v8.dt.ql.bm` already contributes:
+
+```xml
+<extension point="com._1c.g5.v8.dt.ql.qlRuntimeModuleExtension">
+  <qlRuntimeModuleExtension module="com._1c.g5.v8.dt.ql.bm.BmAwareQlModule"/>
+</extension>
+```
+
+Conclusion:
+
+- `com._1c.g5.v8.dt.ql.qlRuntimeModuleExtension` is a singleton-style hook in this EDT runtime.
+- The first attempt added a second QL runtime module, so EDT rejected the QL runtime extension set.
+- Because the existing BM-aware QL module already owns that extension point, this plugin cannot safely bind
+  `IQlCachedScopeProvider` through `qlRuntimeModuleExtension`.
+
+Recovery action:
+
+- Remove the plugin's QL runtime extension contribution.
+- Remove `ContextLinksQlRuntimeModule` and `ContextLinksQlCachedScopeProvider`.
+- Remove the direct `com._1c.g5.v8.dt.ql` bundle dependency.
+- Keep this failed attempt documented because it rules out the most obvious QL hook.
+
+Next research direction:
+
+- Study the existing `com._1c.g5.v8.dt.ql.bm.scoping.QlGlobalScopeProvider`.
+- It extends `PlatformAwareGlobalScopeProvider` and adds only the parent configuration scope plus current resource scope.
+- It does not include sibling extension projects, which matches the Query Constructor symptom.
+- A safer next attempt should target the BM/global metadata scope path that `BmAwareQlModule` already uses, not add another QL
+  runtime module.
+
+Recovery build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 18:06:56 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `115682` bytes.
