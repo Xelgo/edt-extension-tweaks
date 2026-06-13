@@ -799,3 +799,32 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `103436` bytes.
+
+## 2026-06-13 - Narrow Synthetic Touch Suppression To Resource Path
+
+Latest log check:
+
+- The new build was installed and running.
+- `dependency refresh touched ...` appeared, so the synthetic resource delta mechanism is active.
+- The last observed refresh was triggered by `Extension1` and touched a resource in `Extension2`.
+
+Analysis:
+
+- Suppression in commit `6f43ce5` was too broad: after touching a dependent project, all deltas from that project were ignored for
+  `15s`.
+- If the user changed a real metadata file in `Extension2` shortly after our synthetic touch in `Extension2`, the listener could
+  accidentally ignore the real user delta.
+
+Implementation attempt:
+
+- Replace project-wide synthetic delta suppression with exact resource-path suppression.
+- Only the specific resource touched by the plugin is ignored during the suppression window.
+- Other files in the same extension project, such as the document metadata changed by adding a requisite, should still trigger
+  dependency refresh.
+
+Build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 17:27:32 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `105931` bytes.

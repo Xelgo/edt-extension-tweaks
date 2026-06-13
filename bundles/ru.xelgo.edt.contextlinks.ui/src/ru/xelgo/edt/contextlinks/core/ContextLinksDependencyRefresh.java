@@ -32,7 +32,7 @@ public final class ContextLinksDependencyRefresh
     private static final AtomicBoolean installed = new AtomicBoolean();
     private static final AtomicBoolean scheduled = new AtomicBoolean();
     private static final Set<String> pendingProjectNames = ConcurrentHashMap.newKeySet();
-    private static final Map<String, Long> syntheticDeltaProjects = new ConcurrentHashMap<>();
+    private static final Map<String, Long> syntheticDeltaResources = new ConcurrentHashMap<>();
 
     private static final IResourceChangeListener listener = ContextLinksDependencyRefresh::resourceChanged;
 
@@ -86,8 +86,7 @@ public final class ContextLinksDependencyRefresh
         if (resource == null || resource.getType() == IResource.ROOT)
             return false;
 
-        IProject project = resource.getProject();
-        if (project != null && isSyntheticDelta(project.getName()))
+        if (isSyntheticDelta(resource))
             return false;
 
         IPath path = resource.getFullPath();
@@ -217,7 +216,7 @@ public final class ContextLinksDependencyRefresh
 
         try
         {
-            syntheticDeltaProjects.put(project.getName(), Long.valueOf(System.currentTimeMillis()));
+            syntheticDeltaResources.put(touchedResource.getFullPath().toString(), Long.valueOf(System.currentTimeMillis()));
             touchedResource.touch(monitor);
             ContextLinks.logWarning("EDT Context Links dependency refresh touched project=" + project.getName() //$NON-NLS-1$
                 + " resource=" + touchedResource.getProjectRelativePath()); //$NON-NLS-1$
@@ -262,9 +261,13 @@ public final class ContextLinksDependencyRefresh
         return result[0] != null ? result[0] : src;
     }
 
-    private static boolean isSyntheticDelta(String projectName)
+    private static boolean isSyntheticDelta(IResource resource)
     {
-        Long timestamp = syntheticDeltaProjects.get(projectName);
+        String path = resource.getFullPath() != null ? resource.getFullPath().toString() : null;
+        if (path == null)
+            return false;
+
+        Long timestamp = syntheticDeltaResources.get(path);
         if (timestamp == null)
             return false;
 
@@ -272,7 +275,7 @@ public final class ContextLinksDependencyRefresh
         if (age <= SYNTHETIC_DELTA_SUPPRESS_MS)
             return true;
 
-        syntheticDeltaProjects.remove(projectName);
+        syntheticDeltaResources.remove(path);
         return false;
     }
 
