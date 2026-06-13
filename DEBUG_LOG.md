@@ -1405,3 +1405,50 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `127151` bytes.
+
+## 2026-06-13 - EDT Redeploy Automation
+
+Goal:
+
+- Avoid repeated manual install/restart steps while iterating on plugin builds.
+- Target active EDT installation:
+  `C:\Users\Xelgo\AppData\Local\1C\1cedtstart\installations\1C_EDT 2025.2\1cedt`
+- Target workspace:
+  `C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main`
+
+Observed live processes:
+
+```text
+1cedt.exe  -data C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main
+javaw.exe  -data C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\Main
+1cedtstart.exe remains separate and should not be stopped by workspace redeploy.
+```
+
+Implementation:
+
+- Added `tools/redeploy-edt-main.ps1`.
+- The script can:
+  - run Maven build unless `-SkipBuild` is passed;
+  - find and close only EDT processes whose command line contains the `Main` workspace path;
+  - install `ru.xelgo.edt.contextlinks.feature.feature.group` from the repository zip through Eclipse p2 director;
+  - delete the workspace `.metadata\.log`;
+  - restart EDT with `-data ...\projects\Main`.
+- `-DryRun` prints all intended steps without closing EDT or installing anything.
+- If EDT does not close gracefully, the script stops and asks for `-ForceKill` instead of force-killing by default.
+
+Verified:
+
+```text
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\redeploy-edt-main.ps1 -DryRun -SkipBuild
+```
+
+Dry-run correctly detected only the workspace EDT processes and prepared this p2 director command:
+
+```text
+1cedt.exe -nosplash -application org.eclipse.equinox.p2.director
+  -repository jar:file:/.../ru.xelgo.edt.contextlinks.repository.zip!/
+  -installIU ru.xelgo.edt.contextlinks.feature.feature.group
+  -profile C__Users_Xelgo_AppData_Local_1C_1cedtstart_installations_1C_EDT 2025.2_1cedt
+  -destination ...\1C_EDT 2025.2\1cedt
+  -bundlepool C:\Users\Xelgo\.p2\pool
+```
