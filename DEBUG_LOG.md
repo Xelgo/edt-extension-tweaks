@@ -903,3 +903,83 @@ Build:
 - Update site artifact:
   `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
 - Artifact size: `104668` bytes.
+
+## 2026-06-13 - Query Constructor / QL Context Research
+
+User direction:
+
+- Current BSL context linking is acceptable enough to continue.
+- Need to research the EDT Query Constructor ("Конструктор запросов").
+- Goal: query constructor/table-field suggestions should see the same linked extension context as BSL code.
+
+Relevant EDT bundles in the 2025.2 target platform:
+
+- `com._1c.g5.v8.dt.ql_22.1.0.v202605050943.jar`
+- `com._1c.g5.v8.dt.ql.model_11.0.0.v202605050943.jar`
+- `com._1c.g5.v8.dt.ql.dcs_16.0.100.v202605050943.jar`
+- `com._1c.g5.v8.dt.ql.dcs.model_5.0.300.v202605050943.jar`
+- `com._1c.g5.v8.dt.dcs_21.1.1.v202605050943.jar`
+- `com._1c.g5.v8.dt.dcs.model_9.0.100.v202605050943.jar`
+
+Important findings:
+
+- `com._1c.g5.v8.dt.ql` declares extension point
+  `com._1c.g5.v8.dt.ql.qlRuntimeModuleExtension`.
+- The QL extension point looks analogous to BSL's `bslRuntimeModuleExtension`, but the QL jar does not contain the referenced
+  `schema/qlRuntimeModuleExtension.exsd`; BSL does contain its schema.
+- `QlRuntimeModule` binds `IQlCachedScopeProvider` and `IContainer.Manager`.
+- `QlScopeProvider` contains injected fields:
+  - `IQlCachedScopeProvider cacheScopeProvider`;
+  - `IResourceLookup resourceLookup`;
+  - standard QL mapper/type/dynamic-db-view services.
+- `QlScopeProvider.getAllowedDbViewStatic(context)` does:
+  - resolve current `IDtProject` through `IResourceLookup.getDtProject(context)`;
+  - call `IQlCachedScopeProvider.getDbViewScope(dtProject)`;
+  - if missing, build standard scope through the delegate for
+    `QlPackage.Literals.ABSTRACT_QUERY_SCHEMA_TABLE__TABLE_DB_VIEW`;
+  - then save it through `IQlCachedScopeProvider.addDbViewScope(dtProject, scope)`.
+- `QlCachedScopeProvider` has a very small public surface:
+  - `addDbViewScope(IDtProject, IScope)`;
+  - `getDbViewScope(IDtProject)`;
+  - `clearDbViewScopes(IDtProject)`;
+  - per-query operator scope methods `setDbViewScope(String, String, IScope)` / `getScope(String, String)`.
+- `com._1c.g5.v8.dt.ql.dcs` has `QlDcsRuntimeModule` and `QlDcsScopeProvider`.
+  `QlDcsScopeProvider` extends `QlScopeProvider`, so the static db-view path still flows through the QL cache provider.
+- `com._1c.g5.v8.dt.dcs` has `DcsDataSetInfoV8LocalQuery`, which keeps an injected `IQlCachedScopeProvider qlCacheScope` and
+  works with `QlMapper`, `QlCheckerExpression`, dynamic db-view computer and query schema model.
+- BSL string-literal content type computers identify query constructor contexts:
+  - `QueryCtorTypeComputer` for `Query`;
+  - `QueryDcsCtorTypeComputer` for `QueryBuilder`, `ReportBuilder`, `QueryWizard`;
+  - `QueryDcsPropertyTextTypeComputer` for `Text` / `Query` / `QueryText` properties of relevant query/DCS objects.
+
+Current hypothesis:
+
+- The constructor starts from BSL string literal classification, but table/field model building is QL/QL-DCS/DCS.
+- The lowest-risk first injection point is not the query constructor UI, but `IQlCachedScopeProvider`.
+- A custom QL cached scope provider can compose the current project's db-view scope with configured linked projects' db-view scopes,
+  using the same per-project settings and last-stable fallback idea as BSL.
+- This should affect:
+  - QL text validation/content assist;
+  - QL-DCS syntax used by query constructor/report builder/query wizard;
+  - DCS data set info building that uses `IQlCachedScopeProvider`.
+
+Implementation candidate:
+
+- Add QL/DCS bundle dependencies to the plugin manifest.
+- Add a `com._1c.g5.v8.dt.ql.qlRuntimeModuleExtension` contribution.
+- Implement `ContextLinksQlRuntimeModule extends AbstractGenericModule`.
+- Bind `IQlCachedScopeProvider` to a custom `ContextLinksQlCachedScopeProvider extends QlCachedScopeProvider`.
+- In that provider:
+  - remember last stable `IDtProject -> IScope` db-view scopes on non-null `addDbViewScope`;
+  - do not drop the stable snapshot on `clearDbViewScopes`;
+  - for extension projects with configured linked context, return a composite db-view scope:
+    own current/stable db-view scope first, then linked current/stable scopes;
+  - keep per-query operator scope methods delegated unchanged.
+- Avoid replacing `QlScopeProvider` at first; overriding it is a larger blast radius.
+
+Open risks:
+
+- Need confirm whether EDT actually mixes `qlRuntimeModuleExtension` in the same OSGi injector path as BSL. The extension point is
+  declared, but direct `QlStandaloneSetup` bytecode does not show the extension merge.
+- If the query constructor uses a separate QL-DCS injector that does not consume the QL runtime extension point, we may need a second
+  path through DCS/QL-DCS service registration.
