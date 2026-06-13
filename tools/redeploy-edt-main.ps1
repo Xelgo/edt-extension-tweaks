@@ -180,7 +180,6 @@ Clear-WorkspaceLog
 if (-not $NoRestart) {
     $startArgs = @(
         "-data", $Workspace,
-        "-vm", $LauncherVm,
         "--launcher.appendVmargs",
         "-vmargs",
         "-Djava.library.path=",

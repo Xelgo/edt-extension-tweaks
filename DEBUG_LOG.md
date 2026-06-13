@@ -1475,3 +1475,35 @@ Script adjustments:
   - `http://download.eclipse.org/cbi/updates/license/2.0.2.v20181016-2210`
 - Restart EDT even if the p2 director step fails, then rethrow the install error so the failure is still visible.
 - Use array arguments for the GUI restart so the `-vm` path with spaces is passed correctly.
+
+Follow-up redeploy check:
+
+```text
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\redeploy-edt-main.ps1 -SkipBuild
+```
+
+Result:
+
+- p2 director install succeeded with dependency repositories:
+
+```text
+Установка ru.xelgo.edt.contextlinks.feature.feature.group 1.0.0.v202606131532.
+Add запрос для EDT Context Links 1.0.0.v202606131532 ... выполнен
+Операция завершена за 26111 мсек.
+```
+
+- The new plugin bundle appeared in `.p2\pool`:
+
+```text
+C:\Users\Xelgo\.p2\pool\plugins\ru.xelgo.edt.contextlinks.ui_1.0.0.v202606131532.jar
+```
+
+- Restart with explicit `-vm C:\Program Files\...javaw.exe` still caused Eclipse launcher trouble because the path with spaces
+  was not quoted reliably by `Start-Process`.
+- Because `java.exe` is now in the user `PATH`, remove the explicit `-vm` argument from restart and let the launcher resolve Java.
+- Manual restart without `-vm` succeeded. Fresh workspace log contains:
+
+```text
+EDT Context Links QL BM global scope wrapper registered
+EDT Context Links startup warm-up scheduled
+```
