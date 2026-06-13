@@ -1507,3 +1507,49 @@ C:\Users\Xelgo\.p2\pool\plugins\ru.xelgo.edt.contextlinks.ui_1.0.0.v202606131532
 EDT Context Links QL BM global scope wrapper registered
 EDT Context Links startup warm-up scheduled
 ```
+
+Follow-up during automated UI-check setup:
+
+- Functional screenshot check showed Query Constructor opened from `Расш2_ОбщийМодуль`; under `Справочники` only
+  `Расш2_Справочник` was visible. `Расш1_Справочник` was still absent.
+- Expected `QL probe` lines were missing from the log even though `QL BM scope` was logged.
+- Root cause for missing probe: EDT runtime was still loading old bundle `1.0.0.v202606131517` from
+  `configuration/org.eclipse.equinox.simpleconfigurator/bundles.info`, while p2 had downloaded newer
+  `1.0.0.v202606131532` into `.p2\pool\plugins`.
+
+Redeploy automation adjustments:
+
+- `redeploy-edt-main.ps1` now uninstalls `ru.xelgo.edt.contextlinks.feature.feature.group` before installing it again.
+- Normal build path now runs `mvn clean package -DskipTests` to avoid stale class files from earlier experiments being packed
+  into the plugin jar.
+- After p2 install, the script synchronizes `bundles.info` to the newest
+  `C:\Users\Xelgo\.p2\pool\plugins\ru.xelgo.edt.contextlinks.ui_*.jar`.
+- `bundles.info` must be written as UTF-8 without BOM. A BOM caused:
+
+```text
+java.lang.IllegalArgumentException: Line does not contain at least 5 tokens: п»ї#encoding=UTF-8
+```
+
+- Current manual fix verified:
+
+```text
+FIRST_BYTES=23 65 6E
+ru.xelgo.edt.contextlinks.ui,1.0.0.v202606131532,file:/C:/Users/Xelgo/.p2/pool/plugins/ru.xelgo.edt.contextlinks.ui_1.0.0.v202606131532.jar,4,false
+```
+
+Computer Use status:
+
+- Installed plugin was found at:
+  `C:\Users\Xelgo\.codex\plugins\cache\openai-bundled\computer-use\26.609.41114`
+- The current Codex thread still did not expose direct computer-use tools through `tool_search`.
+- Attempting the official `scripts/computer-use-client.mjs` bootstrap through Node REPL failed with:
+
+```text
+Package subpath './dist/project/cua/sky_js/src/targets/windows/internal/computer_use_client_base.js'
+is not defined by "exports" in ...\@oai\sky\package.json
+```
+
+Conclusion:
+
+- Need a Codex restart / plugin runtime reload before using Computer Use reliably in this thread.
+- Until Computer Use starts, avoid continuing fragile foreground PowerShell mouse automation.

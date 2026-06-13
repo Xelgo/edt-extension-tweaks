@@ -6,6 +6,7 @@ param(
     [string]$LauncherVm = "C:\Program Files\1C\1CE\components\1c-edt-start-0.9.0+277-x86_64\jre\bin\javaw.exe",
     [string]$Maven = "C:\Users\Xelgo\Documents\New project\.tools\apache-maven-3.9.9\bin\mvn.cmd",
     [string]$InstallIU = "ru.xelgo.edt.contextlinks.feature.feature.group",
+    [string]$UninstallIU = "ru.xelgo.edt.contextlinks.feature.feature.group",
     [string[]]$DependencyRepositories = @(
         "https://edt.1c.ru/downloads/releases/ruby/2025.2/",
         "https://download.eclipse.org/releases/2023-12/",
@@ -116,6 +117,51 @@ function Clear-WorkspaceLog {
     }
 }
 
+function Sync-ContextLinksBundleInfo {
+    $bundlesInfo = Join-Path $EdtHome "configuration\org.eclipse.equinox.simpleconfigurator\bundles.info"
+    $pluginPool = Join-Path $bundlePool "plugins"
+    if (-not (Test-Path -LiteralPath $bundlesInfo)) {
+        throw "bundles.info not found: $bundlesInfo"
+    }
+
+    $latestPlugin = Get-ChildItem -LiteralPath $pluginPool -Filter "ru.xelgo.edt.contextlinks.ui_*.jar" |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+    if (-not $latestPlugin) {
+        throw "Installed contextlinks plugin jar not found in $pluginPool"
+    }
+
+    if ($latestPlugin.Name -notmatch '^ru\.xelgo\.edt\.contextlinks\.ui_(.+)\.jar$') {
+        throw "Unexpected contextlinks plugin jar name: $($latestPlugin.Name)"
+    }
+
+    $version = $Matches[1]
+    $pluginUri = "file:/$($latestPlugin.FullName.Replace('\', '/'))"
+    $line = "ru.xelgo.edt.contextlinks.ui,$version,$pluginUri,4,false"
+
+    Write-Step "Syncing bundles.info to $($latestPlugin.Name)"
+    if ($DryRun) {
+        return
+    }
+
+    $lines = @(Get-Content -LiteralPath $bundlesInfo)
+    $updated = $false
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -like "ru.xelgo.edt.contextlinks.ui,*") {
+            $lines[$i] = $line
+            $updated = $true
+            break
+        }
+    }
+
+    if (-not $updated) {
+        $lines += $line
+    }
+
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllLines($bundlesInfo, $lines, $utf8NoBom)
+}
+
 Set-Location -LiteralPath $ProjectRoot
 
 $edtExe = Join-Path $EdtHome "1cedt.exe"
@@ -141,7 +187,7 @@ $env:Path = $javaBin + ";" + $env:Path
 
 if (-not $SkipBuild) {
     $env:JAVA_HOME = $JavaHome
-    Invoke-Step $Maven @("package", "-DskipTests")
+    Invoke-Step $Maven @("clean", "package", "-DskipTests")
 }
 
 if (-not (Test-Path -LiteralPath $repoZip)) {
@@ -152,11 +198,9 @@ Stop-EdtWorkspace
 
 $repoUri = "jar:file:/$(Convert-ToFileUriPath $repoZip)!/"
 $repositories = (@($repoUri) + $DependencyRepositories) -join ","
-$directorArgs = @(
+$directorBaseArgs = @(
     "-nosplash",
     "-application", "org.eclipse.equinox.p2.director",
-    "-repository", $repositories,
-    "-installIU", $InstallIU,
     "-profile", $profile,
     "-destination", $EdtHome,
     "-bundlepool", $bundlePool,
@@ -169,7 +213,14 @@ $directorArgs = @(
 
 $installError = $null
 try {
-    Invoke-Step $edtConsoleExe $directorArgs $EdtHome
+    if ($UninstallIU) {
+        $uninstallArgs = $directorBaseArgs + @("-uninstallIU", $UninstallIU)
+        Invoke-Step $edtConsoleExe $uninstallArgs $EdtHome
+    }
+
+    $installArgs = $directorBaseArgs + @("-repository", $repositories, "-installIU", $InstallIU)
+    Invoke-Step $edtConsoleExe $installArgs $EdtHome
+    Sync-ContextLinksBundleInfo
 }
 catch {
     $installError = $_
