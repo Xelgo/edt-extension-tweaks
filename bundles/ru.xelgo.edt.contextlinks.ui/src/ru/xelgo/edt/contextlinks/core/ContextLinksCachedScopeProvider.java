@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -36,6 +37,8 @@ public class ContextLinksCachedScopeProvider
     private static final Set<String> loggedScopeDetails = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedModuleScopeKeys = ConcurrentHashMap.newKeySet();
     private static final ConcurrentHashMap<ModuleScopeKey, IScope> moduleScopes = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<ModuleScopeKey, String> moduleScopeVersions = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, AtomicLong> projectScopeVersions = new ConcurrentHashMap<>();
 
     public ContextLinksCachedScopeProvider()
     {
@@ -47,6 +50,7 @@ public class ContextLinksCachedScopeProvider
     {
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearTypeItems] project=" + describeProject(project)); //$NON-NLS-1$
         super.clearTypeItemsScopes(project);
+        bumpProjectScopeVersion(project, "clear-type-item"); //$NON-NLS-1$
     }
 
     @Override
@@ -54,6 +58,7 @@ public class ContextLinksCachedScopeProvider
     {
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearProperties] project=" + describeProject(project)); //$NON-NLS-1$
         super.clearPropertyScopes(project);
+        bumpProjectScopeVersion(project, "clear-property"); //$NON-NLS-1$
     }
 
     @Override
@@ -62,6 +67,7 @@ public class ContextLinksCachedScopeProvider
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.addTypeItem] project=" + describeProject(project) //$NON-NLS-1$
             + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
         super.addTypeItemScope(project, scope);
+        bumpProjectScopeVersion(project, "add-type-item"); //$NON-NLS-1$
     }
 
     @Override
@@ -70,6 +76,7 @@ public class ContextLinksCachedScopeProvider
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.addProperty] project=" + describeProject(project) //$NON-NLS-1$
             + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
         super.addPropertyScope(project, scope);
+        bumpProjectScopeVersion(project, "add-property"); //$NON-NLS-1$
     }
 
     @Override
@@ -83,10 +90,13 @@ public class ContextLinksCachedScopeProvider
     public IScope getScope(Block block, Environments environments, BslCachedScopeType scopeType)
     {
         IScope scope = super.getScope(block, environments, scopeType);
-        if (scope != null)
+        if (scope != null && isModuleScopeCurrent(block, environments, scopeType))
             return scope;
 
         IScope mirroredScope = moduleScopes.get(new ModuleScopeKey(blockUniqueName(block), environments, scopeType));
+        if (mirroredScope != null && !isModuleScopeCurrent(block, environments, scopeType))
+            mirroredScope = null;
+
         logModuleScope("get-fallback", block, environments, scopeType, mirroredScope); //$NON-NLS-1$
         return mirroredScope;
     }
@@ -247,6 +257,7 @@ public class ContextLinksCachedScopeProvider
             return;
 
         moduleScopes.put(key, scope);
+        moduleScopeVersions.put(key, moduleScopeVersion(block));
         logModuleScope("add", block, environments, scopeType, scope); //$NON-NLS-1$
     }
 
@@ -257,7 +268,79 @@ public class ContextLinksCachedScopeProvider
 
         int before = moduleScopes.size();
         moduleScopes.keySet().removeIf(key -> blockName.equals(key.blockName));
+        moduleScopeVersions.keySet().removeIf(key -> blockName.equals(key.blockName));
         return before - moduleScopes.size();
+    }
+
+    private boolean isModuleScopeCurrent(Block block, Environments environments, BslCachedScopeType scopeType)
+    {
+        ModuleScopeKey key = new ModuleScopeKey(blockUniqueName(block), environments, scopeType);
+        if (!key.isUsable())
+            return true;
+
+        String cachedVersion = moduleScopeVersions.get(key);
+        if (cachedVersion == null)
+            return true;
+
+        String currentVersion = moduleScopeVersion(block);
+        boolean current = cachedVersion.equals(currentVersion);
+        if (!current)
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.stale] block=" + blockUniqueName(block) //$NON-NLS-1$
+                + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
+                + " cached=" + cachedVersion + " current=" + currentVersion); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        return current;
+    }
+
+    private void bumpProjectScopeVersion(IProject project, String reason)
+    {
+        if (project == null || !project.isAccessible())
+            return;
+
+        long version = projectScopeVersions.computeIfAbsent(project.getName(), name -> new AtomicLong()).incrementAndGet();
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.project.version] project=" + project.getName() //$NON-NLS-1$
+            + " version=" + version + " reason=" + reason); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private String moduleScopeVersion(Block block)
+    {
+        IProject project = projectFromBlock(block);
+        if (project == null || !project.isAccessible())
+            return "project=NULL"; //$NON-NLS-1$
+
+        StringBuilder builder = new StringBuilder();
+        appendProjectVersion(builder, project.getName());
+        for (String linkedProjectName : ContextLinks.getContextProjectNames(project))
+            appendProjectVersion(builder, linkedProjectName);
+        return builder.toString();
+    }
+
+    private void appendProjectVersion(StringBuilder builder, String projectName)
+    {
+        if (builder.length() > 0)
+            builder.append('|');
+
+        AtomicLong version = projectScopeVersions.get(projectName);
+        builder.append(projectName).append('=').append(version != null ? version.get() : 0);
+    }
+
+    private IProject projectFromBlock(Block block)
+    {
+        String uniqueName = blockUniqueName(block);
+        if (uniqueName == null)
+            return null;
+
+        String prefix = "platform:/resource/"; //$NON-NLS-1$
+        if (!uniqueName.startsWith(prefix))
+            return null;
+
+        int projectStart = prefix.length();
+        int projectEnd = uniqueName.indexOf('/', projectStart);
+        if (projectEnd <= projectStart)
+            return null;
+
+        return ResourcesPlugin.getWorkspace().getRoot().getProject(uniqueName.substring(projectStart, projectEnd));
     }
 
     private void logModuleScope(String phase, Block block, Environments environments, BslCachedScopeType scopeType,

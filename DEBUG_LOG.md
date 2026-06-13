@@ -264,3 +264,78 @@ Expected next log check:
 
 - `ClassCastException ... ContextLinksProjectScope cannot be cast to ... ISlicedScope` should disappear.
 - Then re-check whether `Configuration.Rest2` content assist includes `Ext1_CommonModule`.
+
+## 2026-06-13 - New Common Module Stays Visible Only In One Extension
+
+Workspace log inspected:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\file\.metadata\.log
+Length: 584755
+LastWriteTime: 2026-06-13 10:06:34 +04:00
+```
+
+User-visible state after installing `13dc42c`:
+
+- Existing cross-extension common-module context mostly works.
+- Creating a fresh common module in one extension updates context for only one extension.
+- The linked extension does not immediately see the new module until a broader rebuild/restart path.
+
+Key log signals:
+
+```text
+[cache.clearTypeItems] project=Configuration.Rest1
+[cache.clearProperties] project=Configuration.Rest1
+[cache.addProperty] project=Configuration.Rest1 scope=... elements=3090
+[cache.addTypeItem] project=Configuration.Rest1 scope=... elements=5287
+[cache.addTypeItem] project=Configuration.Rest1 scope=... elements=10498
+```
+
+New modules appeared in BSL resource processing:
+
+```text
+platform:/resource/Configuration.Rest1/src/CommonModules/XER/Module.bsl
+platform:/resource/Configuration.Rest1/src/CommonModules/Ext1_Test1/Module.bsl
+```
+
+But nearby logs mostly showed module-level clears:
+
+```text
+[cache.module.clear] module=platform:/resource/Configuration.Rest1/src/CommonModules/Ext1_Test1/Module.bsl#/0 removed=0
+[cache.module.clear] module=platform:/resource/Configuration.Rest2/src/CommonModules/Ext2_CommonModule/Module.bsl#/0 removed=0
+```
+
+Conclusion:
+
+The live linked project scope fixes stale project-scope composition, but already cached BSL module scopes can still
+hold old global-scope results. When `Configuration.Rest1` rebuilds type/property project scopes after a new common
+module is created, an already opened module from `Configuration.Rest2` can keep using a module-level scope cached
+before `Rest1` changed.
+
+Implemented fix in the next attempt:
+
+- Track a monotonically increasing project-scope version for every type/property cache clear/add.
+- Store the own+linked project-scope version fingerprint when a module scope is cached.
+- If `getScope()` sees that a cached module scope was built against an older own or linked project version, treat it
+  as stale and return `null` so EDT rebuilds it through its normal lazy path.
+
+Build result:
+
+```text
+BUILD SUCCESS
+Finished at: 2026-06-13T10:10:14+04:00
+```
+
+Update site:
+
+```text
+repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip
+Length: 87849
+LastWriteTime: 2026-06-13 10:10:14 +04:00
+```
+
+Expected next log check:
+
+- After creating a new module, logs should show `[cache.project.version]` for the changed extension.
+- When a linked extension asks for content assist, stale module scopes should produce `[cache.module.stale]`.
+- The linked extension should then rebuild and include the freshly created common module.
