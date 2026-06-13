@@ -107,6 +107,7 @@ public class ContextLinksCachedScopeProvider
         int removedCount = forgetModuleScope(module != null ? module.getUniqueName() : null);
         if (module != null)
             module.allMethods().forEach(method -> forgetModuleScope(method.getUniqueName()));
+        clearProjectScopesForCommonModule(module);
 
         ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.clear] module=" + blockUniqueName(module) //$NON-NLS-1$
             + " removed=" + removedCount); //$NON-NLS-1$
@@ -270,6 +271,21 @@ public class ContextLinksCachedScopeProvider
         moduleScopes.keySet().removeIf(key -> blockName.equals(key.blockName));
         moduleScopeVersions.keySet().removeIf(key -> blockName.equals(key.blockName));
         return before - moduleScopes.size();
+    }
+
+    private void clearProjectScopesForCommonModule(Module module)
+    {
+        if (module == null || !(module.getOwner() instanceof com._1c.g5.v8.dt.metadata.mdclass.CommonModule))
+            return;
+
+        IProject project = projectFromBlock(module);
+        if (project == null || !project.isAccessible())
+            return;
+
+        ContextLinks.logDebug("EDT Context Links DEBUG [cache.project.clear-for-module] project=" //$NON-NLS-1$
+            + describeProject(project) + " module=" + blockUniqueName(module)); //$NON-NLS-1$
+        clearPropertyScopes(project);
+        clearTypeItemsScopes(project);
     }
 
     private boolean isModuleScopeCurrent(Block block, Environments environments, BslCachedScopeType scopeType)

@@ -339,3 +339,85 @@ Expected next log check:
 - After creating a new module, logs should show `[cache.project.version]` for the changed extension.
 - When a linked extension asks for content assist, stale module scopes should produce `[cache.module.stale]`.
 - The linked extension should then rebuild and include the freshly created common module.
+
+## 2026-06-13 - Fresh Module Name Visible But Export Method Missing
+
+Workspace log inspected:
+
+```text
+C:\Users\Xelgo\AppData\Local\1C\1cedtstart\projects\file\.metadata\.log
+Length: 594301
+LastWriteTime: 2026-06-13 10:13:42 +04:00
+```
+
+User-visible state after installing `39c527f`:
+
+- A freshly created common module appears in content assist from both extensions.
+- In one direction, invoking/opening the module works enough that content assist offers the module name.
+- The linter still reports that the module does not exist, and the module's exported method is not visible.
+
+Relevant files observed in the EDT workspace:
+
+```text
+Configuration.Rest1/src/CommonModules/Ext1_Test1/Module.bsl
+Configuration.Rest2/src/CommonModules/Ext2_CommonModule1/Module.bsl
+Configuration.Rest2/src/CommonModules/Ext2_test2/Module.bsl
+```
+
+Key log split:
+
+```text
+[module.context.provider] project=Configuration.Rest2
+moduleUri=platform:/resource/Configuration.Rest2/src/CommonModules/Ext2_CommonModule1/Module.bsl
+context=...{allMethods=1}
+methods=[Тест]
+```
+
+but another fresh module was present with an empty method context:
+
+```text
+[module.context.provider] project=Configuration.Rest2
+moduleUri=platform:/resource/Configuration.Rest2/src/CommonModules/Ext2_test2/Module.bsl
+context=...{allMethods=0}
+methods=[]
+```
+
+Conclusion:
+
+The remaining failure is not simply project/module name visibility. EDT resolves common module methods through
+`CommonModule.getContextDef() -> first property type -> type.getContextDef()`. A project-level property/type scope
+can therefore expose the module name while still carrying an older or empty `ContextDef` for its exported methods.
+
+The previous module-scope versioning attempt did not cover this fully because EDT repeatedly calls
+`clearScopes(module)` for common module BSL resources without necessarily clearing the project-level property/type
+scope that owns the common module `ContextDef`.
+
+Implemented fix in the next attempt:
+
+- When `clearScopes(module)` is called for a common module, also clear the owning project's property and type-item
+  scopes.
+- This forces the common module property/type context to be rebuilt after fresh module creation or export method
+  changes.
+- The existing project-version diagnostics should then make linked module scopes stale and rebuild them on demand.
+
+Build result:
+
+```text
+BUILD SUCCESS
+Finished at: 2026-06-13T10:17:38+04:00
+```
+
+Update site:
+
+```text
+repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip
+Length: 90728
+LastWriteTime: 2026-06-13 10:17:38 +04:00
+```
+
+Expected next log check:
+
+- After editing/creating `Ext2_test2` or `Ext1_Test1`, logs should show `[cache.project.clear-for-module]`.
+- Then `[cache.clearProperties]`, `[cache.clearTypeItems]`, and `[cache.project.version]` should follow for that
+  project.
+- The next `[module.context.provider]` for the fresh common module should report `allMethods > 0`.
