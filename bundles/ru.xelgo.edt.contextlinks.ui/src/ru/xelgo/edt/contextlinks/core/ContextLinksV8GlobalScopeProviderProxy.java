@@ -7,6 +7,7 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,9 +37,13 @@ final class ContextLinksV8GlobalScopeProviderProxy
 {
     static final String SERVICE_CLASS_NAME = "com._1c.g5.v8.dt.core.scoping.IV8GlobalScopeProvider"; //$NON-NLS-1$
     static final String WRAPPER_MARKER_PROPERTY = ContextLinks.PLUGIN_ID + ".qlV8Scope.wrapper"; //$NON-NLS-1$
+    private static final String QL_PROBE_OBJECT =
+        "\u0420\u0430\u0441\u04481_\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442"; //$NON-NLS-1$
+    private static final int QL_PROBE_SCAN_LIMIT = 20000;
 
     private static final Set<String> loggedCompositions = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedDelegateFailures = ConcurrentHashMap.newKeySet();
+    private static final Set<String> loggedProbeResults = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedResourceCalls = ConcurrentHashMap.newKeySet();
 
     private final org.osgi.framework.BundleContext context;
@@ -122,6 +127,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
         List<String> addedProjects = new ArrayList<>();
         List<String> skippedProjects = new ArrayList<>();
 
+        logProbe("own", project, null, reference, ownScope); //$NON-NLS-1$
         for (String linkedProjectName : linkedProjectNames)
         {
             IProject linkedProject = ResourcesPlugin.getWorkspace().getRoot().getProject(linkedProjectName);
@@ -138,11 +144,14 @@ final class ContextLinksV8GlobalScopeProviderProxy
                 continue;
             }
 
+            logProbe("linked", project, linkedProject, reference, linkedScope); //$NON-NLS-1$
             result.addScope(linkedScope);
             addedProjects.add(linkedProjectName);
         }
 
         logComposition(project, addedProjects, skippedProjects);
+        if (!addedProjects.isEmpty())
+            logProbe("composite", project, null, reference, result); //$NON-NLS-1$
         return addedProjects.isEmpty() ? ownScope : result;
     }
 
@@ -228,6 +237,73 @@ final class ContextLinksV8GlobalScopeProviderProxy
             ContextLinks.logWarning("EDT Context Links QL BM scope project=" + project.getName() //$NON-NLS-1$
                 + " linked=" + addedProjects + " skipped=" + skippedProjects); //$NON-NLS-1$ //$NON-NLS-2$
         }
+    }
+
+    private void logProbe(String phase, IProject project, IProject linkedProject, EReference reference, IScope scope)
+    {
+        ScopeProbeResult result = probeScope(scope);
+        String linkedProjectName = linkedProject != null ? linkedProject.getName() : "-"; //$NON-NLS-1$
+        String key = phase + "|" + project.getName() + "|" + linkedProjectName + "|" //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            + describeReference(reference) + "|" + result.found + "|" + result.scanned + "|" + result.matches; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        if (loggedProbeResults.add(key))
+        {
+            ContextLinks.logWarning("EDT Context Links QL probe phase=" + phase //$NON-NLS-1$
+                + " project=" + project.getName() + " linkedProject=" + linkedProjectName //$NON-NLS-1$ //$NON-NLS-2$
+                + " reference=" + describeReference(reference) + " target=" + QL_PROBE_OBJECT //$NON-NLS-1$ //$NON-NLS-2$
+                + " scope=" + describeScope(scope) + " found=" + result.found //$NON-NLS-1$ //$NON-NLS-2$
+                + " scanned=" + result.scanned + " truncated=" + result.truncated //$NON-NLS-1$ //$NON-NLS-2$
+                + " matches=" + result.matches + " samples=" + result.samples); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+    }
+
+    private ScopeProbeResult probeScope(IScope scope)
+    {
+        ScopeProbeResult result = new ScopeProbeResult();
+        if (scope == null)
+            return result;
+
+        String target = QL_PROBE_OBJECT.toLowerCase(Locale.ROOT);
+        for (IEObjectDescription description : scope.getAllElements())
+        {
+            if (result.scanned >= QL_PROBE_SCAN_LIMIT)
+            {
+                result.truncated = true;
+                break;
+            }
+
+            result.scanned++;
+            String candidate = describeElement(description);
+            String normalizedCandidate = candidate.toLowerCase(Locale.ROOT);
+            if (normalizedCandidate.contains(target))
+            {
+                result.found = true;
+                result.matches++;
+                if (result.samples.size() < 5)
+                    result.samples.add(candidate);
+            }
+        }
+        return result;
+    }
+
+    private String describeElement(IEObjectDescription description)
+    {
+        if (description == null)
+            return "NULL"; //$NON-NLS-1$
+
+        String name = description.getName() != null ? description.getName().toString() : "NULL"; //$NON-NLS-1$
+        String uri = description.getEObjectURI() != null ? description.getEObjectURI().toString() : "NULL"; //$NON-NLS-1$
+        return name + "@" + uri; //$NON-NLS-1$
+    }
+
+    private String describeReference(EReference reference)
+    {
+        return reference != null ? reference.getName() : "NULL"; //$NON-NLS-1$
+    }
+
+    private String describeScope(IScope scope)
+    {
+        return scope != null ? scope.getClass().getName() + "@" //$NON-NLS-1$
+            + Integer.toHexString(System.identityHashCode(scope)) : "NULL"; //$NON-NLS-1$
     }
 
     private Object invokeDelegate(Object delegate, Method method, Object[] args)
@@ -325,5 +401,14 @@ final class ContextLinksV8GlobalScopeProviderProxy
         {
             context.ungetService(reference);
         }
+    }
+
+    private static final class ScopeProbeResult
+    {
+        private boolean found;
+        private int matches;
+        private int scanned;
+        private boolean truncated;
+        private final List<String> samples = new ArrayList<>();
     }
 }

@@ -1364,3 +1364,44 @@ Conclusion:
 - The linked extension scope is still being composed for `Расширение2`.
 - The log size problem is not caused by our diagnostics now; most volume is EDT/p2 repeatedly trying stale update-site zip URLs
   like `ru.xelgo.edt.contextlinks.repository-v*.zip` plus 1C service authentication errors.
+
+## 2026-06-13 - Targeted QL Probe for `Расш1_Документ`
+
+User scenario:
+
+- Open module `Расш2_ОбщийМодуль` in `Расширение2`.
+- Open Query Constructor from that module.
+- Current Query Constructor only shows `Расш2_Документ` and `Расш2_Справочник`.
+- It should also show objects from `Расширение1`, first target for diagnosis: `Расш1_Документ`.
+
+Hypothesis to split:
+
+- If `Расш1_Документ` is present in the linked/composite QL BM scope, but Query Constructor UI still does not show it, then the
+  next missing layer is likely a QL-DCS/querywizard db-view model or cache built above the global BM scope.
+- If `Расш1_Документ` is absent from the linked scope itself, then the current `EReference`/filter used by QL's BM provider
+  excludes linked extension metadata before UI gets a chance to show it.
+
+Implementation:
+
+- Add a temporary targeted QL probe to `ContextLinksV8GlobalScopeProviderProxy`.
+- For every QL BM composition, scan up to 20000 elements in:
+  - own scope;
+  - linked extension scope;
+  - final composite scope.
+- Log whether target `Расш1_Документ` is found, how many elements were scanned, whether scanning was truncated, and up to five
+  matching descriptions.
+
+Expected log lines after opening Query Constructor:
+
+```text
+EDT Context Links QL probe phase=own ...
+EDT Context Links QL probe phase=linked ... target=Расш1_Документ found=...
+EDT Context Links QL probe phase=composite ... target=Расш1_Документ found=...
+```
+
+Build:
+
+- `mvn package -DskipTests` completed successfully at `2026-06-13 19:27:45 +04:00`.
+- Update site artifact:
+  `repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip`
+- Artifact size: `127151` bytes.
