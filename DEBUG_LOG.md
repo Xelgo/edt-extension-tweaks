@@ -2339,3 +2339,14 @@ Change:
 Next profiling run:
 - Start capture before triggering the problematic rebuild.
 - Prefer duration=360s and collect partial evidence earlier, because late attach commands may time out once the JVM is memory/CPU starved.
+
+## 2026-06-15 Diagnostics default duration reduced to 4 minutes
+
+Observation:
+- The EDT UH build hang becomes visible quickly enough that a 6 minute capture is still longer than necessary.
+
+Change:
+- tools/capture-edt-diagnostics.ps1 now defaults to 240 seconds.
+
+Next profiling run:
+- Restart EDT with ForceKill, start the 240 second capture, then trigger or observe the build phase before the JVM becomes unresponsive.
