@@ -60,6 +60,13 @@ public class ContextLinksContainerManager
             return visibleContainers;
         }
 
+        if (ContextLinks.shouldSkipContextExtensionDuringBuild("bsl-containers")) //$NON-NLS-1$
+        {
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
+                + " result=standard reason=build"); //$NON-NLS-1$
+            return visibleContainers;
+        }
+
         Set<String> linkedProjectNames = ContextLinks.getContextProjectNames(currentProject);
         if (linkedProjectNames.isEmpty())
         {
@@ -105,6 +112,9 @@ public class ContextLinksContainerManager
 
         logContainers(currentProject, description.getURI(), currentHandle,
             describeVisibleHandles(state, currentHandle), linkedProjectNames, addedHandles, unresolvedProjects);
+        if (!addedHandles.isEmpty())
+            ContextLinks.logScopeExtension("bsl-containers", currentProject, //$NON-NLS-1$
+                "resource=" + description.getURI() + " added=" + addedHandles); //$NON-NLS-1$ //$NON-NLS-2$
 
         ContextLinks.logDebug("EDT Extension Tweaks DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
             + " resultCount=" + visibleContainers.size() + " added=" + addedHandles //$NON-NLS-1$ //$NON-NLS-2$

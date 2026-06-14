@@ -33,12 +33,16 @@ public final class ContextLinks
     public static final String PLUGIN_ID = "ru.xelgo.edt.contextlinks.ui"; //$NON-NLS-1$
     private static final String V8_EXTERNAL_OBJECTS_NATURE = "com._1c.g5.v8.dt.core.V8ExternalObjectsNature"; //$NON-NLS-1$
     private static final boolean DEBUG_LOG_ENABLED = Boolean.getBoolean(PLUGIN_ID + ".debug"); //$NON-NLS-1$
+    private static final boolean DISABLE_CONTEXT_DURING_BUILD = Boolean.parseBoolean(
+        System.getProperty(PLUGIN_ID + ".disableDuringBuild", "true")); //$NON-NLS-1$ //$NON-NLS-2$
 
     private static final QualifiedName CONTEXT_PROJECTS =
         new QualifiedName(PLUGIN_ID, "contextProjects"); //$NON-NLS-1$
     private static final QualifiedName DISABLED_APPLICATION_UPDATE_PROJECTS =
         new QualifiedName(PLUGIN_ID, "disabledApplicationUpdateProjects"); //$NON-NLS-1$
     private static final ConcurrentHashMap<String, Set<String>> contextProjectNamesCache = new ConcurrentHashMap<>();
+    private static final Set<String> loggedBuildSkipKeys = ConcurrentHashMap.newKeySet();
+    private static final Set<String> loggedInfoKeys = ConcurrentHashMap.newKeySet();
 
     private ContextLinks()
     {
@@ -172,12 +176,84 @@ public final class ContextLinks
         return result.toArray(IProject[]::new);
     }
 
+    public static boolean shouldSkipContextExtensionDuringBuild(String feature)
+    {
+        if (!DISABLE_CONTEXT_DURING_BUILD)
+            return false;
+
+        BuildStackMatch match = findBuildStackMatch();
+        if (match == null)
+            return false;
+
+        String key = feature + "|" + match.threadName + "|" + match.frame; //$NON-NLS-1$ //$NON-NLS-2$
+        if (loggedBuildSkipKeys.add(key))
+        {
+            logInfo("EDT Extension Tweaks [build.skip] feature=" + feature //$NON-NLS-1$
+                + " thread=" + match.threadName + " frame=" + match.frame //$NON-NLS-1$ //$NON-NLS-2$
+                + " memory=" + memorySummary()); //$NON-NLS-1$
+        }
+        return true;
+    }
+
+    public static void logScopeExtension(String feature, IProject project, Object details)
+    {
+        String projectName = project != null ? project.getName() : "NULL"; //$NON-NLS-1$
+        String threadName = Thread.currentThread().getName();
+        String key = "scope.extend|" + feature + "|" + projectName + "|" + threadName; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        logInfoOnce(key, "EDT Extension Tweaks [scope.extend] feature=" + feature //$NON-NLS-1$
+            + " project=" + projectName //$NON-NLS-1$
+            + " thread=" + threadName //$NON-NLS-1$
+            + " details=" + details //$NON-NLS-1$
+            + " memory=" + memorySummary()); //$NON-NLS-1$
+    }
+
     public static String describeWorkspaceSettings()
     {
         return Arrays.stream(ResourcesPlugin.getWorkspace().getRoot().getProjects())
             .filter(IProject::isAccessible)
             .map(project -> project.getName() + "=" + getContextProjectNames(project)) //$NON-NLS-1$
             .collect(Collectors.joining("; ")); //$NON-NLS-1$
+    }
+
+    private static BuildStackMatch findBuildStackMatch()
+    {
+        Thread thread = Thread.currentThread();
+        String threadName = thread.getName();
+        if (isBuildThreadName(threadName))
+            return new BuildStackMatch(threadName, "thread-name"); //$NON-NLS-1$
+
+        for (StackTraceElement element : thread.getStackTrace())
+        {
+            String className = element.getClassName();
+            if (isBuildStackClass(className))
+                return new BuildStackMatch(threadName, className + "." + element.getMethodName()); //$NON-NLS-1$
+        }
+        return null;
+    }
+
+    private static boolean isBuildThreadName(String threadName)
+    {
+        if (threadName == null)
+            return false;
+
+        return threadName.startsWith("LCBuilderState") //$NON-NLS-1$
+            || threadName.contains("Builder") //$NON-NLS-1$
+            || threadName.contains("build"); //$NON-NLS-1$
+    }
+
+    private static boolean isBuildStackClass(String className)
+    {
+        if (className == null)
+            return false;
+
+        return className.startsWith("org.eclipse.core.internal.events.BuildManager") //$NON-NLS-1$
+            || className.startsWith("org.eclipse.core.resources.IncrementalProjectBuilder") //$NON-NLS-1$
+            || className.startsWith("org.eclipse.xtext.builder.") //$NON-NLS-1$
+            || className.contains(".builder.") //$NON-NLS-1$
+            || className.contains(".build.") //$NON-NLS-1$
+            || className.contains("LCBuilder") //$NON-NLS-1$
+            || className.contains("ResourceDescription") //$NON-NLS-1$
+            || className.equals("com._1c.g5.v8.dt.bsl.typesystem.ExportMethodTypeProvider"); //$NON-NLS-1$
     }
 
     private static Set<String> getProjectNameSet(IProject project, QualifiedName property, String tag)
@@ -372,6 +448,18 @@ public final class ContextLinks
             .log(new Status(IStatus.WARNING, PLUGIN_ID, message));
     }
 
+    public static void logInfo(String message)
+    {
+        Platform.getLog(ContextLinks.class)
+            .log(new Status(IStatus.INFO, PLUGIN_ID, message));
+    }
+
+    public static void logInfoOnce(String key, String message)
+    {
+        if (loggedInfoKeys.add(key))
+            logInfo(message);
+    }
+
     public static boolean isDebugLoggingEnabled()
     {
         return DEBUG_LOG_ENABLED;
@@ -384,5 +472,24 @@ public final class ContextLinks
 
         Platform.getLog(ContextLinks.class)
             .log(new Status(IStatus.INFO, PLUGIN_ID, message));
+    }
+
+    private static String memorySummary()
+    {
+        Runtime runtime = Runtime.getRuntime();
+        long used = runtime.totalMemory() - runtime.freeMemory();
+        return used + "/" + runtime.maxMemory(); //$NON-NLS-1$
+    }
+
+    private static final class BuildStackMatch
+    {
+        private final String threadName;
+        private final String frame;
+
+        BuildStackMatch(String threadName, String frame)
+        {
+            this.threadName = threadName;
+            this.frame = frame;
+        }
     }
 }

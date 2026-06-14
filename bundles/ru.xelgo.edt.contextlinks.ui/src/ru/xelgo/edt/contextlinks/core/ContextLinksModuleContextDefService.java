@@ -81,6 +81,9 @@ public class ContextLinksModuleContextDefService
 
     private static ContextDef ensureFallbackContextDef(Module module, ContextDef contextDef)
     {
+        if (ContextLinks.shouldSkipContextExtensionDuringBuild("module-context-fallback")) //$NON-NLS-1$
+            return null;
+
         EObject owner = module != null ? module.getOwner() : null;
         if (!(owner instanceof CommonModule))
             return null;
@@ -101,6 +104,13 @@ public class ContextLinksModuleContextDefService
         exportMethods.stream()
             .map(ContextLinksModuleContextDefService::createFallbackMethod)
             .forEach(fallbackContextDef.getMethods()::add);
+        URI moduleUri = module.eResource() != null ? module.eResource().getURI() : null;
+        ContextLinks.logInfoOnce("module-context-fallback|" + moduleUri, //$NON-NLS-1$
+            "EDT Extension Tweaks [scope.extend] feature=module-context-fallback project=" //$NON-NLS-1$
+                + describeProject(moduleUri)
+                + " thread=" + Thread.currentThread().getName() //$NON-NLS-1$
+                + " moduleUri=" + moduleUri //$NON-NLS-1$
+                + " methods=" + exportMethods.size()); //$NON-NLS-1$
         return fallbackContextDef;
     }
 

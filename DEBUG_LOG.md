@@ -2060,3 +2060,18 @@ Verification still needed after redeploy:
   - `CurrentProjectFriendlyScope.wrap(...)` now wraps descriptions lazily.
 - Fixed `tools/capture-edt-diagnostics.ps1` for Windows PowerShell by replacing `ProcessStartInfo.ArgumentList` with quoted `Arguments` string construction.
 - `mvn -q -DskipTests package` succeeded.
+
+## 2026-06-14 - Disable Context Tweaks During Build, Attempt 4
+
+- Added a build/indexing guard for scope-extension paths. By default `ru.xelgo.edt.contextlinks.ui.disableDuringBuild=true`.
+- When a scope request is detected from build/indexing/resource-description/export-method stacks, the plugin returns EDT's own scope/container/context without adding linked projects.
+- Guarded paths:
+  - BSL cached type-item/property scope composition;
+  - BSL visible containers;
+  - QL/BM global scope composition;
+  - common module contextDef fallback generation.
+- Removed startup warm-up builds. `ContextLinksStartup` now only registers the QL global scope wrapper and logs that warm-up builds are disabled; it no longer schedules `WorkspaceJob` and no longer calls `project.build(...)`.
+- Added throttled INFO diagnostics for build investigation, visible without debug flag:
+  - `EDT Extension Tweaks [build.skip] ...` when plugin behavior is skipped because the call came from a build/indexing stack;
+  - `EDT Extension Tweaks [scope.extend] ...` when the plugin actually extends a scope/container/context outside a detected build path.
+- `mvn -q -DskipTests package` succeeded.

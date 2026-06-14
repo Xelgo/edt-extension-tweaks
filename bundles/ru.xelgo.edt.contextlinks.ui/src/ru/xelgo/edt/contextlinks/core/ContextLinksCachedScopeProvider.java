@@ -115,6 +115,9 @@ public class ContextLinksCachedScopeProvider
         if (isConfigurationProject(project))
             return false;
 
+        if (ContextLinks.shouldSkipContextExtensionDuringBuild("bsl-cache-" + kind)) //$NON-NLS-1$
+            return false;
+
         return !ContextLinks.getContextProjectNames(project).isEmpty();
     }
 
@@ -145,6 +148,8 @@ public class ContextLinksCachedScopeProvider
         }
 
         logComposedScope(kind, project, linkedProjectNames, addedProjects, missingProjects);
+        if (!addedProjects.isEmpty())
+            ContextLinks.logScopeExtension("bsl-cache-" + kind.logName, project, "linked=" + addedProjects); //$NON-NLS-1$ //$NON-NLS-2$
         return new ContextLinksProjectScope(this, project, ownScope, linkedProjectNames, kind);
     }
 

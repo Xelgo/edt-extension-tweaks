@@ -175,6 +175,9 @@ final class ContextLinksV8GlobalScopeProviderProxy
         }
 
         logComposition(project, addedProjects, skippedProjects);
+        if (!addedProjects.isEmpty())
+            ContextLinks.logScopeExtension("ql-bm-scope", project, //$NON-NLS-1$
+                "linked=" + addedProjects + " skipped=" + skippedProjects); //$NON-NLS-1$ //$NON-NLS-2$
         IScope result = new CurrentFirstLinkedScope(ownScope, linkedScopes);
         if (!addedProjects.isEmpty())
             logProbe("composite", project, null, reference, result, resource); //$NON-NLS-1$
@@ -227,6 +230,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
     private boolean shouldExtendQlScope(Resource resource, IProject project)
     {
         return isQlResource(resource) && ContextLinks.isContextConfigurableProject(project)
+            && !ContextLinks.shouldSkipContextExtensionDuringBuild("ql-bm-scope") //$NON-NLS-1$
             && !ContextLinks.getContextProjectNames(project).isEmpty();
     }
 
