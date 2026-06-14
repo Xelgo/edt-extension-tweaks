@@ -2325,3 +2325,17 @@ Conclusion:
 - The release plugin allows BSL context-def/scope integration while EDT is stopping or restarting project BM namespaces during clean/rebuild.
 - The correct fixed build must not call into linked/current project BSL context services while a project namespace is inactive or while EDT is in CLEAN/CLEAN_IMPORT/build lifecycle.
 - This supports the direction of gating BSL integration away from build/DD/project lifecycle operations while preserving it only for interactive content assist.
+
+## 2026-06-15 Diagnostics default duration adjustment
+
+Observation:
+- The current EDT UH hang is already visible after roughly 6 minutes of build time.
+- The long watcher run timed out after collecting enough evidence and did not add useful data after the JVM stopped responding to jcmd.
+
+Change:
+- tools/capture-edt-diagnostics.ps1 now defaults to workspace EDT UH.
+- The default capture duration is now 360 seconds.
+
+Next profiling run:
+- Start capture before triggering the problematic rebuild.
+- Prefer duration=360s and collect partial evidence earlier, because late attach commands may time out once the JVM is memory/CPU starved.

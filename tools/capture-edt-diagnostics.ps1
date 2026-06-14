@@ -1,7 +1,7 @@
 param(
-    [string]$Workspace = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\projects\EDTDEV"),
+    [string]$Workspace = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\projects\EDT UH"),
     [int]$ProcessId = 0,
-    [int]$DurationSec = 60,
+    [int]$DurationSec = 360,
     [int]$IntervalSec = 10,
     [int]$CommandTimeoutSec = 20,
     [string]$JcmdPath = "",
