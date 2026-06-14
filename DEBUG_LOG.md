@@ -2350,3 +2350,15 @@ Change:
 
 Next profiling run:
 - Restart EDT with ForceKill, start the 240 second capture, then trigger or observe the build phase before the JVM becomes unresponsive.
+
+## 2026-06-15 EDT launcher VM fix for profiling
+
+Observation:
+- After restart, EDT UH ran as 1cedt.exe without a separate attachable javaw.exe process.
+- jcmd listed only itself, so JFR capture could not attach to the EDT process.
+
+Change:
+- tools/redeploy-edt-main.ps1 now passes -vm <LauncherVm> before -vmargs when starting EDT.
+
+Expected result:
+- EDT should start through the explicit JDK javaw.exe and become visible to jcmd for 240 second JFR captures.

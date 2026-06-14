@@ -243,6 +243,10 @@ if (-not (Test-Path -LiteralPath (Join-Path $javaBin "java.exe"))) {
     throw "java.exe not found near launcher VM: $javaBin"
 }
 
+if (-not (Test-Path -LiteralPath $LauncherVm)) {
+    throw "Launcher VM not found: $LauncherVm"
+}
+
 $env:Path = $javaBin + ";" + $env:Path
 
 if (-not $SkipBuild) {
@@ -292,6 +296,7 @@ Clear-WorkspaceLog
 if (-not $NoRestart) {
     $startArgs = @(
         "-data", $Workspace,
+        "-vm", $LauncherVm,
         "--launcher.appendVmargs",
         "-vmargs",
         "-Djava.library.path=",
