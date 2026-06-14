@@ -2135,3 +2135,24 @@ Expected result:
 - EDT BSL build/validation should use native EDT services only.
 - The plugin should no longer emit BSL `scope.extend` or `build.skip` lines during workspace build.
 - Query constructor context fixes should remain active through the non-BSL query/QL integration points.
+
+## 2026-06-15 Attempt 8 - restore BSL content assist only
+
+Observation after Attempt 7:
+- Large workspace build passed with `1.1.1.v202606142014`.
+- Logs no longer showed BSL `scope.extend` or `build.skip`, confirming the BSL runtime module was fully detached.
+- User reported that context completion stopped working completely.
+
+Conclusion:
+- Removing the whole BSL runtime module is too broad: it protects build, but also removes the context-completion bridge.
+
+Change:
+- Restored `com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension` registration.
+- Removed only the `IContainer.Manager` binding from `ContextLinksBslRuntimeModule`; Xtext container visibility is left native to EDT.
+- Added `ContextLinks.shouldSkipBslContextExtension(feature)`.
+- BSL linked scope/fallback logic now runs only when the stack looks like interactive content assist/proposal/completion.
+- Non-interactive BSL calls are skipped and logged as `[build.skip] ... frame=non-interactive-bsl`.
+
+Expected result:
+- Content assist should see linked extension context again.
+- Workspace startup/build/DD should not inject linked BSL scopes unless invoked from an actual content-assist stack.

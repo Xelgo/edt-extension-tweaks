@@ -196,6 +196,19 @@ public final class ContextLinks
         return true;
     }
 
+    public static boolean shouldSkipBslContextExtension(String feature)
+    {
+        if (shouldSkipContextExtensionDuringBuild(feature))
+            return true;
+
+        if (isInteractiveBslAssistRequest())
+            return false;
+
+        Thread thread = Thread.currentThread();
+        logBuildSkip(feature, new BuildStackMatch(thread.getName(), "non-interactive-bsl")); //$NON-NLS-1$
+        return true;
+    }
+
     private static void logBuildSkip(String feature, BuildStackMatch match)
     {
         String key = feature + "|" + match.threadName + "|" + match.frame; //$NON-NLS-1$ //$NON-NLS-2$
@@ -270,6 +283,25 @@ public final class ContextLinks
     private static boolean isBslBuildSensitiveFeature(String feature)
     {
         return feature != null && (feature.startsWith("bsl-") || feature.startsWith("module-context-")); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private static boolean isInteractiveBslAssistRequest()
+    {
+        for (StackTraceElement element : Thread.currentThread().getStackTrace())
+        {
+            String className = element.getClassName();
+            if (className == null)
+                continue;
+
+            String lowerClassName = className.toLowerCase();
+            if (lowerClassName.contains("contentassist") //$NON-NLS-1$
+                || lowerClassName.contains("proposal") //$NON-NLS-1$
+                || lowerClassName.contains("completion")) //$NON-NLS-1$
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isBuildStackClass(String className)

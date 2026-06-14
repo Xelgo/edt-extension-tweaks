@@ -109,4 +109,11 @@
       </startup>
    </extension>
 
+   <extension
+         point="com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension">
+      <bslRuntimeModuleExtension
+            module="ru.xelgo.edt.contextlinks.core.ContextLinksBslRuntimeModule">
+      </bslRuntimeModuleExtension>
+   </extension>
+
 </plugin>

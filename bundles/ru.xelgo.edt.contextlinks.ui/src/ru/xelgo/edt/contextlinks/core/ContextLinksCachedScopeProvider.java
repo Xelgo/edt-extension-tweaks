@@ -112,7 +112,7 @@ public class ContextLinksCachedScopeProvider
         if (isConfigurationProject(project))
             return false;
 
-        if (ContextLinks.shouldSkipContextExtensionDuringBuild("bsl-cache-" + kind)) //$NON-NLS-1$
+        if (ContextLinks.shouldSkipBslContextExtension("bsl-cache-" + kind)) //$NON-NLS-1$
             return false;
 
         return !ContextLinks.getContextProjectNames(project).isEmpty();

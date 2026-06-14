@@ -1,7 +1,6 @@
 package ru.xelgo.edt.contextlinks.core;
 
 import org.eclipse.xtext.service.AbstractGenericModule;
-import org.eclipse.xtext.resource.IContainer;
 import org.eclipse.xtext.scoping.IScopeProvider;
 
 import com._1c.g5.v8.dt.bsl.contextdef.IBslModuleContextDefService;
@@ -33,8 +32,4 @@ public class ContextLinksBslRuntimeModule
         return ContextLinksModuleContextDefService.class;
     }
 
-    public Class<? extends IContainer.Manager> bindIContainer$Manager()
-    {
-        return ContextLinksContainerManager.class;
-    }
 }

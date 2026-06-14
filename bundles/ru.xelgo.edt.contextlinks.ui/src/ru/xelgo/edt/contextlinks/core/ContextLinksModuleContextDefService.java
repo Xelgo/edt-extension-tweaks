@@ -81,7 +81,7 @@ public class ContextLinksModuleContextDefService
 
     private static ContextDef ensureFallbackContextDef(Module module, ContextDef contextDef)
     {
-        if (ContextLinks.shouldSkipContextExtensionDuringBuild("module-context-fallback")) //$NON-NLS-1$
+        if (ContextLinks.shouldSkipBslContextExtension("module-context-fallback")) //$NON-NLS-1$
             return null;
 
         EObject owner = module != null ? module.getOwner() : null;
