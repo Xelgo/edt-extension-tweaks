@@ -34,7 +34,6 @@ public class ContextLinksCachedScopeProvider
     private static final Set<String> loggedTypeScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedPropertyScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedScopeDetails = ConcurrentHashMap.newKeySet();
-    private static final ConcurrentHashMap<ProjectScopeKey, IScope> stableProjectScopes = new ConcurrentHashMap<>();
 
     public ContextLinksCachedScopeProvider()
     {
@@ -66,7 +65,6 @@ public class ContextLinksCachedScopeProvider
                 + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
         }
         super.addTypeItemScope(project, scope);
-        rememberStableProjectScope(project, ScopeKind.TYPE_ITEM, scope);
     }
 
     @Override
@@ -78,7 +76,6 @@ public class ContextLinksCachedScopeProvider
                 + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
         }
         super.addPropertyScope(project, scope);
-        rememberStableProjectScope(project, ScopeKind.PROPERTY, scope);
     }
 
     @Override
@@ -263,41 +260,12 @@ public class ContextLinksCachedScopeProvider
 
     private IScope getDirectTypeItemScope(IProject project)
     {
-        IScope scope = super.getTypeItemScope(project);
-        if (scope != null)
-        {
-            rememberStableProjectScope(project, ScopeKind.TYPE_ITEM, scope);
-            return scope;
-        }
-        return getStableProjectScope(project, ScopeKind.TYPE_ITEM);
+        return super.getTypeItemScope(project);
     }
 
     private IScope getDirectPropertyScope(IProject project)
     {
-        IScope scope = super.getPropertyScope(project);
-        if (scope != null)
-        {
-            rememberStableProjectScope(project, ScopeKind.PROPERTY, scope);
-            return scope;
-        }
-        return getStableProjectScope(project, ScopeKind.PROPERTY);
-    }
-
-    private void rememberStableProjectScope(IProject project, ScopeKind kind, IScope scope)
-    {
-        if (project == null || !project.isAccessible() || kind == null || scope == null)
-            return;
-
-        stableProjectScopes.put(new ProjectScopeKey(project.getName(), kind), scope);
-    }
-
-    private IScope getStableProjectScope(IProject project, ScopeKind kind)
-    {
-        if (project == null || !project.isAccessible() || kind == null)
-            return null;
-
-        IScope scope = stableProjectScopes.get(new ProjectScopeKey(project.getName(), kind));
-        return scope;
+        return super.getPropertyScope(project);
     }
 
     private static final class ContextLinksProjectScope
@@ -537,40 +505,4 @@ public class ContextLinksCachedScopeProvider
         }
     }
 
-    private static final class ProjectScopeKey
-    {
-        private final String projectName;
-        private final ScopeKind kind;
-
-        ProjectScopeKey(String projectName, ScopeKind kind)
-        {
-            this.projectName = projectName;
-            this.kind = kind;
-        }
-
-        @Override
-        public int hashCode()
-        {
-            int result = projectName != null ? projectName.hashCode() : 0;
-            result = 31 * result + (kind != null ? kind.hashCode() : 0);
-            return result;
-        }
-
-        @Override
-        public boolean equals(Object obj)
-        {
-            if (this == obj)
-                return true;
-            if (!(obj instanceof ProjectScopeKey))
-                return false;
-
-            ProjectScopeKey other = (ProjectScopeKey)obj;
-            return equals(projectName, other.projectName) && kind == other.kind;
-        }
-
-        private boolean equals(Object left, Object right)
-        {
-            return left == null ? right == null : left.equals(right);
-        }
-    }
 }

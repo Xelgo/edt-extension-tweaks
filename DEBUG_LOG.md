@@ -2091,3 +2091,25 @@ Change:
 Expected result:
 - During large project builds our plugin should no longer inject linked extension scopes into background BSL/DD calculations.
 - Logs should show `[build.skip] ... frame=background-thread` instead of `[scope.extend]` for those background BSL paths.
+
+## 2026-06-14 Attempt 6 - remove retained BSL scope cache
+
+Observation after Attempt 5 on EDT UH:
+- Installed build `1.1.1.v202606141950`.
+- `scope.extend count` stayed at 0 during the failing run, so linked context was no longer injected into background build/DD threads.
+- Build still reached heap saturation and UI stopped responding.
+- Heap info before diagnostics: G1 heap total 20971520K, used 20872590K.
+- `jcmd Thread.print` and JFR start timed out once the heap was almost full.
+- Workspace log shows EDT BSL validation exception (`StringIndexOutOfBoundsException` in `BslJavaValidator.checkStringLiteral`) followed by CPU/heap overload.
+
+Hypothesis:
+- `ContextLinksCachedScopeProvider.stableProjectScopes` may retain huge BSL `IScope` instances for large configuration/extension projects even when context extension is skipped.
+- On a large workspace this can prevent EDT from releasing builder/DD scope structures after cache clears.
+
+Change:
+- Removed `stableProjectScopes` and all remembered direct scope fallback logic.
+- Linked context now uses only EDT's current direct scope from `super.getTypeItemScope` / `super.getPropertyScope`.
+
+Expected result:
+- The plugin should no longer keep strong references to large BSL scope graphs.
+- Query-console context may depend more strictly on EDT's own initialized scopes, but build memory pressure should drop.
