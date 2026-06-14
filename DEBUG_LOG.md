@@ -2210,3 +2210,21 @@ Change:
 Expected result:
 - External data processor content assist should keep linked context through the whole proposal pipeline.
 - Normal build/DD/reconciler paths remain skipped outside the short assist continuation window.
+
+## 2026-06-15 Attempt 12 - keep BSL assist continuation when EDT drops project context
+
+Observation after Attempt 11:
+- User reports external data processor content assist is still dead.
+- Logs show the plugin enters `Worker-*: ContentAssist resource sync` and extends `bsl-containers`, `bsl-cache-property`, and `bsl-cache-type-item` for `ВнешняяОбработка`.
+- Immediately after that, EDT still invokes `bsl-cache-type-item` on `ForkJoinPool.commonPool-*`, and the guard skips it as `non-interactive-bsl`.
+
+Hypothesis:
+- A later proposal/type stage can run without the original project context, so the per-project continuation window is not enough.
+
+Change:
+- Added a short global BSL assist timestamp opened only by a real interactive content-assist/proposal/completion call.
+- `ForkJoinPool-*` and `ForkJoinPool.commonPool-*` continuations can now use linked BSL scopes during that short window even if EDT does not pass the project through.
+
+Expected result:
+- The proposal pipeline should keep linked BSL context through project-less continuation calls.
+- Build/DD/reconciler paths remain skipped unless they happen inside the short window immediately after an actual content-assist request.

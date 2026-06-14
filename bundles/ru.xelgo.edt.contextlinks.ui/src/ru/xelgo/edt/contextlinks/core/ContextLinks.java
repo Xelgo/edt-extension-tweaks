@@ -45,6 +45,7 @@ public final class ContextLinks
     private static final Set<String> loggedBuildSkipKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedInfoKeys = ConcurrentHashMap.newKeySet();
     private static final long BSL_ASSIST_WINDOW_MILLIS = 15_000L;
+    private static volatile long recentBslAssistTimestamp;
 
     private ContextLinks()
     {
@@ -224,29 +225,40 @@ public final class ContextLinks
 
     private static void rememberBslAssistProject(IProject project)
     {
+        recentBslAssistTimestamp = System.currentTimeMillis();
         if (project != null && project.isAccessible())
-            recentBslAssistProjects.put(project.getName(), System.currentTimeMillis());
+            recentBslAssistProjects.put(project.getName(), recentBslAssistTimestamp);
     }
 
     private static boolean isRecentBslAssistContinuation(IProject project)
     {
-        if (project == null || !project.isAccessible())
-            return false;
-
         String threadName = Thread.currentThread().getName();
         if (!isAssistContinuationThread(threadName))
             return false;
 
+        if (project == null || !project.isAccessible())
+            return isRecentGlobalBslAssistContinuation();
+
         Long timestamp = recentBslAssistProjects.get(project.getName());
         if (timestamp == null)
-            return false;
+            return isRecentGlobalBslAssistContinuation();
 
         long age = System.currentTimeMillis() - timestamp.longValue();
         if (age >= 0 && age <= BSL_ASSIST_WINDOW_MILLIS)
             return true;
 
         recentBslAssistProjects.remove(project.getName(), timestamp);
-        return false;
+        return isRecentGlobalBslAssistContinuation();
+    }
+
+    private static boolean isRecentGlobalBslAssistContinuation()
+    {
+        long timestamp = recentBslAssistTimestamp;
+        if (timestamp == 0)
+            return false;
+
+        long age = System.currentTimeMillis() - timestamp;
+        return age >= 0 && age <= BSL_ASSIST_WINDOW_MILLIS;
     }
 
     private static boolean isAssistContinuationThread(String threadName)
