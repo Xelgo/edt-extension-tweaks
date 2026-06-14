@@ -2428,3 +2428,23 @@ Likely fix direction:
 - Make linked context extension idempotent by project/source identity, not only by displayed project/container names.
 - Prevent registering or merging the same extension context more than once across restart/CLEAN/EXISTING_DATA_IMPORT lifecycle transitions.
 - Keep plugin BSL/context participation disabled during derived_data_executor, project lifecycle rebuild, and validation phases; allow it only for interactive assist/query wizard flows.
+
+## 2026-06-15 BSL scope duplicate procedure hypothesis and fix
+
+Observation:
+- User observed that after a failed build/restart EDT reported exported procedures as already existing, as if a module/context was indexed twice.
+- Workspace logs also contain Found marker duplicates diagnostics.
+- The query/QL scope path already had deduplication for composed linked scopes, but the BSL cached scope path did not.
+
+Root-cause candidate:
+- ContextLinksCachedScopeProvider.ContextLinksProjectScope was concatenating ownScope plus linked project scopes for getElements(...) and getAllElements(...).
+- If EDT already sees a linked extension through its standard visible containers, and the plugin adds the same linked scope again, the same exported method can appear twice as IEObjectDescription.
+- BSL validation/deep analysis may then treat the duplicated method description as a duplicated exported procedure in the model.
+
+Change:
+- BSL composed scope now applies lazy deduplication to getElements(...) and getAllElements(...).
+- Deduplication uses EObjectURI first and QualifiedName/name only as fallback, so it removes repeated descriptions of the same object without hiding legitimate same-named methods from different objects.
+- Own scope is still iterated first, so native/current project symbols keep priority over linked symbols.
+
+Verification:
+- Maven/Tycho build succeeded with mvn clean package -DskipTests.

@@ -3,6 +3,7 @@
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.resource.IEObjectDescription;
@@ -325,7 +327,7 @@ public class ContextLinksCachedScopeProvider
             List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
                 linkedElements.add(getElements(linkedScope, name, null));
-            return concat(getElements(ownScope, name, null), linkedElements);
+            return deduplicateLazy(concat(getElements(ownScope, name, null), linkedElements));
         }
 
         @Override
@@ -334,7 +336,7 @@ public class ContextLinksCachedScopeProvider
             List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
                 linkedElements.add(getElements(linkedScope, name, filters));
-            return concat(getElements(ownScope, name, filters), linkedElements);
+            return deduplicateLazy(concat(getElements(ownScope, name, filters), linkedElements));
         }
 
         @Override
@@ -359,7 +361,7 @@ public class ContextLinksCachedScopeProvider
             List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
                 linkedElements.add(getElements(linkedScope, object, null));
-            return concat(getElements(ownScope, object, null), linkedElements);
+            return deduplicateLazy(concat(getElements(ownScope, object, null), linkedElements));
         }
 
         @Override
@@ -368,7 +370,7 @@ public class ContextLinksCachedScopeProvider
             List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
                 linkedElements.add(getElements(linkedScope, object, filters));
-            return concat(getElements(ownScope, object, filters), linkedElements);
+            return deduplicateLazy(concat(getElements(ownScope, object, filters), linkedElements));
         }
 
         @Override
@@ -377,7 +379,7 @@ public class ContextLinksCachedScopeProvider
             List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
                 linkedElements.add(getAllElements(linkedScope, null));
-            return concat(getAllElements(ownScope, null), linkedElements);
+            return deduplicateLazy(concat(getAllElements(ownScope, null), linkedElements));
         }
 
         @Override
@@ -386,7 +388,7 @@ public class ContextLinksCachedScopeProvider
             List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
                 linkedElements.add(getAllElements(linkedScope, filters));
-            return concat(getAllElements(ownScope, filters), linkedElements);
+            return deduplicateLazy(concat(getAllElements(ownScope, filters), linkedElements));
         }
 
         private List<IScope> getLinkedScopes()
@@ -442,6 +444,11 @@ public class ContextLinksCachedScopeProvider
             sources.add(ownElements);
             sources.addAll(linkedElements);
             return () -> new CompositeIterator(sources);
+        }
+
+        private Iterable<IEObjectDescription> deduplicateLazy(Iterable<IEObjectDescription> descriptions)
+        {
+            return () -> new DistinctDescriptionIterator(descriptions);
         }
     }
 
@@ -502,6 +509,77 @@ public class ContextLinksCachedScopeProvider
                 Iterable<IEObjectDescription> source = sources.next();
                 current = source != null ? source.iterator() : Collections.emptyIterator();
             }
+        }
+    }
+
+    private static final class DistinctDescriptionIterator
+        implements Iterator<IEObjectDescription>
+    {
+        private final Iterator<IEObjectDescription> delegate;
+        private final Set<String> seen = new HashSet<>();
+        private IEObjectDescription next;
+        private boolean nextReady;
+
+        DistinctDescriptionIterator(Iterable<IEObjectDescription> descriptions)
+        {
+            this.delegate = descriptions != null ? descriptions.iterator() : Collections.emptyIterator();
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            prepareNext();
+            return nextReady;
+        }
+
+        @Override
+        public IEObjectDescription next()
+        {
+            prepareNext();
+            if (!nextReady)
+                throw new NoSuchElementException();
+
+            IEObjectDescription result = next;
+            next = null;
+            nextReady = false;
+            return result;
+        }
+
+        private void prepareNext()
+        {
+            if (nextReady)
+                return;
+
+            while (delegate.hasNext())
+            {
+                IEObjectDescription candidate = delegate.next();
+                if (candidate == null)
+                    continue;
+
+                if (seen.add(descriptionKey(candidate)))
+                {
+                    next = candidate;
+                    nextReady = true;
+                    return;
+                }
+            }
+        }
+
+        private String descriptionKey(IEObjectDescription description)
+        {
+            URI objectUri = description.getEObjectURI();
+            QualifiedName qualifiedName = description.getQualifiedName();
+            if (objectUri != null)
+                return "u:" + objectUri + "|q:" + qualifiedName; //$NON-NLS-1$ //$NON-NLS-2$
+
+            QualifiedName name = description.getName();
+            if (qualifiedName != null)
+                return "q:" + qualifiedName; //$NON-NLS-1$
+
+            if (name != null)
+                return "n:" + name; //$NON-NLS-1$
+
+            return "i:" + System.identityHashCode(description); //$NON-NLS-1$
         }
     }
 
