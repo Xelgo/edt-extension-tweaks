@@ -2448,3 +2448,23 @@ Change:
 
 Verification:
 - Maven/Tycho build succeeded with mvn clean package -DskipTests.
+
+## 2026-06-15 Prevent module context fallback on build threads
+
+Observation:
+- After the BSL scope deduplication build, EDT still logged module-context-fallback from LCBuilderState-11:
+  feature=module-context-fallback project=cf thread=LCBuilderState-11 moduleUri=platform:/resource/cf/src/CommonModules/МиграцияПриложенийГлобальный/Module.bsl.
+- Immediately after that, EDT threw NullPointerException in BslCommentUiUtils.parseTemplateComment because a Resource was null while building documentation for a ContextDef method.
+- This means our synthetic fallback ContextDef was still created during build/validation, not only during interactive content assist.
+
+Root cause:
+- shouldSkipBslContextExtension allowed recent BSL assist continuations before checking build/background threads.
+- A real content assist request left a short recent-assist window, then LCBuilderState-* was incorrectly allowed through as if it were part of the assist continuation.
+
+Change:
+- BSL hard build/validation threads are checked before interactive/recent-assist logic.
+- Hard build threads include LCBuilderState*, derived_data_executor_*, Xtext/check threads, and AEF property palette threads.
+- module-context-* features no longer use recent-assist continuation; they are allowed only for a real interactive content assist stack.
+
+Verification:
+- Maven/Tycho build succeeded with mvn clean package -DskipTests.

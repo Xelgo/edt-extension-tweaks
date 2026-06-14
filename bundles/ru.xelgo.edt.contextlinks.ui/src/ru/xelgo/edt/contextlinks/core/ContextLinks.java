@@ -206,13 +206,16 @@ public final class ContextLinks
 
     public static boolean shouldSkipBslContextExtension(String feature, IProject project)
     {
+        if (shouldSkipBslContextExtensionDuringBuild(feature))
+            return true;
+
         if (isInteractiveBslAssistRequest())
         {
             rememberBslAssistProject(project);
             return false;
         }
 
-        if (isRecentBslAssistContinuation(project))
+        if (allowsRecentBslAssistContinuation(feature) && isRecentBslAssistContinuation(project))
             return false;
 
         if (shouldSkipContextExtensionDuringBuild(feature))
@@ -221,6 +224,32 @@ public final class ContextLinks
         Thread thread = Thread.currentThread();
         logBuildSkip(feature, new BuildStackMatch(thread.getName(), "non-interactive-bsl")); //$NON-NLS-1$
         return true;
+    }
+
+    private static boolean shouldSkipBslContextExtensionDuringBuild(String feature)
+    {
+        if (!DISABLE_CONTEXT_DURING_BUILD)
+            return false;
+
+        Thread thread = Thread.currentThread();
+        String threadName = thread.getName();
+        if (isBslHardBuildThreadName(threadName))
+        {
+            logBuildSkip(feature, new BuildStackMatch(threadName, "hard-build-thread")); //$NON-NLS-1$
+            return true;
+        }
+
+        BuildStackMatch match = findBuildStackMatch();
+        if (match == null)
+            return false;
+
+        logBuildSkip(feature, match);
+        return true;
+    }
+
+    private static boolean allowsRecentBslAssistContinuation(String feature)
+    {
+        return feature == null || !feature.startsWith("module-context-"); //$NON-NLS-1$
     }
 
     private static void rememberBslAssistProject(IProject project)
@@ -325,6 +354,18 @@ public final class ContextLinks
         return threadName.startsWith("LCBuilderState") //$NON-NLS-1$
             || threadName.contains("Builder") //$NON-NLS-1$
             || threadName.contains("build"); //$NON-NLS-1$
+    }
+
+    private static boolean isBslHardBuildThreadName(String threadName)
+    {
+        if (threadName == null)
+            return false;
+
+        return threadName.startsWith("LCBuilderState") //$NON-NLS-1$
+            || threadName.startsWith("derived_data_executor_") //$NON-NLS-1$
+            || threadName.contains("Xtext") //$NON-NLS-1$
+            || threadName.contains("Проверка Xтекст") //$NON-NLS-1$
+            || threadName.startsWith("AEF 2.0 Thread-"); //$NON-NLS-1$
     }
 
     private static boolean isBackgroundThreadName(String threadName)
