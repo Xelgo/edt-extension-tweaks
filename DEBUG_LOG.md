@@ -2298,3 +2298,30 @@ Next proposed experiment:
   - keep a short TTL and/or small per-project map so large scope graphs are not retained indefinitely.
 - Consider reintroducing module scope fallback only behind the same assist-only gate if project scope fallback is not enough.
 - Add one low-noise diagnostic first: for content assist only, sample the first few names from linked type/property scopes to confirm whether the current linked scopes are empty or populated.
+
+## 2026-06-15 Release v1.1.1 profiling - inactive external object context
+
+Observation:
+- While running release code `v1.1.1` in workspace `EDT UH`, the user hit an EDT dialog:
+  `Контекст проекта не готов` / `Проект ВнешняяОбработка еще не стартовал, либо уже закрыт`.
+- Workspace log shows the project lifecycle around the incident:
+  - `Project context is being stopped: ВнешняяОбработка (CLEAN)`;
+  - `Project context is stopped: ВнешняяОбработка`;
+  - later `Project context is being started: ВнешняяОбработка (CLEAN_IMPORT)` and `Project context is started: ВнешняяОбработка`.
+- During the stopped/inactive window, EDT BSL editor/validation still tried to read the external data processor form context.
+
+Relevant stack:
+- `BmNamespaceInactiveException: The namespace 'ВнешняяОбработка' is not active`
+- `FormImpl.getFormContext(...)`
+- `BslModuleContextDefExtensionForm.getContextDef(...)`
+- `ru.xelgo.edt.contextlinks.core.ContextLinksModuleContextDefService.getContextDef(...)`
+- `BslScopeProvider.addContextPropertiesScopeWithoutEnvs(...)`
+- `BslDerivedStateComputer.installDerivedState(...)`
+- `BslNotifyingResourceValidator.validate(...)`
+- `ValidationJob.run(...)`
+
+Conclusion:
+- This is another release-build failure mode, separate from pure heap pressure.
+- The release plugin allows BSL context-def/scope integration while EDT is stopping or restarting project BM namespaces during clean/rebuild.
+- The correct fixed build must not call into linked/current project BSL context services while a project namespace is inactive or while EDT is in CLEAN/CLEAN_IMPORT/build lifecycle.
+- This supports the direction of gating BSL integration away from build/DD/project lifecycle operations while preserving it only for interactive content assist.
