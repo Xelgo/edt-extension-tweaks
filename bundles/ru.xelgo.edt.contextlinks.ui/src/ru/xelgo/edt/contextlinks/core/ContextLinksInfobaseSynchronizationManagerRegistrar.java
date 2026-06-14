@@ -8,8 +8,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
+import org.osgi.framework.Filter;
 import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
+import org.osgi.util.tracker.ServiceTracker;
 
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseSynchronizationManager;
 
@@ -22,6 +26,7 @@ public final class ContextLinksInfobaseSynchronizationManagerRegistrar
     static final String WRAPPER_MARKER_PROPERTY = ContextLinks.PLUGIN_ID + ".infobaseUpdateSkip.wrapper"; //$NON-NLS-1$
     private static final Set<String> loggedRegistrationStates = ConcurrentHashMap.newKeySet();
     private static ServiceRegistration<IInfobaseSynchronizationManager> registration;
+    private static ServiceTracker<IInfobaseSynchronizationManager, IInfobaseSynchronizationManager> delegateTracker;
 
     private ContextLinksInfobaseSynchronizationManagerRegistrar()
     {
@@ -46,6 +51,55 @@ public final class ContextLinksInfobaseSynchronizationManagerRegistrar
             logRegistrationState("EDT Extension Tweaks infobase update skip wrapper not registered: bundle context is null"); //$NON-NLS-1$
             return;
         }
+
+        if (delegateTracker != null)
+            return;
+
+        try
+        {
+            Filter filter = context.createFilter("(&(" + Constants.OBJECTCLASS + "=" //$NON-NLS-1$ //$NON-NLS-2$
+                + IInfobaseSynchronizationManager.class.getName() + ")(!(" + WRAPPER_MARKER_PROPERTY + "=*)))"); //$NON-NLS-1$ //$NON-NLS-2$
+            delegateTracker =
+                new ServiceTracker<IInfobaseSynchronizationManager, IInfobaseSynchronizationManager>(context, filter,
+                    null)
+                {
+                    @Override
+                    public IInfobaseSynchronizationManager addingService(
+                        ServiceReference<IInfobaseSynchronizationManager> reference)
+                    {
+                        IInfobaseSynchronizationManager service = super.addingService(reference);
+                        if (service != null)
+                            registerProxy(context);
+                        return service;
+                    }
+                };
+            delegateTracker.open();
+            logRegistrationState("EDT Extension Tweaks infobase update skip wrapper waiting for EDT delegate service"); //$NON-NLS-1$
+        }
+        catch (InvalidSyntaxException e)
+        {
+            ContextLinks.logError("EDT Extension Tweaks infobase update skip wrapper tracker failed", e); //$NON-NLS-1$
+        }
+    }
+
+    public static synchronized void unregister()
+    {
+        if (registration != null)
+        {
+            registration.unregister();
+            registration = null;
+        }
+        if (delegateTracker != null)
+        {
+            delegateTracker.close();
+            delegateTracker = null;
+        }
+    }
+
+    private static synchronized void registerProxy(BundleContext context)
+    {
+        if (registration != null)
+            return;
 
         IInfobaseSynchronizationManager proxy = ContextLinksInfobaseSynchronizationManagerProxy.create(context);
         if (proxy == null)

@@ -11,7 +11,7 @@
 <feature
       id="ru.xelgo.edt.contextlinks.feature"
       label="%featureName"
-      version="1.1.0.qualifier"
+      version="1.1.1.qualifier"
       provider-name="%providerName"
       license-feature="org.eclipse.license"
       license-feature-version="2.0.2.qualifier">
@@ -32,7 +32,7 @@
          id="ru.xelgo.edt.contextlinks.ui"
          download-size="0"
          install-size="0"
-         version="1.1.0.qualifier"
+         version="1.1.1.qualifier"
          unpack="false"/>
 
 </feature>

@@ -31,6 +31,7 @@ public final class ContextLinksPlugin
     public void stop(BundleContext context)
         throws Exception
     {
+        ContextLinksInfobaseSynchronizationManagerRegistrar.unregister();
         if (queryWizardWeavingRegistration != null)
         {
             queryWizardWeavingRegistration.unregister();
