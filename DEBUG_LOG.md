@@ -2481,3 +2481,23 @@ Change:
 
 Verification:
 - Maven/Tycho build succeeded with mvn clean package -DskipTests.
+
+## 2026-06-15 Pause BSL context assist while build is active
+
+Observation:
+- The previous guard correctly skipped plugin BSL context on build/derived/Xtext threads, but EDT still hung during cf resource description build.
+- The log shows the remaining trigger: while the build was active, the open external data processor editor repeatedly ran ContentAssist resource sync and extended BSL containers/cache from cf.МагнитМаркет.
+- Memory jumped from about 8 GB to 15 GB after those ContentAssist scope extensions, then grew to the 20 GB heap ceiling and EDT stopped responding.
+
+Updated hypothesis:
+- The plugin is no longer hot directly on the build threads, but interactive/editor BSL scope extension can still pull a large linked project while EDT is rebuilding derived data.
+- That concurrent linked-scope load is enough to push the workspace into GC/memory overload.
+
+Change:
+- Any real build/background/derived/Xtext skip now records recent build activity.
+- While recent build activity is fresh, BSL context extension is skipped even for content assist and recent-assist continuations.
+- The quiet window defaults to 60 seconds and can be overridden with -Dru.xelgo.edt.contextlinks.ui.buildQuietWindowMillis=...
+- The recent-build skip does not refresh itself, so context can recover after build activity becomes quiet.
+
+Verification:
+- Maven/Tycho build succeeded with mvn clean package -DskipTests.

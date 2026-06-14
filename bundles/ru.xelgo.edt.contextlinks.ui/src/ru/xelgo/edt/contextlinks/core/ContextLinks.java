@@ -45,7 +45,10 @@ public final class ContextLinks
     private static final Set<String> loggedBuildSkipKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedInfoKeys = ConcurrentHashMap.newKeySet();
     private static final long BSL_ASSIST_WINDOW_MILLIS = 15_000L;
+    private static final long BUILD_QUIET_WINDOW_MILLIS = Long.getLong(
+        PLUGIN_ID + ".buildQuietWindowMillis", 60_000L); //$NON-NLS-1$
     private static volatile long recentBslAssistTimestamp;
+    private static volatile long recentBuildContextTimestamp;
 
     private ContextLinks()
     {
@@ -209,6 +212,12 @@ public final class ContextLinks
         if (shouldSkipBslContextExtensionDuringBuild(feature))
             return true;
 
+        if (isRecentBuildContextActivity())
+        {
+            logBuildSkip(feature, new BuildStackMatch(Thread.currentThread().getName(), "recent-build-activity")); //$NON-NLS-1$
+            return true;
+        }
+
         if (isInteractiveBslAssistRequest())
         {
             rememberBslAssistProject(project);
@@ -301,6 +310,8 @@ public final class ContextLinks
 
     private static void logBuildSkip(String feature, BuildStackMatch match)
     {
+        if (isBuildActivityFrame(match.frame))
+            recentBuildContextTimestamp = System.currentTimeMillis();
         String key = feature + "|" + match.frame; //$NON-NLS-1$
         if (loggedBuildSkipKeys.add(key))
         {
@@ -308,6 +319,22 @@ public final class ContextLinks
                 + " thread=" + match.threadName + " frame=" + match.frame //$NON-NLS-1$ //$NON-NLS-2$
                 + " memory=" + memorySummary()); //$NON-NLS-1$
         }
+    }
+
+    private static boolean isRecentBuildContextActivity()
+    {
+        long timestamp = recentBuildContextTimestamp;
+        if (timestamp == 0)
+            return false;
+
+        long age = System.currentTimeMillis() - timestamp;
+        return age >= 0 && age <= BUILD_QUIET_WINDOW_MILLIS;
+    }
+
+    private static boolean isBuildActivityFrame(String frame)
+    {
+        return frame != null && !"recent-build-activity".equals(frame) //$NON-NLS-1$
+            && !"non-interactive-bsl".equals(frame); //$NON-NLS-1$
     }
 
     public static void logScopeExtension(String feature, IProject project, Object details)
