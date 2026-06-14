@@ -17,8 +17,11 @@ import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseSynchronizationManager;
+import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseConfigurationChange;
+import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseUpdateCallback;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseChangesResolutionResult;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseEqualityState;
+import com._1c.g5.v8.dt.platform.services.core.infobases.sync.ObjectChange;
 
 /**
  * Softly masks disabled projects as synchronized for EDT infobase update flows.
@@ -135,12 +138,78 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
             ContextLinks.logDebug("EDT Context Links DEBUG [application.update.route] operation=" //$NON-NLS-1$
                 + operation + " fromProject=" + project.getName() + " updateProject=" //$NON-NLS-1$ //$NON-NLS-2$
                 + dependentProject.getName());
+            Object routedCallback = wrapUpdateCallbackForLogging(applicationProject, dependentProject, callback);
             Object dependentResult = invokeMethod(synchronization, "updateConnectedInfobase", 4, //$NON-NLS-1$
-                Boolean.valueOf(reload), infobase, callback, monitor);
+                Boolean.valueOf(reload), infobase, routedCallback, monitor);
             if (dependentResult instanceof Boolean)
                 result &= ((Boolean)dependentResult).booleanValue();
         }
         return Boolean.valueOf(!hasDependentProjects || result);
+    }
+
+    private Object wrapUpdateCallbackForLogging(IProject applicationProject, IProject routedProject, Object callback)
+    {
+        if (!(callback instanceof IInfobaseUpdateCallback))
+            return callback;
+
+        return Proxy.newProxyInstance(IInfobaseUpdateCallback.class.getClassLoader(),
+            new Class<?>[] { IInfobaseUpdateCallback.class },
+            (proxy, method, args) -> {
+                if ("resolveInfobaseChanges".equals(method.getName())) //$NON-NLS-1$
+                    logInfobaseChanges(applicationProject, routedProject, args);
+                try
+                {
+                    return method.invoke(callback, args);
+                }
+                catch (InvocationTargetException e)
+                {
+                    throw e.getTargetException();
+                }
+            });
+    }
+
+    private void logInfobaseChanges(IProject applicationProject, IProject routedProject, Object[] args)
+    {
+        IProject conflictProject = firstProject(args);
+        IInfobaseConfigurationChange change = firstInfobaseConfigurationChange(args);
+        if (change == null)
+            return;
+
+        ContextLinks.logDebug("EDT Context Links DEBUG [application.update.conflict.inspect]" //$NON-NLS-1$
+            + " applicationProject=" + applicationProject.getName() //$NON-NLS-1$
+            + " routedProject=" + routedProject.getName() //$NON-NLS-1$
+            + " conflictProject=" + (conflictProject == null ? "<null>" : conflictProject.getName()) //$NON-NLS-1$ //$NON-NLS-2$
+            + " empty=" + change.isEmpty() //$NON-NLS-1$
+            + " fullReload=" + change.isFullReloadRequired() //$NON-NLS-1$
+            + " objectChanges=" + describeObjectChanges(change)); //$NON-NLS-1$
+    }
+
+    private IInfobaseConfigurationChange firstInfobaseConfigurationChange(Object[] args)
+    {
+        if (args == null)
+            return null;
+        for (Object arg : args)
+        {
+            if (arg instanceof IInfobaseConfigurationChange)
+                return (IInfobaseConfigurationChange)arg;
+        }
+        return null;
+    }
+
+    private String describeObjectChanges(IInfobaseConfigurationChange change)
+    {
+        StringBuilder result = new StringBuilder("["); //$NON-NLS-1$
+        boolean first = true;
+        for (ObjectChange objectChange : change.getObjectChanges())
+        {
+            if (!first)
+                result.append(", "); //$NON-NLS-1$
+            first = false;
+            result.append(objectChange.getType())
+                .append(':')
+                .append(objectChange.getPlatformQualifiedName());
+        }
+        return result.append(']').toString();
     }
 
     private boolean shouldFilterUpdateAll(IProject updateProject)

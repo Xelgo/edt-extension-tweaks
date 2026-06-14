@@ -1981,3 +1981,12 @@ Verification still needed after redeploy:
 - Removed the callback suppression wrapper and restored EDT's normal conflict/import dialog behavior for routed extension projects.
 - Kept the safer routed update logic that updates enabled dependent extensions through their own `InfobaseSynchronization` instead of invoking the public manager with a swapped `IProject`.
 - Next investigation, if the stale post-update prompt remains: distinguish false echo conflicts from real Configurator edits using `IInfobaseConfigurationChange.getObjectChanges()` / `ObjectChange.getPlatformQualifiedName()` instead of suppressing all routed extension conflicts.
+## 2026-06-14 - Routed Update Conflict Object Diagnostics, Attempt 6
+
+- User confirmed that in EDT's import-changes dialog only `Catalog.Расш2_Справочник2` is a real Configurator-side change; `Catalog.Расш2_Справочник`, `Catalog.Расш2_Справочник1`, and `Configuration.Расширение` look like stale echo changes after previous EDT-to-infobase extension update.
+- Added a non-invasive wrapper around routed `IInfobaseUpdateCallback.resolveInfobaseChanges(...)` that only logs `IInfobaseConfigurationChange` details and then delegates to EDT normally.
+- New debug marker: `EDT Context Links DEBUG [application.update.conflict.inspect] applicationProject=... routedProject=... conflictProject=... empty=... fullReload=... objectChanges=[TYPE:Platform.Name,...]`.
+- Important: this attempt does not return `InfobaseConflictResolutionResult.IGNORED`; legitimate reverse synchronization, including `Расш2_Справочник2`, should still be offered by EDT.
+- Rebuilt and redeployed to workspace `EDTDEV` with `-DebugPlugin`; installed feature version: `1.0.0.v202606140854`.
+- Post-start log check shows plugin registrations and no `NoSuchMethodException`, `NoSuchFieldException`, `ClassCastException`, `NoClassDefFoundError`, `BundleException`, or `Unhandled event loop exception` from the plugin.
+- Next step after reproducing the dialog: inspect `application.update.conflict.inspect` lines and use the object/type list to decide which changes are stale echoes and which are real Configurator imports.
