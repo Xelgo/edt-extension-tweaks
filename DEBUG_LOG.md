@@ -2171,3 +2171,21 @@ Change:
 Expected result:
 - Background content-assist sync can use linked BSL context.
 - Build/DD/reconciler paths without content-assist markers remain skipped.
+
+## 2026-06-15 Attempt 10 - restore containers for content assist
+
+Observation after Attempt 9:
+- User reported context completion is still unavailable in the external data processor.
+- Fresh logs show `ContentAssist resource sync` now reaches `scope.extend` for `bsl-cache-property` and `bsl-cache-type-item`.
+- There are no `bsl-containers` scope extensions because Attempt 8 removed the `IContainer.Manager` binding.
+
+Hypothesis:
+- For external object projects, linked BSL cache scopes alone are not enough; Xtext also needs linked resource containers visible during content assist.
+
+Change:
+- Restored `IContainer.Manager -> ContextLinksContainerManager` binding.
+- Changed `ContextLinksContainerManager` to use `shouldSkipBslContextExtension("bsl-containers")` so linked containers are added only for content-assist/proposal/completion paths.
+
+Expected result:
+- External data processor content assist should see linked configuration/extension resources again.
+- Build/DD/reconciler paths should continue to receive standard EDT containers only.
