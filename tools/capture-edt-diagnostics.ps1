@@ -4,6 +4,7 @@ param(
     [int]$DurationSec = 60,
     [int]$IntervalSec = 10,
     [int]$CommandTimeoutSec = 20,
+    [string]$JcmdPath = "",
     [string]$OutputRoot = (Join-Path (Resolve-Path "$PSScriptRoot\..").Path "diagnostics")
 )
 
@@ -24,7 +25,7 @@ function Find-EdtJavaProcess($WorkspacePath) {
 
     $candidates = Get-CimInstance Win32_Process |
         Where-Object {
-            $_.Name -in @("javaw.exe", "java.exe") -and
+            $_.Name -in @("1cedt.exe", "javaw.exe", "java.exe") -and
             $_.CommandLine -and
             ($_.CommandLine -match $escapedWorkspace -or $_.CommandLine -match $escapedWorkspaceSlash)
         } |
@@ -35,6 +36,41 @@ function Find-EdtJavaProcess($WorkspacePath) {
     }
 
     return $candidates[0]
+}
+
+function Find-Jcmd($ExecutablePath) {
+    $candidates = @()
+    if ($JcmdPath) {
+        $candidates += $JcmdPath
+    }
+
+    if ($ExecutablePath) {
+        $executableBin = Split-Path -Parent $ExecutablePath
+        $candidates += Join-Path $executableBin "jcmd.exe"
+    }
+
+    if ($env:JAVA_HOME) {
+        $candidates += Join-Path $env:JAVA_HOME "bin\jcmd.exe"
+    }
+
+    $oneCComponents = "C:\Program Files\1C\1CE\components"
+    if (Test-Path -LiteralPath $oneCComponents) {
+        $candidates += Get-ChildItem -LiteralPath $oneCComponents -Directory -Filter "*jdk-full-17*" -ErrorAction SilentlyContinue |
+            ForEach-Object { Join-Path $_.FullName "bin\jcmd.exe" }
+    }
+
+    $pathJcmd = Get-Command jcmd.exe -ErrorAction SilentlyContinue
+    if ($pathJcmd) {
+        $candidates += $pathJcmd.Source
+    }
+
+    foreach ($candidate in $candidates) {
+        if ($candidate -and (Test-Path -LiteralPath $candidate)) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
+    }
+
+    throw "jcmd.exe was not found. Pass -JcmdPath explicitly."
 }
 
 function Invoke-Jcmd($Jcmd, $TargetPid, [string[]]$Arguments, $OutputFile, $TimeoutSec) {
@@ -81,11 +117,7 @@ if (!$javaPath) {
     throw "Could not resolve Java executable path for process $($targetProcess.ProcessId)."
 }
 
-$javaHomeBin = Split-Path -Parent $javaPath
-$jcmd = Join-Path $javaHomeBin "jcmd.exe"
-if (!(Test-Path -LiteralPath $jcmd)) {
-    throw "jcmd.exe was not found near EDT JVM: $jcmd"
-}
+$jcmd = Find-Jcmd $javaPath
 
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $workspaceName = Split-Path -Leaf $resolvedWorkspace

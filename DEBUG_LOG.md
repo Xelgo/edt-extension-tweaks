@@ -2020,3 +2020,27 @@ Verification still needed after redeploy:
 - Added an index from BSL block name to module scope keys, so clearing one module no longer scans all cached module scope keys.
 - Added `tools/capture-edt-diagnostics.ps1` to capture workspace log, thread dumps, heap info, and JFR when possible while EDT is still hung.
 - `mvn -q -DskipTests package` succeeded after the performance fix.
+
+## 2026-06-14 - Large Workspace Build Hang, Attempt 2
+
+- Redeployed `1.1.1` with the first performance fix to workspace `C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH`.
+- User reported another hang during build.
+- Workspace log showed repeated EDT resource manager warnings:
+  - `CPU overload`;
+  - `Sustained CPU overload`;
+  - `Critical CPU overload`;
+  - memory grew to roughly `8.57GB / 8.59GB` with `-Xmx8192m`.
+- `jcmd GC.heap_info` succeeded once and confirmed G1 heap was almost full: `total 8388608K, used 8371290K`.
+- `jcmd JFR.start`, `jcmd Thread.print -l`, and `jstack -l` did not complete even with longer timeouts, so the JVM was too busy or memory-starved to serve attach diagnostics reliably.
+- Root suspicion after code review: plugin-level `moduleScopes` mirrored every BSL module/block scope and retained `IScope` object graphs outside EDT's own cache lifecycle. On a large configuration this can multiply retained model/scope objects and push the JVM into GC pressure.
+- Removed the custom module-scope mirror entirely:
+  - no `moduleScopes`;
+  - no `moduleScopeVersions`;
+  - no `moduleScopeKeysByBlock`;
+  - no `addScope(...)`, `getScope(...)`, or `clearScopes(...)` overrides for BSL module scopes.
+- Kept the lighter project-level linked scope composition for type-item/property scopes and the persistent-settings cache from the previous attempt.
+- Updated `tools/redeploy-edt-main.ps1` to start EDT with a configurable heap and default `-Xmx20g` for heavy workspaces.
+- `mvn -q -DskipTests package` succeeded after the change.
+- Also fixed `tools/capture-edt-diagnostics.ps1` after the failed live capture:
+  - process lookup now includes `1cedt.exe` in addition to `javaw.exe` / `java.exe`;
+  - `jcmd.exe` is discovered from explicit `-JcmdPath`, `JAVA_HOME`, `C:\Program Files\1C\1CE\components\*jdk-full-17*`, or PATH instead of assuming it lives next to `1cedt.exe`.

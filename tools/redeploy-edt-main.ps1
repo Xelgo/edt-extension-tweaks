@@ -18,6 +18,7 @@ param(
     [switch]$ForceKill,
     [switch]$DebugPlugin,
     [switch]$DryRun,
+    [string]$MaxHeap = "20g",
     [int]$ShutdownTimeoutSec = 20
 )
 
@@ -248,7 +249,7 @@ if (-not $NoRestart) {
         "-vmargs",
         "-Djava.library.path=",
         "-Duser.language=ru",
-        "-Xmx8192m"
+        "-Xmx$MaxHeap"
     )
 
     if ($DebugPlugin) {

@@ -6,7 +6,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -15,13 +14,10 @@ import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.scoping.IScope;
 
-import com._1c.g5.v8.dt.bsl.model.Block;
-import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.scoping.BslCachedScopeProvider;
 import com._1c.g5.v8.dt.core.platform.IConfigurationProject;
 import com._1c.g5.v8.dt.core.platform.IV8Project;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
-import com._1c.g5.v8.dt.mcore.util.Environments;
 import com._1c.g5.modeling.xtext.scoping.ISliceFilter;
 import com._1c.g5.modeling.xtext.scoping.ISlicedScope;
 import com._1c.g5.wiring.ServiceAccess;
@@ -35,12 +31,7 @@ public class ContextLinksCachedScopeProvider
     private static final Set<String> loggedTypeScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedPropertyScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedScopeDetails = ConcurrentHashMap.newKeySet();
-    private static final Set<String> loggedModuleScopeKeys = ConcurrentHashMap.newKeySet();
     private static final ConcurrentHashMap<ProjectScopeKey, IScope> stableProjectScopes = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<ModuleScopeKey, IScope> moduleScopes = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<ModuleScopeKey, String> moduleScopeVersions = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, Set<ModuleScopeKey>> moduleScopeKeysByBlock = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, AtomicLong> projectScopeVersions = new ConcurrentHashMap<>();
 
     public ContextLinksCachedScopeProvider()
     {
@@ -53,7 +44,6 @@ public class ContextLinksCachedScopeProvider
         if (ContextLinks.isDebugLoggingEnabled())
             ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.clearTypeItems] project=" + describeProject(project)); //$NON-NLS-1$
         super.clearTypeItemsScopes(project);
-        bumpProjectScopeVersion(project, "clear-type-item"); //$NON-NLS-1$
     }
 
     @Override
@@ -62,7 +52,6 @@ public class ContextLinksCachedScopeProvider
         if (ContextLinks.isDebugLoggingEnabled())
             ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.clearProperties] project=" + describeProject(project)); //$NON-NLS-1$
         super.clearPropertyScopes(project);
-        bumpProjectScopeVersion(project, "clear-property"); //$NON-NLS-1$
     }
 
     @Override
@@ -75,7 +64,6 @@ public class ContextLinksCachedScopeProvider
         }
         super.addTypeItemScope(project, scope);
         rememberStableProjectScope(project, ScopeKind.TYPE_ITEM, scope);
-        bumpProjectScopeVersion(project, "add-type-item"); //$NON-NLS-1$
     }
 
     @Override
@@ -88,46 +76,6 @@ public class ContextLinksCachedScopeProvider
         }
         super.addPropertyScope(project, scope);
         rememberStableProjectScope(project, ScopeKind.PROPERTY, scope);
-        bumpProjectScopeVersion(project, "add-property"); //$NON-NLS-1$
-    }
-
-    @Override
-    public void addScope(Block block, Environments environments, BslCachedScopeType scopeType, IScope scope)
-    {
-        bumpProjectScopeVersion(projectFromBlock(block), "add-module-scope-" + scopeType); //$NON-NLS-1$
-        rememberModuleScope(block, environments, scopeType, scope);
-        super.addScope(block, environments, scopeType, scope);
-    }
-
-    @Override
-    public IScope getScope(Block block, Environments environments, BslCachedScopeType scopeType)
-    {
-        IScope scope = super.getScope(block, environments, scopeType);
-        if (scope != null && isModuleScopeCurrent(block, environments, scopeType))
-            return scope;
-
-        IScope mirroredScope = moduleScopes.get(new ModuleScopeKey(blockUniqueName(block), environments, scopeType));
-        if (mirroredScope != null && !isModuleScopeCurrent(block, environments, scopeType))
-            mirroredScope = null;
-
-        logModuleScope("get-fallback", block, environments, scopeType, mirroredScope); //$NON-NLS-1$
-        return mirroredScope;
-    }
-
-    @Override
-    public void clearScopes(Module module)
-    {
-        int removedCount = forgetModuleScope(module != null ? module.getUniqueName() : null);
-        if (module != null)
-            module.allMethods().forEach(method -> forgetModuleScope(method.getUniqueName()));
-
-        if (ContextLinks.isDebugLoggingEnabled())
-        {
-            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.module.clear] module=" + blockUniqueName(module) //$NON-NLS-1$
-                + " removed=" + removedCount); //$NON-NLS-1$
-        }
-        bumpProjectScopeVersion(projectFromBlock(module), "clear-module-scopes"); //$NON-NLS-1$
-        super.clearScopes(module);
     }
 
     @Override
@@ -274,143 +222,6 @@ public class ContextLinksCachedScopeProvider
         if (scope == null)
             return "NULL"; //$NON-NLS-1$
         return scope.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(scope)); //$NON-NLS-1$
-    }
-
-    private void rememberModuleScope(Block block, Environments environments, BslCachedScopeType scopeType, IScope scope)
-    {
-        ModuleScopeKey key = new ModuleScopeKey(blockUniqueName(block), environments, scopeType);
-        if (!key.isUsable() || scope == null)
-            return;
-
-        moduleScopes.put(key, scope);
-        moduleScopeVersions.put(key, moduleScopeVersion(block));
-        moduleScopeKeysByBlock.computeIfAbsent(key.blockName, ignored -> ConcurrentHashMap.newKeySet()).add(key);
-        logModuleScope("add", block, environments, scopeType, scope); //$NON-NLS-1$
-    }
-
-    private int forgetModuleScope(String blockName)
-    {
-        if (blockName == null || blockName.isBlank())
-            return 0;
-
-        Set<ModuleScopeKey> keys = moduleScopeKeysByBlock.remove(blockName);
-        if (keys == null || keys.isEmpty())
-            return 0;
-
-        int removed = 0;
-        for (ModuleScopeKey key : keys)
-        {
-            if (moduleScopes.remove(key) != null)
-                removed++;
-            moduleScopeVersions.remove(key);
-        }
-        return removed;
-    }
-
-    private boolean isModuleScopeCurrent(Block block, Environments environments, BslCachedScopeType scopeType)
-    {
-        ModuleScopeKey key = new ModuleScopeKey(blockUniqueName(block), environments, scopeType);
-        if (!key.isUsable())
-            return true;
-
-        String cachedVersion = moduleScopeVersions.get(key);
-        if (cachedVersion == null)
-        {
-            if (ContextLinks.isDebugLoggingEnabled())
-            {
-                ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.module.untracked] block=" + blockUniqueName(block) //$NON-NLS-1$
-                    + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
-                    + " current=" + moduleScopeVersion(block)); //$NON-NLS-1$
-            }
-            return false;
-        }
-
-        String currentVersion = moduleScopeVersion(block);
-        boolean current = cachedVersion.equals(currentVersion);
-        if (!current)
-        {
-            if (ContextLinks.isDebugLoggingEnabled())
-            {
-                ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.module.stale] block=" + blockUniqueName(block) //$NON-NLS-1$
-                    + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
-                    + " cached=" + cachedVersion + " current=" + currentVersion); //$NON-NLS-1$ //$NON-NLS-2$
-            }
-        }
-        return current;
-    }
-
-    private void bumpProjectScopeVersion(IProject project, String reason)
-    {
-        if (project == null || !project.isAccessible())
-            return;
-
-        long version = projectScopeVersions.computeIfAbsent(project.getName(), name -> new AtomicLong()).incrementAndGet();
-        if (ContextLinks.isDebugLoggingEnabled())
-        {
-            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.project.version] project=" + project.getName() //$NON-NLS-1$
-                + " version=" + version + " reason=" + reason); //$NON-NLS-1$ //$NON-NLS-2$
-        }
-    }
-
-    private String moduleScopeVersion(Block block)
-    {
-        IProject project = projectFromBlock(block);
-        if (project == null || !project.isAccessible())
-            return "project=NULL"; //$NON-NLS-1$
-
-        StringBuilder builder = new StringBuilder();
-        appendProjectVersion(builder, project.getName());
-        for (String linkedProjectName : ContextLinks.getContextProjectNames(project))
-            appendProjectVersion(builder, linkedProjectName);
-        return builder.toString();
-    }
-
-    private void appendProjectVersion(StringBuilder builder, String projectName)
-    {
-        if (builder.length() > 0)
-            builder.append('|');
-
-        AtomicLong version = projectScopeVersions.get(projectName);
-        builder.append(projectName).append('=').append(version != null ? version.get() : 0);
-    }
-
-    private IProject projectFromBlock(Block block)
-    {
-        String uniqueName = blockUniqueName(block);
-        if (uniqueName == null)
-            return null;
-
-        String prefix = "platform:/resource/"; //$NON-NLS-1$
-        if (!uniqueName.startsWith(prefix))
-            return null;
-
-        int projectStart = prefix.length();
-        int projectEnd = uniqueName.indexOf('/', projectStart);
-        if (projectEnd <= projectStart)
-            return null;
-
-        return ResourcesPlugin.getWorkspace().getRoot().getProject(uniqueName.substring(projectStart, projectEnd));
-    }
-
-    private void logModuleScope(String phase, Block block, Environments environments, BslCachedScopeType scopeType,
-        IScope scope)
-    {
-        if (!ContextLinks.isDebugLoggingEnabled())
-            return;
-
-        String key = phase + "|" + blockUniqueName(block) + "|" + environments + "|" + scopeType //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-            + "|" + describeScope(scope) + "|" + countElements(scope); //$NON-NLS-1$ //$NON-NLS-2$
-        if (loggedModuleScopeKeys.add(key))
-        {
-            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.module." + phase + "] block=" //$NON-NLS-1$ //$NON-NLS-2$
-                + blockUniqueName(block) + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
-                + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
-        }
-    }
-
-    private String blockUniqueName(Block block)
-    {
-        return block != null ? block.getUniqueName() : null;
     }
 
     private enum ScopeKind
@@ -652,53 +463,6 @@ public class ContextLinksCachedScopeProvider
             if (scope instanceof ISlicedScope && filters != null)
                 return ((ISlicedScope)scope).getAllElements(filters);
             return scope.getAllElements();
-        }
-    }
-
-    private static final class ModuleScopeKey
-    {
-        private final String blockName;
-        private final Environments environments;
-        private final BslCachedScopeType scopeType;
-
-        ModuleScopeKey(String blockName, Environments environments, BslCachedScopeType scopeType)
-        {
-            this.blockName = blockName;
-            this.environments = environments;
-            this.scopeType = scopeType;
-        }
-
-        boolean isUsable()
-        {
-            return blockName != null && !blockName.isBlank() && environments != null && scopeType != null;
-        }
-
-        @Override
-        public int hashCode()
-        {
-            int result = blockName != null ? blockName.hashCode() : 0;
-            result = 31 * result + (environments != null ? environments.hashCode() : 0);
-            result = 31 * result + (scopeType != null ? scopeType.hashCode() : 0);
-            return result;
-        }
-
-        @Override
-        public boolean equals(Object obj)
-        {
-            if (this == obj)
-                return true;
-            if (!(obj instanceof ModuleScopeKey))
-                return false;
-
-            ModuleScopeKey other = (ModuleScopeKey)obj;
-            return equals(blockName, other.blockName)
-                && equals(environments, other.environments)
-                && scopeType == other.scopeType;
-        }
-
-        private boolean equals(Object left, Object right)
-        {
-            return left == null ? right == null : left.equals(right);
         }
     }
 
