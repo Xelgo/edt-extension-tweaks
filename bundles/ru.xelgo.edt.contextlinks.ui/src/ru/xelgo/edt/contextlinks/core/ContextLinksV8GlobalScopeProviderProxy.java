@@ -6,13 +6,16 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -612,10 +615,11 @@ final class ContextLinksV8GlobalScopeProviderProxy
         @Override
         public Iterable<IEObjectDescription> getAllElements()
         {
-            List<IEObjectDescription> result = new ArrayList<>(descriptions(ownScope.getAllElements()));
+            List<Iterable<IEObjectDescription>> sources = new ArrayList<>(linkedScopes.size() + 1);
+            sources.add(ownScope.getAllElements());
             for (IScope linkedScope : linkedScopes)
-                result.addAll(descriptions(linkedScope.getAllElements()));
-            return deduplicate(result);
+                sources.add(linkedScope.getAllElements());
+            return deduplicateLazy(() -> new CompositeDescriptionIterator(sources));
         }
 
         private static List<IEObjectDescription> descriptions(Iterable<IEObjectDescription> descriptions)
@@ -646,6 +650,11 @@ final class ContextLinksV8GlobalScopeProviderProxy
                 result.putIfAbsent(name, description);
             }
             return new ArrayList<>(result.values());
+        }
+
+        private static Iterable<IEObjectDescription> deduplicateLazy(Iterable<IEObjectDescription> descriptions)
+        {
+            return () -> new DistinctDescriptionIterator(descriptions);
         }
     }
 
@@ -693,10 +702,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
 
         private Iterable<IEObjectDescription> wrap(Iterable<IEObjectDescription> descriptions)
         {
-            List<IEObjectDescription> result = new ArrayList<>();
-            for (IEObjectDescription description : descriptions)
-                result.add(wrap(description));
-            return result;
+            return () -> new FriendlyDescriptionIterator(descriptions, this);
         }
 
         private IEObjectDescription wrap(IEObjectDescription description)
@@ -718,6 +724,175 @@ final class ContextLinksV8GlobalScopeProviderProxy
                 return description;
 
             return new CurrentProjectFriendlyDescription(description, dbView, currentMdObject);
+        }
+    }
+
+    private static final class CompositeDescriptionIterator
+        implements Iterator<IEObjectDescription>
+    {
+        private final Iterator<Iterable<IEObjectDescription>> sources;
+        private Iterator<IEObjectDescription> current = Collections.emptyIterator();
+        private IEObjectDescription next;
+        private boolean nextReady;
+
+        CompositeDescriptionIterator(List<Iterable<IEObjectDescription>> sources)
+        {
+            this.sources = sources.iterator();
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            prepareNext();
+            return nextReady;
+        }
+
+        @Override
+        public IEObjectDescription next()
+        {
+            prepareNext();
+            if (!nextReady)
+                throw new NoSuchElementException();
+
+            IEObjectDescription result = next;
+            next = null;
+            nextReady = false;
+            return result;
+        }
+
+        private void prepareNext()
+        {
+            if (nextReady)
+                return;
+
+            while (true)
+            {
+                while (current.hasNext())
+                {
+                    IEObjectDescription candidate = current.next();
+                    if (candidate != null)
+                    {
+                        next = candidate;
+                        nextReady = true;
+                        return;
+                    }
+                }
+
+                if (!sources.hasNext())
+                    return;
+
+                Iterable<IEObjectDescription> source = sources.next();
+                current = source != null ? source.iterator() : Collections.emptyIterator();
+            }
+        }
+    }
+
+    private static final class DistinctDescriptionIterator
+        implements Iterator<IEObjectDescription>
+    {
+        private final Iterator<IEObjectDescription> delegate;
+        private final Set<QualifiedName> seen = new HashSet<>();
+        private IEObjectDescription next;
+        private boolean nextReady;
+
+        DistinctDescriptionIterator(Iterable<IEObjectDescription> descriptions)
+        {
+            this.delegate = descriptions != null ? descriptions.iterator() : Collections.emptyIterator();
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            prepareNext();
+            return nextReady;
+        }
+
+        @Override
+        public IEObjectDescription next()
+        {
+            prepareNext();
+            if (!nextReady)
+                throw new NoSuchElementException();
+
+            IEObjectDescription result = next;
+            next = null;
+            nextReady = false;
+            return result;
+        }
+
+        private void prepareNext()
+        {
+            if (nextReady)
+                return;
+
+            while (delegate.hasNext())
+            {
+                IEObjectDescription candidate = delegate.next();
+                if (candidate == null)
+                    continue;
+
+                QualifiedName name = candidate.getQualifiedName();
+                if (name == null)
+                    name = candidate.getName();
+                if (seen.add(name))
+                {
+                    next = candidate;
+                    nextReady = true;
+                    return;
+                }
+            }
+        }
+    }
+
+    private static final class FriendlyDescriptionIterator
+        implements Iterator<IEObjectDescription>
+    {
+        private final Iterator<IEObjectDescription> delegate;
+        private final CurrentProjectFriendlyScope scope;
+        private IEObjectDescription next;
+        private boolean nextReady;
+
+        FriendlyDescriptionIterator(Iterable<IEObjectDescription> descriptions, CurrentProjectFriendlyScope scope)
+        {
+            this.delegate = descriptions != null ? descriptions.iterator() : Collections.emptyIterator();
+            this.scope = scope;
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            prepareNext();
+            return nextReady;
+        }
+
+        @Override
+        public IEObjectDescription next()
+        {
+            prepareNext();
+            if (!nextReady)
+                throw new NoSuchElementException();
+
+            IEObjectDescription result = next;
+            next = null;
+            nextReady = false;
+            return result;
+        }
+
+        private void prepareNext()
+        {
+            if (nextReady)
+                return;
+
+            while (delegate.hasNext())
+            {
+                IEObjectDescription candidate = scope.wrap(delegate.next());
+                if (candidate != null)
+                {
+                    next = candidate;
+                    nextReady = true;
+                    return;
+                }
+            }
         }
     }
 

@@ -73,15 +73,20 @@ function Find-Jcmd($ExecutablePath) {
     throw "jcmd.exe was not found. Pass -JcmdPath explicitly."
 }
 
+function Format-ProcessArgument($Argument) {
+    if ($Argument -match '[\s"]') {
+        return '"' + ($Argument -replace '"', '\"') + '"'
+    }
+    return $Argument
+}
+
 function Invoke-Jcmd($Jcmd, $TargetPid, [string[]]$Arguments, $OutputFile, $TimeoutSec) {
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $Jcmd
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
-    foreach ($argument in @([string]$TargetPid) + $Arguments) {
-        [void]$psi.ArgumentList.Add($argument)
-    }
+    $psi.Arguments = ((@([string]$TargetPid) + $Arguments) | ForEach-Object { Format-ProcessArgument $_ }) -join " "
 
     $process = [System.Diagnostics.Process]::Start($psi)
     if (!$process.WaitForExit($TimeoutSec * 1000)) {

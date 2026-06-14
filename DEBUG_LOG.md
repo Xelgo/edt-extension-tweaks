@@ -2044,3 +2044,19 @@ Verification still needed after redeploy:
 - Also fixed `tools/capture-edt-diagnostics.ps1` after the failed live capture:
   - process lookup now includes `1cedt.exe` in addition to `javaw.exe` / `java.exe`;
   - `jcmd.exe` is discovered from explicit `-JcmdPath`, `JAVA_HOME`, `C:\Program Files\1C\1CE\components\*jdk-full-17*`, or PATH instead of assuming it lives next to `1cedt.exe`.
+
+## 2026-06-14 - Large Workspace Build Hang, Attempt 3
+
+- User reported another hang after raising EDT startup heap to `-Xmx20g` and removing the custom BSL module-scope mirror.
+- Live diagnostics for process `54560` in workspace `EDT UH` showed the heap was again almost full:
+  - before: `total 20971520K, used 20885136K`;
+  - after: `total 20971520K, used 20856326K`.
+- `Thread.print`, `GC.class_histogram`, and repeated attach diagnostics still timed out, so the JVM was again memory/CPU starved enough that attach was unreliable.
+- Workspace log showed contexts started successfully, then memory climbed during later BSL work; one EDT-side stack was `ExportMethodTypeProvider.updateExportMethodIndex(...)` with `Transaction is not active`, followed by repeated `Critical CPU overload`.
+- Code review found another likely multiplier: plugin scope wrappers materialized complete `IEObjectDescription` collections into `ArrayList` in `getAllElements()` and several `getElements(...)` methods.
+- Reworked scope wrappers to return lazy iterables instead of materializing all descriptions:
+  - `ContextLinksProjectScope` now concatenates own and linked scopes lazily;
+  - `CurrentFirstLinkedScope.getAllElements()` now performs lazy concatenation and lazy deduplication by `QualifiedName`;
+  - `CurrentProjectFriendlyScope.wrap(...)` now wraps descriptions lazily.
+- Fixed `tools/capture-edt-diagnostics.ps1` for Windows PowerShell by replacing `ProcessStartInfo.ArgumentList` with quoted `Arguments` string construction.
+- `mvn -q -DskipTests package` succeeded.

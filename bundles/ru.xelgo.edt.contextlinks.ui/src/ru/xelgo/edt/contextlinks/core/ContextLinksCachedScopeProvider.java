@@ -1,9 +1,12 @@
 ﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -346,21 +349,19 @@ public class ContextLinksCachedScopeProvider
         @Override
         public Iterable<IEObjectDescription> getElements(QualifiedName name)
         {
-            List<IEObjectDescription> result = new ArrayList<>();
-            getElements(ownScope, name, null).forEach(result::add);
+            List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
-                getElements(linkedScope, name, null).forEach(result::add);
-            return result;
+                linkedElements.add(getElements(linkedScope, name, null));
+            return concat(getElements(ownScope, name, null), linkedElements);
         }
 
         @Override
         public Iterable<IEObjectDescription> getElements(QualifiedName name, Collection<ISliceFilter> filters)
         {
-            List<IEObjectDescription> result = new ArrayList<>();
-            getElements(ownScope, name, filters).forEach(result::add);
+            List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
-                getElements(linkedScope, name, filters).forEach(result::add);
-            return result;
+                linkedElements.add(getElements(linkedScope, name, filters));
+            return concat(getElements(ownScope, name, filters), linkedElements);
         }
 
         @Override
@@ -382,41 +383,37 @@ public class ContextLinksCachedScopeProvider
         @Override
         public Iterable<IEObjectDescription> getElements(EObject object)
         {
-            List<IEObjectDescription> result = new ArrayList<>();
-            getElements(ownScope, object, null).forEach(result::add);
+            List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
-                getElements(linkedScope, object, null).forEach(result::add);
-            return result;
+                linkedElements.add(getElements(linkedScope, object, null));
+            return concat(getElements(ownScope, object, null), linkedElements);
         }
 
         @Override
         public Iterable<IEObjectDescription> getElements(EObject object, Collection<ISliceFilter> filters)
         {
-            List<IEObjectDescription> result = new ArrayList<>();
-            getElements(ownScope, object, filters).forEach(result::add);
+            List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
-                getElements(linkedScope, object, filters).forEach(result::add);
-            return result;
+                linkedElements.add(getElements(linkedScope, object, filters));
+            return concat(getElements(ownScope, object, filters), linkedElements);
         }
 
         @Override
         public Iterable<IEObjectDescription> getAllElements()
         {
-            List<IEObjectDescription> result = new ArrayList<>();
-            getAllElements(ownScope, null).forEach(result::add);
+            List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
-                getAllElements(linkedScope, null).forEach(result::add);
-            return result;
+                linkedElements.add(getAllElements(linkedScope, null));
+            return concat(getAllElements(ownScope, null), linkedElements);
         }
 
         @Override
         public Iterable<IEObjectDescription> getAllElements(Collection<ISliceFilter> filters)
         {
-            List<IEObjectDescription> result = new ArrayList<>();
-            getAllElements(ownScope, filters).forEach(result::add);
+            List<Iterable<IEObjectDescription>> linkedElements = new ArrayList<>();
             for (IScope linkedScope : getLinkedScopes())
-                getAllElements(linkedScope, filters).forEach(result::add);
-            return result;
+                linkedElements.add(getAllElements(linkedScope, filters));
+            return concat(getAllElements(ownScope, filters), linkedElements);
         }
 
         private List<IScope> getLinkedScopes()
@@ -463,6 +460,75 @@ public class ContextLinksCachedScopeProvider
             if (scope instanceof ISlicedScope && filters != null)
                 return ((ISlicedScope)scope).getAllElements(filters);
             return scope.getAllElements();
+        }
+
+        private Iterable<IEObjectDescription> concat(Iterable<IEObjectDescription> ownElements,
+            List<Iterable<IEObjectDescription>> linkedElements)
+        {
+            List<Iterable<IEObjectDescription>> sources = new ArrayList<>(linkedElements.size() + 1);
+            sources.add(ownElements);
+            sources.addAll(linkedElements);
+            return () -> new CompositeIterator(sources);
+        }
+    }
+
+    private static final class CompositeIterator
+        implements Iterator<IEObjectDescription>
+    {
+        private final Iterator<Iterable<IEObjectDescription>> sources;
+        private Iterator<IEObjectDescription> current = Collections.emptyIterator();
+        private IEObjectDescription next;
+        private boolean nextReady;
+
+        CompositeIterator(List<Iterable<IEObjectDescription>> sources)
+        {
+            this.sources = sources.iterator();
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            prepareNext();
+            return nextReady;
+        }
+
+        @Override
+        public IEObjectDescription next()
+        {
+            prepareNext();
+            if (!nextReady)
+                throw new NoSuchElementException();
+
+            IEObjectDescription result = next;
+            next = null;
+            nextReady = false;
+            return result;
+        }
+
+        private void prepareNext()
+        {
+            if (nextReady)
+                return;
+
+            while (true)
+            {
+                while (current.hasNext())
+                {
+                    IEObjectDescription candidate = current.next();
+                    if (candidate != null)
+                    {
+                        next = candidate;
+                        nextReady = true;
+                        return;
+                    }
+                }
+
+                if (!sources.hasNext())
+                    return;
+
+                Iterable<IEObjectDescription> source = sources.next();
+                current = source != null ? source.iterator() : Collections.emptyIterator();
+            }
         }
     }
 
