@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.lang.reflect.Field;
 import java.util.Iterator;
@@ -56,11 +56,11 @@ public final class ContextLinksQueryWizardPatches
 
             iterator.remove();
             removed++;
-            ContextLinks.logWarning("EDT Context Links QW adoption skip foreign extension object=" + describe(object)); //$NON-NLS-1$
+            ContextLinks.logWarning("EDT Extension Tweaks QW adoption skip foreign extension object=" + describe(object)); //$NON-NLS-1$
         }
 
         if (removed > 0)
-            ContextLinks.logWarning("EDT Context Links QW adoption filtered foreignExtensionObjects=" + removed //$NON-NLS-1$
+            ContextLinks.logWarning("EDT Extension Tweaks QW adoption filtered foreignExtensionObjects=" + removed //$NON-NLS-1$
                 + " remaining=" + objects.size()); //$NON-NLS-1$
         return objects;
     }

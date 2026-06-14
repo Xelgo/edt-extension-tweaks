@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.io.IOException;
 import java.util.Map;
@@ -39,7 +39,7 @@ final class ContextLinksQueryWizardWeavingServiceFactory
         if (bundle == null || !QUERY_WIZARD_UI_BUNDLE.equals(bundle.getSymbolicName()))
             return null;
 
-        ContextLinks.logWarning("EDT Context Links Query Wizard weaving active for " + bundle.getSymbolicName()); //$NON-NLS-1$
+        ContextLinks.logWarning("EDT Extension Tweaks Query Wizard weaving active for " + bundle.getSymbolicName()); //$NON-NLS-1$
         return new QueryWizardWeavingService();
     }
 
@@ -106,7 +106,7 @@ final class ContextLinksQueryWizardWeavingServiceFactory
                 method.instructions.add(new InsnNode(Opcodes.IRETURN));
                 method.maxStack = 2;
                 method.maxLocals = Math.max(method.maxLocals, 3);
-                ContextLinks.logWarning("EDT Context Links patched Query Wizard table matching"); //$NON-NLS-1$
+                ContextLinks.logWarning("EDT Extension Tweaks patched Query Wizard table matching"); //$NON-NLS-1$
                 return write(classNode);
             }
             return null;
@@ -139,7 +139,7 @@ final class ContextLinksQueryWizardWeavingServiceFactory
 
             if (patched)
             {
-                ContextLinks.logWarning("EDT Context Links patched Query Wizard adoption filter"); //$NON-NLS-1$
+                ContextLinks.logWarning("EDT Extension Tweaks patched Query Wizard adoption filter"); //$NON-NLS-1$
                 return write(classNode);
             }
             return null;

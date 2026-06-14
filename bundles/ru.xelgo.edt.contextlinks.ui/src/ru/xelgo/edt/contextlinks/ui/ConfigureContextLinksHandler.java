@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.ui;
+﻿package ru.xelgo.edt.contextlinks.ui;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -34,20 +34,20 @@ public class ConfigureContextLinksHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.execute.enter] event=" + event); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.execute.enter] event=" + event); //$NON-NLS-1$
         IProject project = getSelectedProject(event);
         Shell shell = HandlerUtil.getActiveShell(event);
         if (project == null)
         {
-            ContextLinks.logWarning("EDT Context Links configure command cannot resolve selected project"); //$NON-NLS-1$
+            ContextLinks.logWarning("EDT Extension Tweaks configure command cannot resolve selected project"); //$NON-NLS-1$
             Messages.showInfo(shell, Messages.ConfigureContextLinksHandler_Title,
                 Messages.ConfigureContextLinksHandler_NoProject);
             return null;
         }
-        ContextLinks.logDebug("EDT Context Links configure command selected project " + project.getName()); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks configure command selected project " + project.getName()); //$NON-NLS-1$
         if (!ContextLinks.isContextConfigurableProject(project))
         {
-            ContextLinks.logWarning("EDT Context Links configure command ignored non-configurable project " //$NON-NLS-1$
+            ContextLinks.logWarning("EDT Extension Tweaks configure command ignored non-configurable project " //$NON-NLS-1$
                 + project.getName());
             Messages.showInfo(shell, Messages.ConfigureContextLinksHandler_Title,
                 Messages.ConfigureContextLinksHandler_NotExtensionProject);
@@ -59,11 +59,11 @@ public class ConfigureContextLinksHandler
             .filter(candidate -> !candidate.equals(project))
             .filter(ContextLinks::isExtensionProject)
             .toArray(IProject[]::new);
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.candidates] project=" + project.getName() //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.candidates] project=" + project.getName() //$NON-NLS-1$
             + " candidates=" + Arrays.toString(Arrays.stream(candidates).map(IProject::getName).toArray())); //$NON-NLS-1$
 
         Object[] initialSelection = getInitialSelection(project, candidates);
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.initialSelection] project=" + project.getName() //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.initialSelection] project=" + project.getName() //$NON-NLS-1$
             + " selected=" + Arrays.toString(Arrays.stream(initialSelection).map(this::describeObject).toArray())); //$NON-NLS-1$
 
         ListSelectionDialog dialog = ListSelectionDialog.of(candidates)
@@ -83,7 +83,7 @@ public class ConfigureContextLinksHandler
 
         if (dialog.open() != Window.OK)
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [ui.dialog.cancel] project=" + project.getName()); //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.dialog.cancel] project=" + project.getName()); //$NON-NLS-1$
             return null;
         }
 
@@ -93,15 +93,15 @@ public class ConfigureContextLinksHandler
             if (result instanceof IProject)
                 names.add(((IProject)result).getName());
             else
-                ContextLinks.logDebug("EDT Context Links DEBUG [ui.dialog.unexpectedResult] value=" //$NON-NLS-1$
+                ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.dialog.unexpectedResult] value=" //$NON-NLS-1$
                     + describeObject(result));
         }
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.dialog.ok] project=" + project.getName() + " names=" + names); //$NON-NLS-1$ //$NON-NLS-2$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.dialog.ok] project=" + project.getName() + " names=" + names); //$NON-NLS-1$ //$NON-NLS-2$
 
         try
         {
             ContextLinks.setContextProjectNames(project, names);
-            ContextLinks.logWarning("EDT Context Links configure command saved project=" + project.getName() //$NON-NLS-1$
+            ContextLinks.logWarning("EDT Extension Tweaks configure command saved project=" + project.getName() //$NON-NLS-1$
                 + ", names=" + names + ", allSettings=" + ContextLinks.describeWorkspaceSettings()); //$NON-NLS-1$ //$NON-NLS-2$
         }
         catch (CoreException e)
@@ -123,26 +123,26 @@ public class ConfigureContextLinksHandler
     private IProject getSelectedProject(ExecutionEvent event)
     {
         ISelection selection = HandlerUtil.getCurrentSelection(event);
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.selection] selection=" + describeObject(selection)); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.selection] selection=" + describeObject(selection)); //$NON-NLS-1$
         Object selected = selection instanceof IStructuredSelection
             ? ((IStructuredSelection)selection).getFirstElement()
             : null;
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.selection.first] selected=" + describeObject(selected)); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.selection.first] selected=" + describeObject(selected)); //$NON-NLS-1$
         IProject project = getProject(selected);
         if (project != null)
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [ui.selection.project] project=" + project.getName()); //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.selection.project] project=" + project.getName()); //$NON-NLS-1$
             return project;
         }
 
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.selection.fallbackEditor]"); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.selection.fallbackEditor]"); //$NON-NLS-1$
         return getActiveEditorProject(event);
     }
 
     private IProject getProject(Object selected)
     {
         IProject project = ProjectSelection.getProject(selected);
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.getProject] selected=" + describeObject(selected) //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.getProject] selected=" + describeObject(selected) //$NON-NLS-1$
             + " project=" + (project != null ? project.getName() : "NULL")); //$NON-NLS-1$ //$NON-NLS-2$
         return project;
     }
@@ -150,13 +150,13 @@ public class ConfigureContextLinksHandler
     private IProject getActiveEditorProject(ExecutionEvent event)
     {
         IEditorPart editor = HandlerUtil.getActiveEditor(event);
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.editor.active] editor=" + describeObject(editor)); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.editor.active] editor=" + describeObject(editor)); //$NON-NLS-1$
         if (editor != null)
         {
             IProject project = getProject(editor.getEditorInput());
             if (project != null)
             {
-                ContextLinks.logDebug("EDT Context Links DEBUG [ui.editor.project] via=HandlerUtil project=" //$NON-NLS-1$
+                ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.editor.project] via=HandlerUtil project=" //$NON-NLS-1$
                     + project.getName());
                 return project;
             }
@@ -167,12 +167,12 @@ public class ConfigureContextLinksHandler
         IEditorPart activeEditor = page != null ? page.getActiveEditor() : null;
         if (activeEditor == null)
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [ui.editor.project] activeEditor=NULL"); //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.editor.project] activeEditor=NULL"); //$NON-NLS-1$
             return null;
         }
 
         IEditorInput input = activeEditor.getEditorInput();
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.editor.input] input=" + describeObject(input)); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.editor.input] input=" + describeObject(input)); //$NON-NLS-1$
         return getProject(input);
     }
 

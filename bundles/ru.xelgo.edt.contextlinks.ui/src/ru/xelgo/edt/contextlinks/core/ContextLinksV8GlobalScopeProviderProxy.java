@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
@@ -86,7 +86,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
         }
         catch (ReflectiveOperationException | IllegalArgumentException e)
         {
-            ContextLinks.logError("EDT Context Links failed to create QL BM global scope wrapper", e); //$NON-NLS-1$
+            ContextLinks.logError("EDT Extension Tweaks failed to create QL BM global scope wrapper", e); //$NON-NLS-1$
             return null;
         }
     }
@@ -211,7 +211,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
         catch (IllegalAccessException | InvocationTargetException | RuntimeException e)
         {
             if (loggedDelegateFailures.add(linkedProject.getName()))
-                ContextLinks.logError("EDT Context Links failed to get linked QL BM scope for " + linkedProject.getName(), e); //$NON-NLS-1$
+                ContextLinks.logError("EDT Extension Tweaks failed to get linked QL BM scope for " + linkedProject.getName(), e); //$NON-NLS-1$
             return null;
         }
     }
@@ -241,7 +241,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
         String key = resource.getClass().getName() + "|" + projectName; //$NON-NLS-1$
         if (loggedResourceCalls.add(key))
         {
-            ContextLinks.logDebug("EDT Context Links QL BM provider call resource=" //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks QL BM provider call resource=" //$NON-NLS-1$
                 + resource.getClass().getName() + " project=" + projectName //$NON-NLS-1$
                 + " ql=" + isQlResource(resource) + " uri=" + resource.getURI()); //$NON-NLS-1$ //$NON-NLS-2$
         }
@@ -286,7 +286,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
         String key = project.getName() + "|" + addedProjects + "|" + skippedProjects; //$NON-NLS-1$ //$NON-NLS-2$
         if (loggedCompositions.add(key))
         {
-            ContextLinks.logDebug("EDT Context Links QL BM scope project=" + project.getName() //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks QL BM scope project=" + project.getName() //$NON-NLS-1$
                 + " linked=" + addedProjects + " skipped=" + skippedProjects); //$NON-NLS-1$ //$NON-NLS-2$
         }
     }
@@ -303,7 +303,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
             + describeReference(reference) + "|" + result.found + "|" + result.scanned + "|" + result.matches; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         if (loggedProbeResults.add(key))
         {
-            ContextLinks.logDebug("EDT Context Links QL probe phase=" + phase //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks QL probe phase=" + phase //$NON-NLS-1$
                 + " project=" + project.getName() + " linkedProject=" + linkedProjectName //$NON-NLS-1$ //$NON-NLS-2$
                 + " reference=" + describeReference(reference) + " target=" + QL_PROBE_OBJECT //$NON-NLS-1$ //$NON-NLS-2$
                 + " scope=" + describeScope(scope) + " found=" + result.found //$NON-NLS-1$ //$NON-NLS-2$
@@ -470,7 +470,7 @@ final class ContextLinksV8GlobalScopeProviderProxy
         }
         catch (InvalidSyntaxException e)
         {
-            ContextLinks.logError("EDT Context Links failed to find delegate IV8GlobalScopeProvider", e); //$NON-NLS-1$
+            ContextLinks.logError("EDT Extension Tweaks failed to find delegate IV8GlobalScopeProvider", e); //$NON-NLS-1$
             return null;
         }
     }

@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -46,13 +46,13 @@ public final class ContextLinks
     {
         if (project == null)
         {
-            logDebug("EDT Context Links DEBUG [settings.read.skip] project=NULL"); //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [settings.read.skip] project=NULL"); //$NON-NLS-1$
             return Set.of();
         }
 
         if (!project.isAccessible())
         {
-            logDebug("EDT Context Links DEBUG [settings.read.skip] project=" + project.getName() //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [settings.read.skip] project=" + project.getName() //$NON-NLS-1$
                 + " reason=not-accessible"); //$NON-NLS-1$
             return Set.of();
         }
@@ -62,7 +62,7 @@ public final class ContextLinks
             String value = project.getPersistentProperty(CONTEXT_PROJECTS);
             if (value == null || value.isBlank())
             {
-                logDebug("EDT Context Links DEBUG [settings.read] project=" + project.getName() //$NON-NLS-1$
+                logDebug("EDT Extension Tweaks DEBUG [settings.read] project=" + project.getName() //$NON-NLS-1$
                     + " links=[] raw=NULL_OR_BLANK"); //$NON-NLS-1$
                 return Set.of();
             }
@@ -71,7 +71,7 @@ public final class ContextLinks
                 .map(String::trim)
                 .filter(name -> !name.isEmpty())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-            logDebug("EDT Context Links DEBUG [settings.read] project=" + project.getName() //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [settings.read] project=" + project.getName() //$NON-NLS-1$
                 + " links=" + result + " raw=" + value.replace('\n', '|')); //$NON-NLS-1$ //$NON-NLS-2$
             return result;
         }
@@ -87,13 +87,13 @@ public final class ContextLinks
     {
         if (project == null)
         {
-            logDebug("EDT Context Links DEBUG [settings.save.skip] project=NULL names=" + names); //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [settings.save.skip] project=NULL names=" + names); //$NON-NLS-1$
             return;
         }
 
         if (!project.isAccessible())
         {
-            logDebug("EDT Context Links DEBUG [settings.save.skip] project=" + project.getName() //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [settings.save.skip] project=" + project.getName() //$NON-NLS-1$
                 + " reason=not-accessible names=" + names); //$NON-NLS-1$
             return;
         }
@@ -190,7 +190,7 @@ public final class ContextLinks
             String value = project.getPersistentProperty(property);
             if (value == null || value.isBlank())
             {
-                logDebug("EDT Context Links DEBUG [" + tag + "] project=" + project.getName() //$NON-NLS-1$ //$NON-NLS-2$
+                logDebug("EDT Extension Tweaks DEBUG [" + tag + "] project=" + project.getName() //$NON-NLS-1$ //$NON-NLS-2$
                     + " names=[] raw=NULL_OR_BLANK"); //$NON-NLS-1$
                 return Set.of();
             }
@@ -199,13 +199,13 @@ public final class ContextLinks
                 .map(String::trim)
                 .filter(name -> !name.isEmpty())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-            logDebug("EDT Context Links DEBUG [" + tag + "] project=" + project.getName() //$NON-NLS-1$ //$NON-NLS-2$
+            logDebug("EDT Extension Tweaks DEBUG [" + tag + "] project=" + project.getName() //$NON-NLS-1$ //$NON-NLS-2$
                 + " names=" + result + " raw=" + value.replace('\n', '|')); //$NON-NLS-1$ //$NON-NLS-2$
             return result;
         }
         catch (CoreException e)
         {
-            logWarning("Failed to read EDT Context Links project setting for " + project.getName() //$NON-NLS-1$
+            logWarning("Failed to read EDT Extension Tweaks project setting for " + project.getName() //$NON-NLS-1$
                 + ": " + e.getMessage()); //$NON-NLS-1$
             return Set.of();
         }
@@ -223,7 +223,7 @@ public final class ContextLinks
             .distinct()
             .collect(Collectors.joining("\n")); //$NON-NLS-1$
         project.setPersistentProperty(property, value.isEmpty() ? null : value);
-        logDebug("EDT Context Links DEBUG [" + tag + "] project=" + project.getName() + " names=" + names); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        logDebug("EDT Extension Tweaks DEBUG [" + tag + "] project=" + project.getName() + " names=" + names); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 
     public static boolean isExtensionProject(IProject project)
@@ -234,14 +234,14 @@ public final class ContextLinks
         IV8ProjectManager projectManager = ServiceAccess.get(IV8ProjectManager.class);
         if (projectManager == null)
         {
-            logDebug("EDT Context Links DEBUG [project.kind] project=" + project.getName() //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [project.kind] project=" + project.getName() //$NON-NLS-1$
                 + " result=false reason=project-manager-null"); //$NON-NLS-1$
             return false;
         }
 
         IV8Project v8Project = projectManager.getProject(project);
         boolean result = v8Project instanceof IExtensionProject;
-        logDebug("EDT Context Links DEBUG [project.kind] project=" + project.getName() //$NON-NLS-1$
+        logDebug("EDT Extension Tweaks DEBUG [project.kind] project=" + project.getName() //$NON-NLS-1$
             + " v8Project=" + (v8Project != null ? v8Project.getClass().getName() : "NULL") //$NON-NLS-1$ //$NON-NLS-2$
             + " extension=" + result); //$NON-NLS-1$
         return result;
@@ -255,7 +255,7 @@ public final class ContextLinks
         try
         {
             boolean result = project.hasNature(V8_EXTERNAL_OBJECTS_NATURE);
-            logDebug("EDT Context Links DEBUG [project.kind.external] project=" + project.getName() //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [project.kind.external] project=" + project.getName() //$NON-NLS-1$
                 + " externalObjects=" + result); //$NON-NLS-1$
             return result;
         }
@@ -271,7 +271,7 @@ public final class ContextLinks
         boolean extension = isExtensionProject(project);
         boolean externalObjects = !extension && isExternalObjectsProject(project);
         boolean result = extension || externalObjects;
-        logDebug("EDT Context Links DEBUG [project.kind.configurable] project=" //$NON-NLS-1$
+        logDebug("EDT Extension Tweaks DEBUG [project.kind.configurable] project=" //$NON-NLS-1$
             + (project != null ? project.getName() : "NULL") //$NON-NLS-1$
             + " extension=" + extension + " externalObjects=" + externalObjects + " result=" + result); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         return result;
@@ -281,7 +281,7 @@ public final class ContextLinks
     {
         if (uri == null)
         {
-            logDebug("EDT Context Links DEBUG [project.from.uri] uri=NULL result=NULL"); //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [project.from.uri] uri=NULL result=NULL"); //$NON-NLS-1$
             return null;
         }
 
@@ -294,14 +294,14 @@ public final class ContextLinks
             IProject project = projectName != null && !projectName.isBlank()
                 ? ResourcesPlugin.getWorkspace().getRoot().getProject(projectName)
                 : null;
-            logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
                 + " bmProject=" + (project != null ? project.getName() : "NULL")); //$NON-NLS-1$ //$NON-NLS-2$
             return project;
         }
 
         if (!uri.isPlatformResource())
         {
-            logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
                 + " result=NULL reason=not-platform-resource"); //$NON-NLS-1$
             return null;
         }
@@ -309,7 +309,7 @@ public final class ContextLinks
         String platformPath = uri.toPlatformString(true);
         if (platformPath == null || platformPath.isEmpty())
         {
-            logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
                 + " result=NULL reason=empty-platform-path"); //$NON-NLS-1$
             return null;
         }
@@ -318,7 +318,7 @@ public final class ContextLinks
         if (resource != null)
         {
             IProject project = resource.getProject();
-            logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks DEBUG [project.from.uri] uri=" + uri //$NON-NLS-1$
                 + " resource=" + resource.getFullPath() + " project=" //$NON-NLS-1$ //$NON-NLS-2$
                 + (project != null ? project.getName() : "NULL")); //$NON-NLS-1$
             return project;
@@ -331,7 +331,7 @@ public final class ContextLinks
         IProject project = projectName != null
             ? ResourcesPlugin.getWorkspace().getRoot().getProject(projectName)
             : null;
-        logDebug("EDT Context Links DEBUG [project.from.uri] uri=" + uri + " fallbackProject=" //$NON-NLS-1$ //$NON-NLS-2$
+        logDebug("EDT Extension Tweaks DEBUG [project.from.uri] uri=" + uri + " fallbackProject=" //$NON-NLS-1$ //$NON-NLS-2$
             + (project != null ? project.getName() : "NULL")); //$NON-NLS-1$
         return project;
     }

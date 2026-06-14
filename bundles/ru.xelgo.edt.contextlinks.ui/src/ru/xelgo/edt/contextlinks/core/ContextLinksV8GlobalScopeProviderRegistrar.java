@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.util.Dictionary;
 import java.util.Hashtable;
@@ -32,7 +32,7 @@ public final class ContextLinksV8GlobalScopeProviderRegistrar
 
         if (Boolean.getBoolean(DISABLE_PROPERTY))
         {
-            logRegistrationState("EDT Context Links QL BM global scope wrapper disabled by system property"); //$NON-NLS-1$
+            logRegistrationState("EDT Extension Tweaks QL BM global scope wrapper disabled by system property"); //$NON-NLS-1$
             return;
         }
 
@@ -40,7 +40,7 @@ public final class ContextLinksV8GlobalScopeProviderRegistrar
         BundleContext context = bundle != null ? bundle.getBundleContext() : null;
         if (context == null)
         {
-            logRegistrationState("EDT Context Links QL BM global scope wrapper not registered: bundle context is null"); //$NON-NLS-1$
+            logRegistrationState("EDT Extension Tweaks QL BM global scope wrapper not registered: bundle context is null"); //$NON-NLS-1$
             return;
         }
 
@@ -51,12 +51,12 @@ public final class ContextLinksV8GlobalScopeProviderRegistrar
         Object proxy = ContextLinksV8GlobalScopeProviderProxy.create(context);
         if (proxy == null)
         {
-            logRegistrationState("EDT Context Links QL BM global scope wrapper not registered: proxy creation failed"); //$NON-NLS-1$
+            logRegistrationState("EDT Extension Tweaks QL BM global scope wrapper not registered: proxy creation failed"); //$NON-NLS-1$
             return;
         }
 
         registration = context.registerService(ContextLinksV8GlobalScopeProviderProxy.SERVICE_CLASS_NAME, proxy, properties);
-        ContextLinks.logWarning("EDT Context Links QL BM global scope wrapper registered"); //$NON-NLS-1$
+        ContextLinks.logWarning("EDT Extension Tweaks QL BM global scope wrapper registered"); //$NON-NLS-1$
     }
 
     private static void logRegistrationState(String message)

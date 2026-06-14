@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.util.List;
 import java.util.Set;
@@ -152,7 +152,7 @@ public class ContextLinksModuleContextDefService
         if (!loggedContextKeys.add(key))
             return;
 
-        ContextLinks.logDebug("EDT Context Links DEBUG [module.context." + stage + "] project=" //$NON-NLS-1$ //$NON-NLS-2$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [module.context." + stage + "] project=" //$NON-NLS-1$ //$NON-NLS-2$
             + describeProject(moduleUri) + " moduleUri=" + moduleUri //$NON-NLS-1$
             + " owner=" + safeName(commonModule.getName()) //$NON-NLS-1$
             + " ownerProxy=" + commonModule.eIsProxy() //$NON-NLS-1$

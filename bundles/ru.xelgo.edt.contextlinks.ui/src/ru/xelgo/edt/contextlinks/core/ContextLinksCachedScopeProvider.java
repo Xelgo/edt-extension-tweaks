@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -50,7 +50,7 @@ public class ContextLinksCachedScopeProvider
     public void clearTypeItemsScopes(IProject project)
     {
         if (ContextLinks.isDebugLoggingEnabled())
-            ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearTypeItems] project=" + describeProject(project)); //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.clearTypeItems] project=" + describeProject(project)); //$NON-NLS-1$
         super.clearTypeItemsScopes(project);
         bumpProjectScopeVersion(project, "clear-type-item"); //$NON-NLS-1$
     }
@@ -59,7 +59,7 @@ public class ContextLinksCachedScopeProvider
     public void clearPropertyScopes(IProject project)
     {
         if (ContextLinks.isDebugLoggingEnabled())
-            ContextLinks.logDebug("EDT Context Links DEBUG [cache.clearProperties] project=" + describeProject(project)); //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.clearProperties] project=" + describeProject(project)); //$NON-NLS-1$
         super.clearPropertyScopes(project);
         bumpProjectScopeVersion(project, "clear-property"); //$NON-NLS-1$
     }
@@ -69,7 +69,7 @@ public class ContextLinksCachedScopeProvider
     {
         if (ContextLinks.isDebugLoggingEnabled())
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [cache.addTypeItem] project=" + describeProject(project) //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.addTypeItem] project=" + describeProject(project) //$NON-NLS-1$
                 + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
         }
         super.addTypeItemScope(project, scope);
@@ -82,7 +82,7 @@ public class ContextLinksCachedScopeProvider
     {
         if (ContextLinks.isDebugLoggingEnabled())
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [cache.addProperty] project=" + describeProject(project) //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.addProperty] project=" + describeProject(project) //$NON-NLS-1$
                 + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
         }
         super.addPropertyScope(project, scope);
@@ -122,7 +122,7 @@ public class ContextLinksCachedScopeProvider
 
         if (ContextLinks.isDebugLoggingEnabled())
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.clear] module=" + blockUniqueName(module) //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.module.clear] module=" + blockUniqueName(module) //$NON-NLS-1$
                 + " removed=" + removedCount); //$NON-NLS-1$
         }
         bumpProjectScopeVersion(projectFromBlock(module), "clear-module-scopes"); //$NON-NLS-1$
@@ -153,7 +153,7 @@ public class ContextLinksCachedScopeProvider
     {
         if (ContextLinks.isDebugLoggingEnabled())
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [cache.get." + kind + "] project=" //$NON-NLS-1$ //$NON-NLS-2$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.get." + kind + "] project=" //$NON-NLS-1$ //$NON-NLS-2$
                 + describeProject(project) + " own=" + describeScope(ownScope)); //$NON-NLS-1$
         }
 
@@ -223,7 +223,7 @@ public class ContextLinksCachedScopeProvider
             + describeScope(linkedScope) + "|" + countElements(linkedScope); //$NON-NLS-1$
         if (loggedScopeDetails.add(key))
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [cache.linked." + kind.logName + "] project=" //$NON-NLS-1$ //$NON-NLS-2$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.linked." + kind.logName + "] project=" //$NON-NLS-1$ //$NON-NLS-2$
                 + project.getName() + " linked=" + linkedProject.getName() //$NON-NLS-1$
                 + " scope=" + describeScope(linkedScope) + " elements=" + countElements(linkedScope)); //$NON-NLS-1$ //$NON-NLS-2$
         }
@@ -240,7 +240,7 @@ public class ContextLinksCachedScopeProvider
         Set<String> targetLog = kind == ScopeKind.TYPE_ITEM ? loggedTypeScopeKeys : loggedPropertyScopeKeys;
         if (targetLog.add(key))
         {
-            ContextLinks.logDebug("EDT Context Links " + kind.logName + " scope: project=" + project.getName() //$NON-NLS-1$ //$NON-NLS-2$
+            ContextLinks.logDebug("EDT Extension Tweaks " + kind.logName + " scope: project=" + project.getName() //$NON-NLS-1$ //$NON-NLS-2$
                 + ", configured=" + configuredProjects //$NON-NLS-1$
                 + ", added=" + addedProjects //$NON-NLS-1$
                 + ", missing=" + missingProjects); //$NON-NLS-1$
@@ -308,7 +308,7 @@ public class ContextLinksCachedScopeProvider
         {
             if (ContextLinks.isDebugLoggingEnabled())
             {
-                ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.untracked] block=" + blockUniqueName(block) //$NON-NLS-1$
+                ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.module.untracked] block=" + blockUniqueName(block) //$NON-NLS-1$
                     + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
                     + " current=" + moduleScopeVersion(block)); //$NON-NLS-1$
             }
@@ -321,7 +321,7 @@ public class ContextLinksCachedScopeProvider
         {
             if (ContextLinks.isDebugLoggingEnabled())
             {
-                ContextLinks.logDebug("EDT Context Links DEBUG [cache.module.stale] block=" + blockUniqueName(block) //$NON-NLS-1$
+                ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.module.stale] block=" + blockUniqueName(block) //$NON-NLS-1$
                     + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
                     + " cached=" + cachedVersion + " current=" + currentVersion); //$NON-NLS-1$ //$NON-NLS-2$
             }
@@ -337,7 +337,7 @@ public class ContextLinksCachedScopeProvider
         long version = projectScopeVersions.computeIfAbsent(project.getName(), name -> new AtomicLong()).incrementAndGet();
         if (ContextLinks.isDebugLoggingEnabled())
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [cache.project.version] project=" + project.getName() //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.project.version] project=" + project.getName() //$NON-NLS-1$
                 + " version=" + version + " reason=" + reason); //$NON-NLS-1$ //$NON-NLS-2$
         }
     }
@@ -392,7 +392,7 @@ public class ContextLinksCachedScopeProvider
             + "|" + describeScope(scope) + "|" + countElements(scope); //$NON-NLS-1$ //$NON-NLS-2$
         if (loggedModuleScopeKeys.add(key))
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [cache.module." + phase + "] block=" //$NON-NLS-1$ //$NON-NLS-2$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.module." + phase + "] block=" //$NON-NLS-1$ //$NON-NLS-2$
                 + blockUniqueName(block) + " env=" + environments + " type=" + scopeType //$NON-NLS-1$ //$NON-NLS-2$
                 + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
         }

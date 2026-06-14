@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.ui;
+﻿package ru.xelgo.edt.contextlinks.ui;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -37,7 +37,7 @@ public class ContextLinksStartup
     {
         WarmupJob(int pass)
         {
-            super("EDT Context Links startup warm-up " + pass); //$NON-NLS-1$
+            super("EDT Extension Tweaks startup warm-up " + pass); //$NON-NLS-1$
             setRule(ResourcesPlugin.getWorkspace().getRoot());
             setSystem(true);
         }
@@ -91,7 +91,7 @@ public class ContextLinksStartup
             }
             catch (CoreException e)
             {
-                ContextLinks.logError("EDT Context Links startup warm-up failed for " + project.getName(), e); //$NON-NLS-1$
+                ContextLinks.logError("EDT Extension Tweaks startup warm-up failed for " + project.getName(), e); //$NON-NLS-1$
             }
         }
 

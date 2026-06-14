@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -32,38 +32,38 @@ public class ContextLinksContainerManager
     public List<IContainer> getVisibleContainers(IResourceDescription description,
         IResourceDescriptions resourceDescriptions)
     {
-        ContextLinks.logDebug("EDT Context Links DEBUG [containers.enter] description=" //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [containers.enter] description=" //$NON-NLS-1$
             + describeDescription(description) + " resourceDescriptions=" + describeObject(resourceDescriptions)); //$NON-NLS-1$
 
         if (description == null || resourceDescriptions == null)
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [containers.exit] result=[] reason=null-argument"); //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [containers.exit] result=[] reason=null-argument"); //$NON-NLS-1$
             return List.of();
         }
 
         List<IContainer> visibleContainers = new ArrayList<>(
             super.getVisibleContainers(description, resourceDescriptions));
-        ContextLinks.logDebug("EDT Context Links DEBUG [containers.super] resource=" + description.getURI() //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [containers.super] resource=" + description.getURI() //$NON-NLS-1$
             + " count=" + visibleContainers.size()); //$NON-NLS-1$
 
         IProject currentProject = ContextLinks.getProject(description.getURI());
         if (isConfigurationProject(currentProject))
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
                 + " result=standard reason=configuration-project"); //$NON-NLS-1$
             return visibleContainers;
         }
 
         if (currentProject == null)
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [containers.exit] result=standard reason=project-null"); //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [containers.exit] result=standard reason=project-null"); //$NON-NLS-1$
             return visibleContainers;
         }
 
         Set<String> linkedProjectNames = ContextLinks.getContextProjectNames(currentProject);
         if (linkedProjectNames.isEmpty())
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
                 + " result=standard reason=no-linked-projects"); //$NON-NLS-1$
             return visibleContainers;
         }
@@ -106,7 +106,7 @@ public class ContextLinksContainerManager
         logContainers(currentProject, description.getURI(), currentHandle,
             describeVisibleHandles(state, currentHandle), linkedProjectNames, addedHandles, unresolvedProjects);
 
-        ContextLinks.logDebug("EDT Context Links DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
             + " resultCount=" + visibleContainers.size() + " added=" + addedHandles //$NON-NLS-1$ //$NON-NLS-2$
             + " unresolved=" + unresolvedProjects); //$NON-NLS-1$
         return visibleContainers;
@@ -123,7 +123,7 @@ public class ContextLinksContainerManager
             + "|" + addedHandles + "|" + unresolvedProjects; //$NON-NLS-1$ //$NON-NLS-2$
         if (loggedContainerKeys.add(key))
         {
-            ContextLinks.logDebug("EDT Context Links containers: project=" + currentProject.getName() //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks containers: project=" + currentProject.getName() //$NON-NLS-1$
                 + ", resource=" + resourceUri //$NON-NLS-1$
                 + ", currentHandle=" + currentHandle //$NON-NLS-1$
                 + ", standardVisible=" + standardVisible //$NON-NLS-1$
@@ -192,7 +192,7 @@ public class ContextLinksContainerManager
         }
         catch (RuntimeException e)
         {
-            ContextLinks.logWarning("EDT Context Links cannot resolve container handle for " + uri //$NON-NLS-1$
+            ContextLinks.logWarning("EDT Extension Tweaks cannot resolve container handle for " + uri //$NON-NLS-1$
                 + ": " + e.getMessage()); //$NON-NLS-1$
             return null;
         }

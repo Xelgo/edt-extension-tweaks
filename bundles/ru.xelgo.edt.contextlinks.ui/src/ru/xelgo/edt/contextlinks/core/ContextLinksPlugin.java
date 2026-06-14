@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import org.eclipse.core.runtime.Plugin;
 import org.osgi.framework.BundleContext;
@@ -22,7 +22,7 @@ public final class ContextLinksPlugin
         queryWizardWeavingRegistration =
             context.registerService(IWeavingServiceFactory.class, new ContextLinksQueryWizardWeavingServiceFactory(),
                 null);
-        ContextLinks.logWarning("EDT Context Links Query Wizard weaving service registered"); //$NON-NLS-1$
+        ContextLinks.logWarning("EDT Extension Tweaks Query Wizard weaving service registered"); //$NON-NLS-1$
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
         ContextLinksInfobaseSynchronizationManagerRegistrar.ensureRegistered();
     }

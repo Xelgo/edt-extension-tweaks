@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +47,7 @@ public class ContextLinksBslScopeProvider
         if (!loggedScopeKeys.add(key))
             return;
 
-        ContextLinks.logDebug("EDT Context Links DEBUG [bsl.scope] project=" + describeProject(moduleUri) //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [bsl.scope] project=" + describeProject(moduleUri) //$NON-NLS-1$
             + " moduleUri=" + moduleUri //$NON-NLS-1$
             + " context=" + contextType //$NON-NLS-1$
             + " reference=" + referenceName //$NON-NLS-1$

@@ -1999,3 +1999,10 @@ Verification still needed after redeploy:
 - Workspace inspection showed both extension projects have the same extension identity in `src/Configuration/Configuration.mdo`: `uuid="76d717b9-bdaa-4259-811a-57d7c3af5154"` and `<name>Расширение</name>`.
 - The false `NEW` objects are present in project `Конфигурация.Расширение`, but absent from `Конфигурация.Расширение2`; because both projects use the same extension identity, the infobase synchronization can see objects from one extension project as changes for the other.
 - This explains why objects previously uploaded from EDT are offered back as external changes: there are two workspace projects representing the same runtime extension identity.
+
+## 2026-06-14 - Product Rename to EDT Extension Tweaks
+
+- Chosen new public plugin name: `EDT Extension Tweaks`.
+- Updated public display metadata: README, Maven project name, feature name/description, source feature name, p2 category label, plugin name, command category, and Java log prefix.
+- Kept internal bundle/package/repository identifiers as `ru.xelgo.edt.contextlinks.*` to avoid a risky OSGi/package rename while the plugin is under active debugging.
+- `mvn -q -DskipTests package` succeeded.

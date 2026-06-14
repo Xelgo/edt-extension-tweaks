@@ -3,5 +3,5 @@
    <feature id="ru.xelgo.edt.contextlinks.feature">
       <category name="ru.xelgo.edt.contextlinks.category"/>
    </feature>
-   <category-def name="ru.xelgo.edt.contextlinks.category" label="EDT Context Links"/>
+   <category-def name="ru.xelgo.edt.contextlinks.category" label="EDT Extension Tweaks"/>
 </site>

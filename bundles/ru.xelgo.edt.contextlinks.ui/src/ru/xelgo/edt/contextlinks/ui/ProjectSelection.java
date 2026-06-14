@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.ui;
+﻿package ru.xelgo.edt.contextlinks.ui;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -50,7 +50,7 @@ final class ProjectSelection
     {
         IProject project = getProject(selected);
         boolean result = ContextLinks.isExtensionProject(project);
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.visible.extension] selected=" + describeObject(selected) //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.visible.extension] selected=" + describeObject(selected) //$NON-NLS-1$
             + " project=" + (project != null ? project.getName() : "NULL") //$NON-NLS-1$ //$NON-NLS-2$
             + " result=" + result); //$NON-NLS-1$
         return result;
@@ -60,7 +60,7 @@ final class ProjectSelection
     {
         IProject project = getProject(selected);
         boolean result = ContextLinks.isContextConfigurableProject(project);
-        ContextLinks.logDebug("EDT Context Links DEBUG [ui.visible.configurable] selected=" + describeObject(selected) //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [ui.visible.configurable] selected=" + describeObject(selected) //$NON-NLS-1$
             + " project=" + (project != null ? project.getName() : "NULL") //$NON-NLS-1$ //$NON-NLS-2$
             + " result=" + result); //$NON-NLS-1$
         return result;

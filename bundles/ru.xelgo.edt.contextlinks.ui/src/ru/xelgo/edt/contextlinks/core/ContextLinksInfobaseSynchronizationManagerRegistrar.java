@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.util.Dictionary;
 import java.util.Hashtable;
@@ -35,7 +35,7 @@ public final class ContextLinksInfobaseSynchronizationManagerRegistrar
 
         if (Boolean.getBoolean(DISABLE_PROPERTY))
         {
-            logRegistrationState("EDT Context Links infobase update skip wrapper disabled by system property"); //$NON-NLS-1$
+            logRegistrationState("EDT Extension Tweaks infobase update skip wrapper disabled by system property"); //$NON-NLS-1$
             return;
         }
 
@@ -43,14 +43,14 @@ public final class ContextLinksInfobaseSynchronizationManagerRegistrar
         BundleContext context = bundle != null ? bundle.getBundleContext() : null;
         if (context == null)
         {
-            logRegistrationState("EDT Context Links infobase update skip wrapper not registered: bundle context is null"); //$NON-NLS-1$
+            logRegistrationState("EDT Extension Tweaks infobase update skip wrapper not registered: bundle context is null"); //$NON-NLS-1$
             return;
         }
 
         IInfobaseSynchronizationManager proxy = ContextLinksInfobaseSynchronizationManagerProxy.create(context);
         if (proxy == null)
         {
-            logRegistrationState("EDT Context Links infobase update skip wrapper not registered: proxy creation failed"); //$NON-NLS-1$
+            logRegistrationState("EDT Extension Tweaks infobase update skip wrapper not registered: proxy creation failed"); //$NON-NLS-1$
             return;
         }
 
@@ -58,7 +58,7 @@ public final class ContextLinksInfobaseSynchronizationManagerRegistrar
         properties.put(Constants.SERVICE_RANKING, Integer.valueOf(1000));
         properties.put(WRAPPER_MARKER_PROPERTY, Boolean.TRUE.toString());
         registration = context.registerService(IInfobaseSynchronizationManager.class, proxy, properties);
-        ContextLinks.logWarning("EDT Context Links infobase update skip wrapper registered"); //$NON-NLS-1$
+        ContextLinks.logWarning("EDT Extension Tweaks infobase update skip wrapper registered"); //$NON-NLS-1$
     }
 
     private static void logRegistrationState(String message)

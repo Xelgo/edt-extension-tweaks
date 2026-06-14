@@ -1,4 +1,4 @@
-package ru.xelgo.edt.contextlinks.core;
+﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
@@ -102,7 +102,7 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         if (!ContextLinks.isApplicationUpdateDisabled(applicationProject, updateProject))
             return false;
 
-        ContextLinks.logDebug("EDT Context Links DEBUG [application.update.skip] operation=" + operation //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [application.update.skip] operation=" + operation //$NON-NLS-1$
             + " applicationProject=" + applicationProject.getName() + " updateProject=" + updateProject.getName()); //$NON-NLS-1$ //$NON-NLS-2$
         return true;
     }
@@ -127,7 +127,7 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
             hasDependentProjects = true;
             if (ContextLinks.isApplicationUpdateDisabled(applicationProject, dependentProject))
             {
-                ContextLinks.logDebug("EDT Context Links DEBUG [application.update.skip] operation=" //$NON-NLS-1$
+                ContextLinks.logDebug("EDT Extension Tweaks DEBUG [application.update.skip] operation=" //$NON-NLS-1$
                     + operation + " applicationProject=" + applicationProject.getName() //$NON-NLS-1$
                     + " updateProject=" + dependentProject.getName()); //$NON-NLS-1$
                 continue;
@@ -135,7 +135,7 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
 
             Object synchronization = getOrCreateSynchronization(delegate, dependentProject);
             invokeMethod(delegate, "synchronizeConnectionsWithApplications", 2, dependentProject, synchronization); //$NON-NLS-1$
-            ContextLinks.logDebug("EDT Context Links DEBUG [application.update.route] operation=" //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [application.update.route] operation=" //$NON-NLS-1$
                 + operation + " fromProject=" + project.getName() + " updateProject=" //$NON-NLS-1$ //$NON-NLS-2$
                 + dependentProject.getName());
             Object routedCallback = wrapUpdateCallbackForLogging(applicationProject, dependentProject, callback);
@@ -175,7 +175,7 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         if (change == null)
             return;
 
-        ContextLinks.logDebug("EDT Context Links DEBUG [application.update.conflict.inspect]" //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks DEBUG [application.update.conflict.inspect]" //$NON-NLS-1$
             + " applicationProject=" + applicationProject.getName() //$NON-NLS-1$
             + " routedProject=" + routedProject.getName() //$NON-NLS-1$
             + " conflictProject=" + (conflictProject == null ? "<null>" : conflictProject.getName()) //$NON-NLS-1$ //$NON-NLS-2$
@@ -242,7 +242,7 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         }
         else
         {
-            ContextLinks.logDebug("EDT Context Links DEBUG [application.update.skip] operation=updateAllInfobases" //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [application.update.skip] operation=updateAllInfobases" //$NON-NLS-1$
                 + " applicationProject=" + applicationProject.getName() + " updateProject=" + project.getName()); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
@@ -379,7 +379,7 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         }
         catch (InvalidSyntaxException e)
         {
-            ContextLinks.logError("EDT Context Links failed to find delegate IInfobaseSynchronizationManager", e); //$NON-NLS-1$
+            ContextLinks.logError("EDT Extension Tweaks failed to find delegate IInfobaseSynchronizationManager", e); //$NON-NLS-1$
             return null;
         }
     }
