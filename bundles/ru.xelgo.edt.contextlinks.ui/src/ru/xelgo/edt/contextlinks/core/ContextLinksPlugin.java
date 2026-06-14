@@ -24,6 +24,7 @@ public final class ContextLinksPlugin
                 null);
         ContextLinks.logWarning("EDT Context Links Query Wizard weaving service registered"); //$NON-NLS-1$
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
+        ContextLinksInfobaseSynchronizationManagerRegistrar.ensureRegistered();
     }
 
     @Override

@@ -1,6 +1,6 @@
 param(
     [string]$ProjectRoot = (Resolve-Path "$PSScriptRoot\..").Path,
-    [string]$Workspace = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\projects\EDT DEV"),
+    [string]$Workspace = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\projects\EDTDEV"),
     [string]$EdtHome = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\installations\1C_EDT (Lite) 2025.2\1cedt"),
     [string]$JavaHome = "C:\Program Files\1C\1CE\components\axiom-jdk-full-17.0.16+12-x86_64",
     [string]$LauncherVm = "C:\Program Files\1C\1CE\components\axiom-jdk-full-17.0.16+12-x86_64\bin\javaw.exe",

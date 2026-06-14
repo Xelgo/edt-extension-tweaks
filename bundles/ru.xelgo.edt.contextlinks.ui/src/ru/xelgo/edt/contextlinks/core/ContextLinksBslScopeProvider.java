@@ -23,11 +23,6 @@ public class ContextLinksBslScopeProvider
 {
     private static final Set<String> loggedScopeKeys = ConcurrentHashMap.newKeySet();
 
-    public ContextLinksBslScopeProvider()
-    {
-        ContextLinks.logDebug("EDT Context Links BSL scope provider constructed"); //$NON-NLS-1$
-    }
-
     @Override
     public IScope getScope(EObject context, EReference reference)
     {

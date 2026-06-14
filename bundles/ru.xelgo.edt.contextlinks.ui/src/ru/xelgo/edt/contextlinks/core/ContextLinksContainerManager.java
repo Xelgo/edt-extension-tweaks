@@ -28,11 +28,6 @@ public class ContextLinksContainerManager
 {
     private static final Set<String> loggedContainerKeys = ConcurrentHashMap.newKeySet();
 
-    public ContextLinksContainerManager()
-    {
-        ContextLinks.logDebug("EDT Context Links container manager constructed"); //$NON-NLS-1$
-    }
-
     @Override
     public List<IContainer> getVisibleContainers(IResourceDescription description,
         IResourceDescriptions resourceDescriptions)

@@ -16,6 +16,10 @@ public final class Messages
     public static String ConfigureContextLinksHandler_NoProject;
     public static String ConfigureContextLinksHandler_NotExtensionProject;
     public static String ConfigureContextLinksHandler_Title;
+    public static String ConfigureApplicationUpdateProjectsHandler_Message;
+    public static String ConfigureApplicationUpdateProjectsHandler_NoApplication;
+    public static String ConfigureApplicationUpdateProjectsHandler_NoCandidates;
+    public static String ConfigureApplicationUpdateProjectsHandler_Title;
 
     static
     {

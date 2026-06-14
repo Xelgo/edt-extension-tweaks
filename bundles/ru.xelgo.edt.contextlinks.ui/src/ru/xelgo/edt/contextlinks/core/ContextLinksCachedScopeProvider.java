@@ -45,7 +45,6 @@ public class ContextLinksCachedScopeProvider
     public ContextLinksCachedScopeProvider()
     {
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
-        ContextLinks.logDebug("EDT Context Links cached scope provider constructed"); //$NON-NLS-1$
     }
 
     @Override

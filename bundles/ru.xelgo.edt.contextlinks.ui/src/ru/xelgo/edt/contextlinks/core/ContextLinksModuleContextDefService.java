@@ -34,11 +34,6 @@ public class ContextLinksModuleContextDefService
     @Inject
     private IBslModuleContextDefRegistry registry;
 
-    public ContextLinksModuleContextDefService()
-    {
-        ContextLinks.logDebug("EDT Context Links module context definition service constructed"); //$NON-NLS-1$
-    }
-
     @Override
     public ContextDef getContextDef(Module module)
     {

@@ -1,6 +1,7 @@
 package ru.xelgo.edt.contextlinks.core;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -17,6 +18,7 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.emf.common.util.URI;
 
 import com._1c.g5.v8.dt.core.platform.IExtensionProject;
+import com._1c.g5.v8.dt.core.platform.IDependentProject;
 import com._1c.g5.v8.dt.core.platform.IV8Project;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.wiring.ServiceAccess;
@@ -32,6 +34,8 @@ public final class ContextLinks
 
     private static final QualifiedName CONTEXT_PROJECTS =
         new QualifiedName(PLUGIN_ID, "contextProjects"); //$NON-NLS-1$
+    private static final QualifiedName DISABLED_APPLICATION_UPDATE_PROJECTS =
+        new QualifiedName(PLUGIN_ID, "disabledApplicationUpdateProjects"); //$NON-NLS-1$
 
     private ContextLinks()
     {
@@ -103,12 +107,123 @@ public final class ContextLinks
         logDebug("Saved EDT context links for " + project.getName() + ": " + names); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
+    public static Set<String> getDisabledApplicationUpdateProjectNames(IProject applicationProject)
+    {
+        return getProjectNameSet(applicationProject, DISABLED_APPLICATION_UPDATE_PROJECTS,
+            "application.update.disabled.read"); //$NON-NLS-1$
+    }
+
+    public static void setDisabledApplicationUpdateProjectNames(IProject applicationProject, Set<String> names)
+        throws CoreException
+    {
+        setProjectNameSet(applicationProject, DISABLED_APPLICATION_UPDATE_PROJECTS, names,
+            "application.update.disabled.save"); //$NON-NLS-1$
+    }
+
+    public static boolean isApplicationUpdateDisabled(IProject applicationProject, IProject updateProject)
+    {
+        if (applicationProject == null || updateProject == null)
+            return false;
+        return getDisabledApplicationUpdateProjectNames(applicationProject).contains(updateProject.getName());
+    }
+
+    public static boolean isApplicationUpdateDisabled(IProject updateProject)
+    {
+        IProject applicationProject = getApplicationProject(updateProject);
+        return isApplicationUpdateDisabled(applicationProject, updateProject);
+    }
+
+    public static IProject getApplicationProject(IProject updateProject)
+    {
+        if (updateProject == null || !updateProject.isAccessible())
+            return updateProject;
+
+        IV8ProjectManager projectManager = ServiceAccess.get(IV8ProjectManager.class);
+        if (projectManager == null)
+            return updateProject;
+
+        IV8Project v8Project = projectManager.getProject(updateProject);
+        if (v8Project instanceof IDependentProject)
+        {
+            IProject parentProject = ((IDependentProject)v8Project).getParentProject();
+            return parentProject != null ? parentProject : updateProject;
+        }
+        return updateProject;
+    }
+
+    public static IProject[] getApplicationUpdateCandidateProjects(IProject applicationProject)
+    {
+        if (applicationProject == null || !applicationProject.isAccessible())
+            return new IProject[0];
+
+        IV8ProjectManager projectManager = ServiceAccess.get(IV8ProjectManager.class);
+        if (projectManager == null)
+            return new IProject[] { applicationProject };
+
+        LinkedHashSet<IProject> result = new LinkedHashSet<>();
+        if (projectManager.getProject(applicationProject) != null)
+            result.add(applicationProject);
+
+        Collection<IExtensionProject> extensions = projectManager.getProjects(IExtensionProject.class);
+        IDependentProject.getDependent(applicationProject, extensions).stream()
+            .filter(project -> project != null && project.isAccessible())
+            .forEach(result::add);
+
+        return result.toArray(IProject[]::new);
+    }
+
     public static String describeWorkspaceSettings()
     {
         return Arrays.stream(ResourcesPlugin.getWorkspace().getRoot().getProjects())
             .filter(IProject::isAccessible)
             .map(project -> project.getName() + "=" + getContextProjectNames(project)) //$NON-NLS-1$
             .collect(Collectors.joining("; ")); //$NON-NLS-1$
+    }
+
+    private static Set<String> getProjectNameSet(IProject project, QualifiedName property, String tag)
+    {
+        if (project == null || !project.isAccessible())
+            return Set.of();
+
+        try
+        {
+            String value = project.getPersistentProperty(property);
+            if (value == null || value.isBlank())
+            {
+                logDebug("EDT Context Links DEBUG [" + tag + "] project=" + project.getName() //$NON-NLS-1$ //$NON-NLS-2$
+                    + " names=[] raw=NULL_OR_BLANK"); //$NON-NLS-1$
+                return Set.of();
+            }
+
+            Set<String> result = Arrays.stream(value.split("\\R")) //$NON-NLS-1$
+                .map(String::trim)
+                .filter(name -> !name.isEmpty())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+            logDebug("EDT Context Links DEBUG [" + tag + "] project=" + project.getName() //$NON-NLS-1$ //$NON-NLS-2$
+                + " names=" + result + " raw=" + value.replace('\n', '|')); //$NON-NLS-1$ //$NON-NLS-2$
+            return result;
+        }
+        catch (CoreException e)
+        {
+            logWarning("Failed to read EDT Context Links project setting for " + project.getName() //$NON-NLS-1$
+                + ": " + e.getMessage()); //$NON-NLS-1$
+            return Set.of();
+        }
+    }
+
+    private static void setProjectNameSet(IProject project, QualifiedName property, Set<String> names, String tag)
+        throws CoreException
+    {
+        if (project == null || !project.isAccessible())
+            return;
+
+        String value = names.stream()
+            .map(String::trim)
+            .filter(name -> !name.isEmpty())
+            .distinct()
+            .collect(Collectors.joining("\n")); //$NON-NLS-1$
+        project.setPersistentProperty(property, value.isEmpty() ? null : value);
+        logDebug("EDT Context Links DEBUG [" + tag + "] project=" + project.getName() + " names=" + names); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 
     public static boolean isExtensionProject(IProject project)
