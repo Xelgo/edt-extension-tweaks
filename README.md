@@ -1,56 +1,61 @@
 # EDT Extension Tweaks
 
-Plugin for 1C:Enterprise Development Tools that improves day-to-day work with extensions, external
-reports/processors, query constructor metadata, and infobase update flows.
+Плагин для 1C:Enterprise Development Tools, который упрощает работу с расширениями, внешними
+обработками/отчетами, конструктором запросов и цепочкой обновления информационной базы.
 
-The plugin is focused on projects that live together in one EDT workspace and need to see each other as one working
-context without manually copying metadata between extensions.
+Плагин рассчитан на сценарии, где в одном workspace EDT живут основная конфигурация, несколько расширений и внешние
+обработки или отчеты. Он помогает этим проектам видеть общий контекст без ручного копирования метаданных между
+расширениями.
 
-## Features
+## Возможности
 
-- Adds **Настроить контекст EDT** to configurable workspace projects, including extensions and external
-  reports/processors.
-- Lets a project use BSL context from selected sibling projects, so content assist can see exported common modules and
-  metadata from configured extensions.
-- Extends Query Constructor metadata visibility: linked extension objects and fields can be used in query tables and
-  fields from another extension or external report/processor.
-- Patches Query Constructor table matching so repeated field selection keeps one logical table instead of creating
-  duplicate aliases for the same metadata object.
-- Filters Query Constructor adoption of metadata from foreign extensions, preventing EDT from trying to add another
-  extension's objects into the current extension.
-- Adds **Настроить обновляемые проекты** to the Applications view, allowing selected configuration or extension
-  projects to be skipped in the infobase update chain.
-- Keeps optional debug diagnostics for complex EDT synchronization and Query Constructor scenarios.
+- Добавляет команду **Настроить контекст EDT** для проектов расширений, внешних обработок, внешних отчетов и других
+  настраиваемых проектов workspace.
+- Позволяет проекту использовать BSL-контекст выбранных соседних проектов: экспортные общие модули и метаданные
+  становятся доступны в контекстной подсказке EDT.
+- Расширяет видимость метаданных в конструкторе запросов: объекты и поля связанных расширений можно использовать в
+  запросах из другого расширения, внешней обработки или внешнего отчета.
+- Исправляет сопоставление таблиц в конструкторе запросов, чтобы повторный выбор полей одного объекта не создавал
+  лишние алиасы и дубли таблиц.
+- Фильтрует попытки конструктора запросов добавить в текущее расширение объекты, которые принадлежат другому
+  расширению.
+- Добавляет команду **Настроить обновляемые проекты** во вкладку приложений EDT: можно исключать тяжелую основную
+  конфигурацию или отдельные расширения из цепочки обновления ИБ.
+- Сохраняет отладочные диагностические логи для сложных сценариев синхронизации EDT и работы конструктора запросов.
 
-## Build
+## Короткое описание для GitHub
 
-Requirements:
+Плагин для 1C:EDT: общий BSL-контекст между проектами, метаданные расширений в конструкторе запросов и гибкая настройка обновления ИБ.
+
+## Сборка
+
+Требования:
 
 - JDK 17
 - Maven 3.9.4+
 
-Build the p2 update site:
+Собрать p2 update site:
 
 ```powershell
 $env:JAVA_HOME='C:\Program Files\1C\1CE\components\axiom-jdk-full-17.0.16+12-x86_64'
 & 'C:\Users\USER\Documents\EDT Plugins\.tools\apache-maven-3.9.9\bin\mvn.cmd' package -DskipTests
 ```
 
-The installable update site archive is created at:
+Архив update site будет создан здесь:
 
 ```text
 repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip
 ```
 
-## Debugging Trail
+## Журнал отладки
 
-See [DEBUG_LOG.md](DEBUG_LOG.md) for curated EDT log findings, failed hypotheses, diagnostic commits, and conclusions
-from runtime debugging.
+См. [DEBUG_LOG.md](DEBUG_LOG.md): там собраны выводы из логов EDT, неудачные гипотезы, диагностические коммиты и
+результаты runtime-отладки.
 
-## Projects
+## Структура проекта
 
-- `bundles/ru.xelgo.edt.contextlinks.ui` - UI commands, BSL/QL context integration, Query Constructor patches, and
-  infobase update tweaks.
-- `features/ru.xelgo.edt.contextlinks.feature` - installable feature.
+- `bundles/ru.xelgo.edt.contextlinks.ui` - UI-команды, интеграция BSL/QL-контекста, патчи конструктора запросов и
+  доработки обновления ИБ.
+- `features/ru.xelgo.edt.contextlinks.feature` - устанавливаемая feature.
 - `repositories/ru.xelgo.edt.contextlinks.repository` - p2 update site.
-- `targets/default/default.target` - target platform for EDT 2025.2.
+- `targets/default/default.target` - target platform для EDT 2025.2.
