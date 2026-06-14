@@ -301,7 +301,7 @@ public final class ContextLinks
 
     private static void logBuildSkip(String feature, BuildStackMatch match)
     {
-        String key = feature + "|" + match.threadName + "|" + match.frame; //$NON-NLS-1$ //$NON-NLS-2$
+        String key = feature + "|" + match.frame; //$NON-NLS-1$
         if (loggedBuildSkipKeys.add(key))
         {
             logInfo("EDT Extension Tweaks [build.skip] feature=" + feature //$NON-NLS-1$

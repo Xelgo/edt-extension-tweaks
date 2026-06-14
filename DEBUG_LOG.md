@@ -2468,3 +2468,16 @@ Change:
 
 Verification:
 - Maven/Tycho build succeeded with mvn clean package -DskipTests.
+
+## 2026-06-15 Build skip log noise reduction
+
+Observation:
+- The first build-thread guard worked: module-context-fallback calls on derived_data_executor, Xtext, and build threads were skipped instead of extended.
+- The verification log was too noisy because each worker thread produced a separate build.skip record.
+
+Change:
+- build.skip logging is now keyed by feature and skip reason/frame, not by thread name.
+- The message still includes the first observed thread for orientation, but repeated worker numbers no longer flood .metadata/.log.
+
+Verification:
+- Maven/Tycho build succeeded with mvn clean package -DskipTests.
