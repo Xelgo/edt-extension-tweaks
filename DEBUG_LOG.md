@@ -2156,3 +2156,18 @@ Change:
 Expected result:
 - Content assist should see linked extension context again.
 - Workspace startup/build/DD should not inject linked BSL scopes unless invoked from an actual content-assist stack.
+
+## 2026-06-15 Attempt 9 - allow ContentAssist worker threads
+
+Observation after Attempt 8:
+- BSL runtime module was restored and build/startup stayed stable: no `scope.extend`, no overload.
+- Logs showed many skipped calls from `Worker-*: ContentAssist resource sync`.
+- This can explain why user-facing context completion still has no linked context: EDT performs part of content assist preparation on background worker threads.
+
+Change:
+- `shouldSkipBslContextExtension` now allows interactive assist before applying the generic background/build guard.
+- `isInteractiveBslAssistRequest` also checks the thread name for `contentassist`, `proposal`, or `completion` markers.
+
+Expected result:
+- Background content-assist sync can use linked BSL context.
+- Build/DD/reconciler paths without content-assist markers remain skipped.

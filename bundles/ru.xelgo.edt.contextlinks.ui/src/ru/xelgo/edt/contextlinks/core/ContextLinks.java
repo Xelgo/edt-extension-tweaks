@@ -198,11 +198,11 @@ public final class ContextLinks
 
     public static boolean shouldSkipBslContextExtension(String feature)
     {
-        if (shouldSkipContextExtensionDuringBuild(feature))
-            return true;
-
         if (isInteractiveBslAssistRequest())
             return false;
+
+        if (shouldSkipContextExtensionDuringBuild(feature))
+            return true;
 
         Thread thread = Thread.currentThread();
         logBuildSkip(feature, new BuildStackMatch(thread.getName(), "non-interactive-bsl")); //$NON-NLS-1$
@@ -287,21 +287,28 @@ public final class ContextLinks
 
     private static boolean isInteractiveBslAssistRequest()
     {
+        String threadName = Thread.currentThread().getName();
+        if (containsAssistMarker(threadName))
+            return true;
+
         for (StackTraceElement element : Thread.currentThread().getStackTrace())
         {
             String className = element.getClassName();
-            if (className == null)
-                continue;
-
-            String lowerClassName = className.toLowerCase();
-            if (lowerClassName.contains("contentassist") //$NON-NLS-1$
-                || lowerClassName.contains("proposal") //$NON-NLS-1$
-                || lowerClassName.contains("completion")) //$NON-NLS-1$
-            {
+            if (containsAssistMarker(className))
                 return true;
-            }
         }
         return false;
+    }
+
+    private static boolean containsAssistMarker(String value)
+    {
+        if (value == null)
+            return false;
+
+        String lowerValue = value.toLowerCase();
+        return lowerValue.contains("contentassist") //$NON-NLS-1$
+            || lowerValue.contains("proposal") //$NON-NLS-1$
+            || lowerValue.contains("completion"); //$NON-NLS-1$
     }
 
     private static boolean isBuildStackClass(String className)
