@@ -2075,3 +2075,19 @@ Verification still needed after redeploy:
   - `EDT Extension Tweaks [build.skip] ...` when plugin behavior is skipped because the call came from a build/indexing stack;
   - `EDT Extension Tweaks [scope.extend] ...` when the plugin actually extends a scope/container/context outside a detected build path.
 - `mvn -q -DskipTests package` succeeded.
+
+## 2026-06-14 Attempt 5 - skip BSL context extensions on background threads
+
+Observation from EDT UH after build-time skip guards:
+- Startup warm-up is disabled and explicit build stack guards are firing (`[build.skip]`).
+- The hang still reaches critical CPU/heap pressure near 20g.
+- Logs still contain `[scope.extend]` for BSL features from background workers such as `Worker-*`, `ForkJoinPool-*`, `derived_data_executor_*` and Xtext/DD jobs.
+
+Change:
+- Treat BSL/module context features as build-sensitive on generic background threads too.
+- Skip `bsl-*` and `module-context-*` context extension on `Worker-*`, `ForkJoinPool-*`, `derived_data_executor_*`, `LCBuilderState-*`, Xtext/reconcile/check threads and `AEF 2.0 Thread-*`.
+- Leave query constructor / QL / BM paths untouched so the interactive query console context should still work.
+
+Expected result:
+- During large project builds our plugin should no longer inject linked extension scopes into background BSL/DD calculations.
+- Logs should show `[build.skip] ... frame=background-thread` instead of `[scope.extend]` for those background BSL paths.

@@ -181,10 +181,23 @@ public final class ContextLinks
         if (!DISABLE_CONTEXT_DURING_BUILD)
             return false;
 
+        Thread thread = Thread.currentThread();
+        if (isBslBuildSensitiveFeature(feature) && isBackgroundThreadName(thread.getName()))
+        {
+            logBuildSkip(feature, new BuildStackMatch(thread.getName(), "background-thread")); //$NON-NLS-1$
+            return true;
+        }
+
         BuildStackMatch match = findBuildStackMatch();
         if (match == null)
             return false;
 
+        logBuildSkip(feature, match);
+        return true;
+    }
+
+    private static void logBuildSkip(String feature, BuildStackMatch match)
+    {
         String key = feature + "|" + match.threadName + "|" + match.frame; //$NON-NLS-1$ //$NON-NLS-2$
         if (loggedBuildSkipKeys.add(key))
         {
@@ -192,7 +205,6 @@ public final class ContextLinks
                 + " thread=" + match.threadName + " frame=" + match.frame //$NON-NLS-1$ //$NON-NLS-2$
                 + " memory=" + memorySummary()); //$NON-NLS-1$
         }
-        return true;
     }
 
     public static void logScopeExtension(String feature, IProject project, Object details)
@@ -239,6 +251,25 @@ public final class ContextLinks
         return threadName.startsWith("LCBuilderState") //$NON-NLS-1$
             || threadName.contains("Builder") //$NON-NLS-1$
             || threadName.contains("build"); //$NON-NLS-1$
+    }
+
+    private static boolean isBackgroundThreadName(String threadName)
+    {
+        if (threadName == null)
+            return false;
+
+        return threadName.startsWith("Worker-") //$NON-NLS-1$
+            || threadName.startsWith("ForkJoinPool-") //$NON-NLS-1$
+            || threadName.startsWith("derived_data_executor_") //$NON-NLS-1$
+            || threadName.startsWith("LCBuilderState-") //$NON-NLS-1$
+            || threadName.contains("Xtext") //$NON-NLS-1$
+            || threadName.contains("Проверка Xтекст") //$NON-NLS-1$
+            || threadName.startsWith("AEF 2.0 Thread-"); //$NON-NLS-1$
+    }
+
+    private static boolean isBslBuildSensitiveFeature(String feature)
+    {
+        return feature != null && (feature.startsWith("bsl-") || feature.startsWith("module-context-")); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     private static boolean isBuildStackClass(String className)
