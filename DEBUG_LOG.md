@@ -2389,3 +2389,42 @@ Observation:
 Change:
 - JFR output now goes to %TEMP%\edt-extension-tweaks-jfr with a sanitized file name.
 - The diagnostics folder records the exact JFR path in jfr-file.txt.
+
+## 2026-06-15 EDT UH 240 second JFR findings
+
+Capture:
+- EDT was restarted through explicit javaw.exe and captured for 240 seconds.
+- Diagnostics folder: diagnostics/EDT UH-27408-20260615-014253.
+- jcmd split the original JFR filename at the space in EDT Plugins; the recording was rescued from C:\Users\USER\Documents\EDT to recording-rescued.jfr.
+
+JFR summary:
+- Duration: 240 seconds.
+- Execution samples: 51,933.
+- Garbage collections: 252 total, 251 young GCs.
+- The hottest sampled threads are derived_data_executor_2 through derived_data_executor_9, each with roughly 5,500-6,900 samples.
+- Direct ru.xelgo frames are rare in this capture: 11 matching execution-sample lines.
+
+Hot areas:
+- BM object serialization/copy/feature access dominates the top frames.
+- Samples include extension derived data update paths:
+  - com._1c.g5.v8.dt.internal.md.extension.bm.derived.ExtObjectUpdateComputer.doUpdateAllFeatures(...)
+  - ExtObjectUpdateComputer.updateAllFeatures(...)
+  - ExtObjectUpdateComputer.doCompute(...)
+- Samples also include BSL validation/deep analysis paths:
+  - BslDeepAnalisysService.performDeepAnalisys(...)
+  - LanguageCheckDerivedDataComputer.compute(...)
+  - CheckExecutor.runLanguageChecks(...)
+
+Workspace log clues:
+- The log contains Found marker duplicates diagnostics.
+- The log contains NullPointerException at ExternalObjectProject.getProvidedByConfiguration(...), called from BslPreferences.getEnvLaunchMode/getLoadEnvs during BslJavaValidator.checkExpressionType(...).
+
+Updated hypothesis:
+- During the hot part of the hang, our plugin is no longer the direct CPU hotspot.
+- The plugin likely corrupts or duplicates the visible linked context earlier in the lifecycle, then EDT derived data / BM extension update / BSL validation processes duplicated or inconsistent model data.
+- This matches the user observation that after a failed build/restart exported procedures were reported as already existing in the list, as if the module/context was indexed twice.
+
+Likely fix direction:
+- Make linked context extension idempotent by project/source identity, not only by displayed project/container names.
+- Prevent registering or merging the same extension context more than once across restart/CLEAN/EXISTING_DATA_IMPORT lifecycle transitions.
+- Keep plugin BSL/context participation disabled during derived_data_executor, project lifecycle rebuild, and validation phases; allow it only for interactive assist/query wizard flows.
