@@ -17,7 +17,9 @@ import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseSynchronizationManager;
+import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseUpdateCallback;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseChangesResolutionResult;
+import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseConflictResolutionResult;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseEqualityState;
 
 /**
@@ -57,6 +59,8 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         {
             if ("updateAllInfobases".equals(method.getName()) && shouldFilterUpdateAll(project)) //$NON-NLS-1$
                 return updateAllInfobases(delegate.service, ContextLinks.getApplicationProject(project), project, args);
+            if (isUpdateOperation(method.getName()) && isDisabled(project, method.getName()))
+                return updateEnabledDependentInfobases(delegate.service, method.getName(), project, args);
 
             Object disabledValue = disabledValue(method, project);
             if (disabledValue == SKIPPED_VOID)
@@ -100,6 +104,73 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         ContextLinks.logDebug("EDT Context Links DEBUG [application.update.skip] operation=" + operation //$NON-NLS-1$
             + " applicationProject=" + applicationProject.getName() + " updateProject=" + updateProject.getName()); //$NON-NLS-1$ //$NON-NLS-2$
         return true;
+    }
+
+    private boolean isUpdateOperation(String operation)
+    {
+        return "updateInfobase".equals(operation) || "reloadInfobase".equals(operation); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private Boolean updateEnabledDependentInfobases(Object delegate, String operation, IProject project, Object[] args)
+        throws Throwable
+    {
+        IProject applicationProject = ContextLinks.getApplicationProject(project);
+        Object infobase = args != null && args.length > 1 ? args[1] : null;
+        Object callback = args != null && args.length > 2 ? args[2] : null;
+        Object monitor = args != null && args.length > 4 ? args[4] : null;
+        boolean reload = "reloadInfobase".equals(operation); //$NON-NLS-1$
+        boolean result = true;
+        boolean hasDependentProjects = false;
+        for (IProject dependentProject : getDependentExtensionProjects(delegate, project))
+        {
+            hasDependentProjects = true;
+            if (ContextLinks.isApplicationUpdateDisabled(applicationProject, dependentProject))
+            {
+                ContextLinks.logDebug("EDT Context Links DEBUG [application.update.skip] operation=" //$NON-NLS-1$
+                    + operation + " applicationProject=" + applicationProject.getName() //$NON-NLS-1$
+                    + " updateProject=" + dependentProject.getName()); //$NON-NLS-1$
+                continue;
+            }
+
+            Object synchronization = getOrCreateSynchronization(delegate, dependentProject);
+            invokeMethod(delegate, "synchronizeConnectionsWithApplications", 2, dependentProject, synchronization); //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Context Links DEBUG [application.update.route] operation=" //$NON-NLS-1$
+                + operation + " fromProject=" + project.getName() + " updateProject=" //$NON-NLS-1$ //$NON-NLS-2$
+                + dependentProject.getName());
+            Object dependentResult = invokeMethod(synchronization, "updateConnectedInfobase", 4, //$NON-NLS-1$
+                Boolean.valueOf(reload), infobase, wrapUpdateCallback(applicationProject, dependentProject, callback),
+                monitor);
+            if (dependentResult instanceof Boolean)
+                result &= ((Boolean)dependentResult).booleanValue();
+        }
+        return Boolean.valueOf(!hasDependentProjects || result);
+    }
+
+    private Object wrapUpdateCallback(IProject applicationProject, IProject routedProject, Object callback)
+    {
+        if (!(callback instanceof IInfobaseUpdateCallback))
+            return callback;
+
+        return Proxy.newProxyInstance(IInfobaseUpdateCallback.class.getClassLoader(),
+            new Class<?>[] { IInfobaseUpdateCallback.class }, (proxy, method, args) -> {
+                if ("resolveInfobaseChanges".equals(method.getName())) //$NON-NLS-1$
+                {
+                    IProject conflictProject = firstProject(args);
+                    ContextLinks.logDebug("EDT Context Links DEBUG [application.update.conflict.skip]" //$NON-NLS-1$
+                        + " applicationProject=" + applicationProject.getName() //$NON-NLS-1$
+                        + " routedProject=" + routedProject.getName() //$NON-NLS-1$
+                        + " conflictProject=" + (conflictProject != null ? conflictProject.getName() : "<null>")); //$NON-NLS-1$ //$NON-NLS-2$
+                    return InfobaseConflictResolutionResult.IGNORED;
+                }
+                try
+                {
+                    return method.invoke(callback, args);
+                }
+                catch (InvocationTargetException e)
+                {
+                    throw e.getTargetException();
+                }
+            });
     }
 
     private boolean shouldFilterUpdateAll(IProject updateProject)
@@ -157,6 +228,12 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         field.setAccessible(true);
         Object synchronizations = field.get(delegate);
         return synchronizations instanceof Map ? ((Map<?, ?>)synchronizations).get(project) : null;
+    }
+
+    private Object getOrCreateSynchronization(Object delegate, IProject project)
+        throws Throwable
+    {
+        return invokeMethod(delegate, "getOrCreateSynchronization", 1, project); //$NON-NLS-1$
     }
 
     private Object invokeMethod(Object target, String name, int parameterCount, Object... args)
