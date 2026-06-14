@@ -2228,3 +2228,21 @@ Change:
 Expected result:
 - The proposal pipeline should keep linked BSL context through project-less continuation calls.
 - Build/DD/reconciler paths remain skipped unless they happen inside the short window immediately after an actual content-assist request.
+
+## 2026-06-15 Deployment script fix - EDT UH workspace
+
+Problem:
+- Manual redeploy snippets repeatedly risked starting EDT with an incorrectly quoted `-data` argument or with the wrong workspace.
+- The existing `tools/redeploy-edt-main.ps1` still defaulted to `EDTDEV` and used the slower p2 director flow by default.
+
+Change:
+- Changed the default workspace to `C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH`.
+- Added a fast local install path as the default: copy the freshly built bundle jar to `.p2\pool\plugins` and sync `bundles.info` with UTF-8 without BOM.
+- Kept p2 director available behind `-UseP2Director`.
+- Added `-ForceKill` behavior that kills existing EDT/EDT console processes before installing and launching.
+
+Verification:
+- Ran `tools\redeploy-edt-main.ps1 -SkipBuild -ForceKill`.
+- EDT started with a single `1cedt.exe` process and the command line contains `-data "C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH"`.
+- `bundles.info` points to `ru.xelgo.edt.contextlinks.ui_1.1.1.v202606142040.jar`.
+- Workspace log shows EDT Extension Tweaks services registered.

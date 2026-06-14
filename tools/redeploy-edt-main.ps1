@@ -1,6 +1,6 @@
 param(
     [string]$ProjectRoot = (Resolve-Path "$PSScriptRoot\..").Path,
-    [string]$Workspace = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\projects\EDTDEV"),
+    [string]$Workspace = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\projects\EDT UH"),
     [string]$EdtHome = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\installations\1C_EDT (Lite) 2025.2\1cedt"),
     [string]$JavaHome = "C:\Program Files\1C\1CE\components\axiom-jdk-full-17.0.16+12-x86_64",
     [string]$LauncherVm = "C:\Program Files\1C\1CE\components\axiom-jdk-full-17.0.16+12-x86_64\bin\javaw.exe",
@@ -16,6 +16,7 @@ param(
     [switch]$SkipBuild,
     [switch]$NoRestart,
     [switch]$ForceKill,
+    [switch]$UseP2Director,
     [switch]$DebugPlugin,
     [switch]$DryRun,
     [string]$MaxHeap = "20g",
@@ -103,14 +104,22 @@ function Get-EdtWorkspaceProcesses {
         }
 }
 
+function Get-EdtProcesses {
+    Get-CimInstance Win32_Process |
+        Where-Object {
+            $_.Name -in @("1cedt.exe", "1cedtc.exe") -or
+            (($_.Name -in @("javaw.exe", "java.exe")) -and $_.CommandLine -and $_.CommandLine -like "*1cedt*")
+        }
+}
+
 function Stop-EdtWorkspace {
-    $processes = @(Get-EdtWorkspaceProcesses)
+    $processes = if ($ForceKill) { @(Get-EdtProcesses) } else { @(Get-EdtWorkspaceProcesses) }
     if ($processes.Count -eq 0) {
-        Write-Step "No EDT processes found for workspace $Workspace"
+        Write-Step "No EDT processes found"
         return
     }
 
-    Write-Step "Force killing EDT processes for workspace ${Workspace}: $($processes.ProcessId -join ', ')"
+    Write-Step "Force killing EDT processes: $($processes.ProcessId -join ', ')"
     if ($DryRun) {
         return
     }
@@ -118,6 +127,36 @@ function Stop-EdtWorkspace {
     foreach ($cimProcess in $processes) {
         Stop-Process -Id $cimProcess.ProcessId -Force -ErrorAction SilentlyContinue
     }
+}
+
+function Get-BuiltContextLinksPlugin {
+    $repositoryPlugins = Join-Path $ProjectRoot "repositories\ru.xelgo.edt.contextlinks.repository\target\repository\plugins"
+    $latestPlugin = Get-ChildItem -LiteralPath $repositoryPlugins -Filter "ru.xelgo.edt.contextlinks.ui_*.jar" |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+    if (-not $latestPlugin) {
+        throw "Built contextlinks plugin jar not found in $repositoryPlugins"
+    }
+
+    return $latestPlugin
+}
+
+function Install-ContextLinksBundleToPool {
+    $sourcePlugin = Get-BuiltContextLinksPlugin
+    $pluginPool = Join-Path $bundlePool "plugins"
+    if (-not (Test-Path -LiteralPath $pluginPool)) {
+        if (-not $DryRun) {
+            New-Item -ItemType Directory -Force -Path $pluginPool | Out-Null
+        }
+    }
+
+    $destinationPlugin = Join-Path $pluginPool $sourcePlugin.Name
+    Write-Step "Copying $($sourcePlugin.Name) to $pluginPool"
+    if (-not $DryRun) {
+        Copy-Item -LiteralPath $sourcePlugin.FullName -Destination $destinationPlugin -Force
+    }
+
+    Sync-ContextLinksBundleInfo -PluginJarPath $destinationPlugin
 }
 
 function Clear-WorkspaceLog {
@@ -131,15 +170,23 @@ function Clear-WorkspaceLog {
 }
 
 function Sync-ContextLinksBundleInfo {
+    param(
+        [string]$PluginJarPath = ""
+    )
+
     $bundlesInfo = Join-Path $EdtHome "configuration\org.eclipse.equinox.simpleconfigurator\bundles.info"
     $pluginPool = Join-Path $bundlePool "plugins"
     if (-not (Test-Path -LiteralPath $bundlesInfo)) {
         throw "bundles.info not found: $bundlesInfo"
     }
 
-    $latestPlugin = Get-ChildItem -LiteralPath $pluginPool -Filter "ru.xelgo.edt.contextlinks.ui_*.jar" |
-        Sort-Object LastWriteTime -Descending |
-        Select-Object -First 1
+    $latestPlugin = if ($PluginJarPath) {
+        Get-Item -LiteralPath $PluginJarPath
+    } else {
+        Get-ChildItem -LiteralPath $pluginPool -Filter "ru.xelgo.edt.contextlinks.ui_*.jar" |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+    }
     if (-not $latestPlugin) {
         throw "Installed contextlinks plugin jar not found in $pluginPool"
     }
@@ -205,28 +252,29 @@ if (-not $SkipBuild) {
 }
 
 if (-not (Test-Path -LiteralPath $repoZip)) {
-    throw "Update site zip not found: $repoZip"
+    if ($UseP2Director) {
+        throw "Update site zip not found: $repoZip"
+    }
 }
 
 Stop-EdtWorkspace
 
-$repoUri = "jar:file:/$(Convert-ToFileUriPath $repoZip)!/"
-$repositories = (@($repoUri) + $DependencyRepositories) -join ","
-$directorBaseArgs = @(
-    "-nosplash",
-    "-application", "org.eclipse.equinox.p2.director",
-    "-profile", $profile,
-    "-destination", $EdtHome,
-    "-bundlepool", $bundlePool,
-    "-p2.os", "win32",
-    "-p2.ws", "win32",
-    "-p2.arch", "x86_64",
-    "-roaming",
-    "-consoleLog"
-)
+if ($UseP2Director) {
+    $repoUri = "jar:file:/$(Convert-ToFileUriPath $repoZip)!/"
+    $repositories = (@($repoUri) + $DependencyRepositories) -join ","
+    $directorBaseArgs = @(
+        "-nosplash",
+        "-application", "org.eclipse.equinox.p2.director",
+        "-profile", $profile,
+        "-destination", $EdtHome,
+        "-bundlepool", $bundlePool,
+        "-p2.os", "win32",
+        "-p2.ws", "win32",
+        "-p2.arch", "x86_64",
+        "-roaming",
+        "-consoleLog"
+    )
 
-$installError = $null
-try {
     if ($UninstallIU) {
         $uninstallArgs = $directorBaseArgs + @("-uninstallIU", $UninstallIU)
         Invoke-OptionalStep $edtConsoleExe $uninstallArgs $EdtHome
@@ -235,9 +283,8 @@ try {
     $installArgs = $directorBaseArgs + @("-repository", $repositories, "-installIU", $InstallIU)
     Invoke-Step $edtConsoleExe $installArgs $EdtHome
     Sync-ContextLinksBundleInfo
-}
-catch {
-    $installError = $_
+} else {
+    Install-ContextLinksBundleToPool
 }
 
 Clear-WorkspaceLog
@@ -261,8 +308,4 @@ if (-not $NoRestart) {
         $startArgumentLine = ($startArgs | ForEach-Object { Format-Argument $_ }) -join " "
         Start-Process -FilePath $edtExe -ArgumentList $startArgumentLine -WorkingDirectory $EdtHome | Out-Null
     }
-}
-
-if ($installError) {
-    throw $installError
 }
