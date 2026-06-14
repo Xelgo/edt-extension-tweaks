@@ -2113,3 +2113,25 @@ Change:
 Expected result:
 - The plugin should no longer keep strong references to large BSL scope graphs.
 - Query-console context may depend more strictly on EDT's own initialized scopes, but build memory pressure should drop.
+
+## 2026-06-15 Attempt 7 - remove BSL runtime module registration
+
+Observation after Attempt 6 on EDT UH:
+- Correct workspace was relaunched with quoted `-data "C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH"`.
+- Installed bundle was `1.1.1.v202606142001`.
+- `stableProjectScopes` was removed, but BSL extension still appeared during startup/build-sensitive paths:
+  - `scope.extend count: 3`
+  - examples: `ForkJoinPool.commonPool-worker-13` and `main` while external object project context was being initialized.
+- EDT still logged `StringIndexOutOfBoundsException` in `BslJavaValidator.checkStringLiteral` and CPU overload messages.
+
+Conclusion:
+- Thread-name/build-stack guards are not enough. The BSL runtime module itself is still too broad for large workspace builds.
+
+Change:
+- Removed the `com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension` registration from `plugin.xml`.
+- Query Wizard weaving, QL/BM global scope wrapper, application update controls and UI handlers remain registered outside this BSL runtime module.
+
+Expected result:
+- EDT BSL build/validation should use native EDT services only.
+- The plugin should no longer emit BSL `scope.extend` or `build.skip` lines during workspace build.
+- Query constructor context fixes should remain active through the non-BSL query/QL integration points.
