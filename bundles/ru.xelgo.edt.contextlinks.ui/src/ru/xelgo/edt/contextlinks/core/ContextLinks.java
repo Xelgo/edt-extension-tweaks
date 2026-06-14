@@ -2,8 +2,10 @@
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IProject;
@@ -36,6 +38,7 @@ public final class ContextLinks
         new QualifiedName(PLUGIN_ID, "contextProjects"); //$NON-NLS-1$
     private static final QualifiedName DISABLED_APPLICATION_UPDATE_PROJECTS =
         new QualifiedName(PLUGIN_ID, "disabledApplicationUpdateProjects"); //$NON-NLS-1$
+    private static final ConcurrentHashMap<String, Set<String>> contextProjectNamesCache = new ConcurrentHashMap<>();
 
     private ContextLinks()
     {
@@ -57,22 +60,18 @@ public final class ContextLinks
             return Set.of();
         }
 
+        Set<String> cached = contextProjectNamesCache.get(project.getName());
+        if (cached != null)
+            return cached;
+
         try
         {
             String value = project.getPersistentProperty(CONTEXT_PROJECTS);
-            if (value == null || value.isBlank())
-            {
-                logDebug("EDT Extension Tweaks DEBUG [settings.read] project=" + project.getName() //$NON-NLS-1$
-                    + " links=[] raw=NULL_OR_BLANK"); //$NON-NLS-1$
-                return Set.of();
-            }
-
-            Set<String> result = Arrays.stream(value.split("\\R")) //$NON-NLS-1$
-                .map(String::trim)
-                .filter(name -> !name.isEmpty())
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+            Set<String> result = normalizeProjectNames(value);
             logDebug("EDT Extension Tweaks DEBUG [settings.read] project=" + project.getName() //$NON-NLS-1$
-                + " links=" + result + " raw=" + value.replace('\n', '|')); //$NON-NLS-1$ //$NON-NLS-2$
+                + " links=" + result + " raw=" //$NON-NLS-1$ //$NON-NLS-2$
+                + (value == null || value.isBlank() ? "NULL_OR_BLANK" : value.replace('\n', '|'))); //$NON-NLS-1$
+            contextProjectNamesCache.put(project.getName(), result);
             return result;
         }
         catch (CoreException e)
@@ -98,13 +97,14 @@ public final class ContextLinks
             return;
         }
 
-        String value = names.stream()
-            .map(String::trim)
-            .filter(name -> !name.isEmpty())
-            .distinct()
-            .collect(Collectors.joining("\n")); //$NON-NLS-1$
+        Set<String> normalizedNames = normalizeProjectNames(names);
+        String value = normalizedNames.stream().collect(Collectors.joining("\n")); //$NON-NLS-1$
         project.setPersistentProperty(CONTEXT_PROJECTS, value.isEmpty() ? null : value);
-        logDebug("Saved EDT context links for " + project.getName() + ": " + names); //$NON-NLS-1$ //$NON-NLS-2$
+        if (normalizedNames.isEmpty())
+            contextProjectNamesCache.remove(project.getName());
+        else
+            contextProjectNamesCache.put(project.getName(), normalizedNames);
+        logDebug("Saved EDT context links for " + project.getName() + ": " + normalizedNames); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     public static Set<String> getDisabledApplicationUpdateProjectNames(IProject applicationProject)
@@ -209,6 +209,30 @@ public final class ContextLinks
                 + ": " + e.getMessage()); //$NON-NLS-1$
             return Set.of();
         }
+    }
+
+    private static Set<String> normalizeProjectNames(String value)
+    {
+        if (value == null || value.isBlank())
+            return Set.of();
+
+        Set<String> result = Arrays.stream(value.split("\\R")) //$NON-NLS-1$
+            .map(String::trim)
+            .filter(name -> !name.isEmpty())
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        return Collections.unmodifiableSet(result);
+    }
+
+    private static Set<String> normalizeProjectNames(Set<String> names)
+    {
+        if (names == null || names.isEmpty())
+            return Set.of();
+
+        Set<String> result = names.stream()
+            .map(String::trim)
+            .filter(name -> !name.isEmpty())
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        return result.isEmpty() ? Set.of() : Collections.unmodifiableSet(result);
     }
 
     private static void setProjectNameSet(IProject project, QualifiedName property, Set<String> names, String tag)

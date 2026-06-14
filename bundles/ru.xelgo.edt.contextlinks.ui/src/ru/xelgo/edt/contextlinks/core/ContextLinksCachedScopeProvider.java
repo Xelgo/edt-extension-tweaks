@@ -39,6 +39,7 @@ public class ContextLinksCachedScopeProvider
     private static final ConcurrentHashMap<ProjectScopeKey, IScope> stableProjectScopes = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<ModuleScopeKey, IScope> moduleScopes = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<ModuleScopeKey, String> moduleScopeVersions = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Set<ModuleScopeKey>> moduleScopeKeysByBlock = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, AtomicLong> projectScopeVersions = new ConcurrentHashMap<>();
 
     public ContextLinksCachedScopeProvider()
@@ -283,6 +284,7 @@ public class ContextLinksCachedScopeProvider
 
         moduleScopes.put(key, scope);
         moduleScopeVersions.put(key, moduleScopeVersion(block));
+        moduleScopeKeysByBlock.computeIfAbsent(key.blockName, ignored -> ConcurrentHashMap.newKeySet()).add(key);
         logModuleScope("add", block, environments, scopeType, scope); //$NON-NLS-1$
     }
 
@@ -291,10 +293,18 @@ public class ContextLinksCachedScopeProvider
         if (blockName == null || blockName.isBlank())
             return 0;
 
-        int before = moduleScopes.size();
-        moduleScopes.keySet().removeIf(key -> blockName.equals(key.blockName));
-        moduleScopeVersions.keySet().removeIf(key -> blockName.equals(key.blockName));
-        return before - moduleScopes.size();
+        Set<ModuleScopeKey> keys = moduleScopeKeysByBlock.remove(blockName);
+        if (keys == null || keys.isEmpty())
+            return 0;
+
+        int removed = 0;
+        for (ModuleScopeKey key : keys)
+        {
+            if (moduleScopes.remove(key) != null)
+                removed++;
+            moduleScopeVersions.remove(key);
+        }
+        return removed;
     }
 
     private boolean isModuleScopeCurrent(Block block, Environments environments, BslCachedScopeType scopeType)

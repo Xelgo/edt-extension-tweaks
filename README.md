@@ -69,6 +69,20 @@ repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlin
 См. [DEBUG_LOG.md](DEBUG_LOG.md): там собраны выводы из логов EDT, неудачные гипотезы, диагностические коммиты и
 результаты runtime-отладки.
 
+## Диагностика зависаний EDT
+
+Если EDT завис на сборке большого проекта, снимите диагностику до принудительного закрытия процесса:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\capture-edt-diagnostics.ps1 `
+  -Workspace "C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH" `
+  -DurationSec 60 `
+  -IntervalSec 10
+```
+
+Скрипт найдет Java-процесс EDT по workspace, возьмет `jcmd.exe` из той же JDK, скопирует `.metadata\.log`, снимет
+thread dumps, heap info и попробует записать JFR. Результаты складываются в `diagnostics/`.
+
 ## Структура проекта
 
 - `bundles/ru.xelgo.edt.contextlinks.ui` - UI-команды, интеграция BSL/QL-контекста, патчи конструктора запросов и

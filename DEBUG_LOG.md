@@ -2006,3 +2006,17 @@ Verification still needed after redeploy:
 - Updated public display metadata: README, Maven project name, feature name/description, source feature name, p2 category label, plugin name, command category, and Java log prefix.
 - Kept internal bundle/package/repository identifiers as `ru.xelgo.edt.contextlinks.*` to avoid a risky OSGi/package rename while the plugin is under active debugging.
 - `mvn -q -DskipTests package` succeeded.
+
+## 2026-06-14 - Large Workspace Build Hang Profiling
+
+- Investigated workspace `C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH` after EDT hung during a large project build with extensions.
+- EDT process used Zulu Java 17 and reached roughly 30 GB working set; UI process was not responding.
+- Captured a usable thread dump before EDT was closed: `diagnostics\EDT-UH-hang-20260614-220854\thread-dump-00.txt` (diagnostics are ignored by git).
+- Thread dump confirmed the external performance warning: parallel `LCBuilderState-*` build threads were executing BSL/Xtext scope resolution through EDT Extension Tweaks wrappers.
+- Hot/problematic stacks included:
+  - `ContextLinks.getContextProjectNames(...)` -> `Resource.getPersistentProperty(...)` -> `PropertyManager2.getProperty(...)`, causing multiple parallel build threads to block on Eclipse workspace metadata property access.
+  - `ContextLinksCachedScopeProvider.forgetModuleScope(...)` doing `ConcurrentHashMap.keySet().removeIf(...)` during module scope clearing.
+- Added in-memory caching for context project names so build-time scope calls do not repeatedly read persistent project properties.
+- Added an index from BSL block name to module scope keys, so clearing one module no longer scans all cached module scope keys.
+- Added `tools/capture-edt-diagnostics.ps1` to capture workspace log, thread dumps, heap info, and JFR when possible while EDT is still hung.
+- `mvn -q -DskipTests package` succeeded after the performance fix.
