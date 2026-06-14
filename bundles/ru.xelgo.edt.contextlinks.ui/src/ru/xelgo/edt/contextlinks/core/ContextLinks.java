@@ -41,8 +41,10 @@ public final class ContextLinks
     private static final QualifiedName DISABLED_APPLICATION_UPDATE_PROJECTS =
         new QualifiedName(PLUGIN_ID, "disabledApplicationUpdateProjects"); //$NON-NLS-1$
     private static final ConcurrentHashMap<String, Set<String>> contextProjectNamesCache = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Long> recentBslAssistProjects = new ConcurrentHashMap<>();
     private static final Set<String> loggedBuildSkipKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedInfoKeys = ConcurrentHashMap.newKeySet();
+    private static final long BSL_ASSIST_WINDOW_MILLIS = 15_000L;
 
     private ContextLinks()
     {
@@ -198,7 +200,18 @@ public final class ContextLinks
 
     public static boolean shouldSkipBslContextExtension(String feature)
     {
+        return shouldSkipBslContextExtension(feature, null);
+    }
+
+    public static boolean shouldSkipBslContextExtension(String feature, IProject project)
+    {
         if (isInteractiveBslAssistRequest())
+        {
+            rememberBslAssistProject(project);
+            return false;
+        }
+
+        if (isRecentBslAssistContinuation(project))
             return false;
 
         if (shouldSkipContextExtensionDuringBuild(feature))
@@ -207,6 +220,42 @@ public final class ContextLinks
         Thread thread = Thread.currentThread();
         logBuildSkip(feature, new BuildStackMatch(thread.getName(), "non-interactive-bsl")); //$NON-NLS-1$
         return true;
+    }
+
+    private static void rememberBslAssistProject(IProject project)
+    {
+        if (project != null && project.isAccessible())
+            recentBslAssistProjects.put(project.getName(), System.currentTimeMillis());
+    }
+
+    private static boolean isRecentBslAssistContinuation(IProject project)
+    {
+        if (project == null || !project.isAccessible())
+            return false;
+
+        String threadName = Thread.currentThread().getName();
+        if (!isAssistContinuationThread(threadName))
+            return false;
+
+        Long timestamp = recentBslAssistProjects.get(project.getName());
+        if (timestamp == null)
+            return false;
+
+        long age = System.currentTimeMillis() - timestamp.longValue();
+        if (age >= 0 && age <= BSL_ASSIST_WINDOW_MILLIS)
+            return true;
+
+        recentBslAssistProjects.remove(project.getName(), timestamp);
+        return false;
+    }
+
+    private static boolean isAssistContinuationThread(String threadName)
+    {
+        if (threadName == null)
+            return false;
+
+        return threadName.startsWith("ForkJoinPool-") //$NON-NLS-1$
+            || threadName.startsWith("ForkJoinPool.commonPool-"); //$NON-NLS-1$
     }
 
     private static void logBuildSkip(String feature, BuildStackMatch match)

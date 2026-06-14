@@ -2189,3 +2189,24 @@ Change:
 Expected result:
 - External data processor content assist should see linked configuration/extension resources again.
 - Build/DD/reconciler paths should continue to receive standard EDT containers only.
+
+## 2026-06-15 Attempt 11 - allow short content-assist continuation window
+
+Observation after Attempt 10:
+- User still reports dead context completion in the external data processor.
+- Logs show content assist does enter the plugin and extends `bsl-containers`, `bsl-cache-property`, and `bsl-cache-type-item` for `ВнешняяОбработка`.
+- Immediately after that, EDT schedules proposal/type work on `ForkJoinPool-*`; those calls are skipped as `non-interactive-bsl` or `background-thread`.
+
+Hypothesis:
+- EDT content assist has a multi-stage pipeline: `Worker-*: ContentAssist resource sync` warms resources, then `ForkJoinPool-*` computes proposals/types.
+- Allowing only the first stage leaves actual proposal computation without linked scopes.
+
+Change:
+- Added a short per-project BSL assist window (`15s`) in `ContextLinks`.
+- When a project enters an interactive content-assist path, remember it.
+- During that window, allow linked BSL scopes on `ForkJoinPool-*` continuations for the same project.
+- Pass project information into BSL guards from cache provider, container manager, and module context fallback.
+
+Expected result:
+- External data processor content assist should keep linked context through the whole proposal pipeline.
+- Normal build/DD/reconciler paths remain skipped outside the short assist continuation window.

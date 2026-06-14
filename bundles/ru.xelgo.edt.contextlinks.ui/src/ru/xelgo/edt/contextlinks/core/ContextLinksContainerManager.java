@@ -60,7 +60,7 @@ public class ContextLinksContainerManager
             return visibleContainers;
         }
 
-        if (ContextLinks.shouldSkipBslContextExtension("bsl-containers")) //$NON-NLS-1$
+        if (ContextLinks.shouldSkipBslContextExtension("bsl-containers", currentProject)) //$NON-NLS-1$
         {
             ContextLinks.logDebug("EDT Extension Tweaks DEBUG [containers.exit] project=" + currentProject.getName() //$NON-NLS-1$
                 + " result=standard reason=build"); //$NON-NLS-1$
