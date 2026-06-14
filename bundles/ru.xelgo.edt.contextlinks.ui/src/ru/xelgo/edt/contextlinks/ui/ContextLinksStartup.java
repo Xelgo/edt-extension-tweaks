@@ -28,7 +28,6 @@ public class ContextLinksStartup
     public void earlyStartup()
     {
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
-        ContextLinks.logWarning("EDT Context Links startup warm-up scheduled"); //$NON-NLS-1$
         for (int i = 0; i < WARMUP_DELAYS_MS.length; i++)
             new WarmupJob(i + 1).schedule(WARMUP_DELAYS_MS[i]);
     }
@@ -36,12 +35,9 @@ public class ContextLinksStartup
     private static final class WarmupJob
         extends WorkspaceJob
     {
-        private final int pass;
-
         WarmupJob(int pass)
         {
             super("EDT Context Links startup warm-up " + pass); //$NON-NLS-1$
-            this.pass = pass;
             setRule(ResourcesPlugin.getWorkspace().getRoot());
             setSystem(true);
         }
@@ -50,9 +46,6 @@ public class ContextLinksStartup
         public IStatus runInWorkspace(IProgressMonitor monitor)
         {
             Set<IProject> projectsToBuild = collectProjectsToBuild();
-            ContextLinks.logWarning("EDT Context Links startup warm-up pass=" + pass //$NON-NLS-1$
-                + " projects=" + describeProjects(projectsToBuild)); //$NON-NLS-1$
-
             monitor.beginTask(getName(), projectsToBuild.size());
             for (IProject project : projectsToBuild)
             {
@@ -94,8 +87,6 @@ public class ContextLinksStartup
         {
             try
             {
-                ContextLinks.logWarning("EDT Context Links startup warm-up build pass=" + pass //$NON-NLS-1$
-                    + " project=" + project.getName()); //$NON-NLS-1$
                 project.build(IncrementalProjectBuilder.FULL_BUILD, monitor);
             }
             catch (CoreException e)
@@ -104,12 +95,5 @@ public class ContextLinksStartup
             }
         }
 
-        private String describeProjects(Set<IProject> projects)
-        {
-            return projects.stream()
-                .map(IProject::getName)
-                .toList()
-                .toString();
-        }
     }
 }

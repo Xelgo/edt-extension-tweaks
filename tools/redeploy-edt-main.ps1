@@ -16,6 +16,7 @@ param(
     [switch]$SkipBuild,
     [switch]$NoRestart,
     [switch]$ForceKill,
+    [switch]$DebugPlugin,
     [switch]$DryRun,
     [int]$ShutdownTimeoutSec = 20
 )
@@ -90,12 +91,14 @@ function Ensure-BuildPlaceholders {
 }
 
 function Get-EdtWorkspaceProcesses {
-    $escapedWorkspace = [regex]::Escape($Workspace)
+    $resolvedWorkspace = (Resolve-Path -LiteralPath $Workspace).Path
+    $escapedWorkspace = [regex]::Escape($resolvedWorkspace)
+    $escapedWorkspaceUriPath = [regex]::Escape($resolvedWorkspace.Replace("\", "/"))
     Get-CimInstance Win32_Process |
         Where-Object {
             $_.CommandLine -and
             ($_.Name -in @("1cedt.exe", "javaw.exe", "java.exe")) -and
-            ($_.CommandLine -match $escapedWorkspace)
+            (($_.CommandLine -match $escapedWorkspace) -or ($_.CommandLine -match $escapedWorkspaceUriPath))
         }
 }
 
@@ -244,10 +247,13 @@ if (-not $NoRestart) {
         "--launcher.appendVmargs",
         "-vmargs",
         "-Djava.library.path=",
-        "-Dru.xelgo.edt.contextlinks.ui.debug=true",
         "-Duser.language=ru",
         "-Xmx8192m"
     )
+
+    if ($DebugPlugin) {
+        $startArgs = $startArgs + @("-Dru.xelgo.edt.contextlinks.ui.debug=true")
+    }
 
     Write-Step "Starting EDT for workspace $Workspace"
     if (-not $DryRun) {

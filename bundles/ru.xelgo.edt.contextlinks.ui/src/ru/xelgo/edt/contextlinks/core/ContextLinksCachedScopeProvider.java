@@ -36,7 +36,6 @@ public class ContextLinksCachedScopeProvider
     private static final Set<String> loggedPropertyScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedScopeDetails = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedModuleScopeKeys = ConcurrentHashMap.newKeySet();
-    private static final Set<String> loggedStableScopeFallbackKeys = ConcurrentHashMap.newKeySet();
     private static final ConcurrentHashMap<ProjectScopeKey, IScope> stableProjectScopes = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<ModuleScopeKey, IScope> moduleScopes = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<ModuleScopeKey, String> moduleScopeVersions = new ConcurrentHashMap<>();
@@ -469,15 +468,6 @@ public class ContextLinksCachedScopeProvider
             return null;
 
         IScope scope = stableProjectScopes.get(new ProjectScopeKey(project.getName(), kind));
-        if (scope != null)
-        {
-            String key = project.getName() + "|" + kind.name() + "|" + describeScope(scope); //$NON-NLS-1$ //$NON-NLS-2$
-            if (loggedStableScopeFallbackKeys.add(key))
-            {
-                ContextLinks.logWarning("EDT Context Links stable scope fallback project=" + project.getName() //$NON-NLS-1$
-                    + " kind=" + kind.logName + " scope=" + describeScope(scope)); //$NON-NLS-1$ //$NON-NLS-2$
-            }
-        }
         return scope;
     }
 

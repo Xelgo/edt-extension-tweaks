@@ -1,12 +1,15 @@
 package ru.xelgo.edt.contextlinks.core;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.core.resources.IProject;
 import org.osgi.framework.Constants;
@@ -23,6 +26,9 @@ import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseEqualitySt
 final class ContextLinksInfobaseSynchronizationManagerProxy
     implements InvocationHandler
 {
+    private static final Object NOT_DISABLED = new Object();
+    private static final Object SKIPPED_VOID = new Object();
+
     private final org.osgi.framework.BundleContext context;
 
     private ContextLinksInfobaseSynchronizationManagerProxy(org.osgi.framework.BundleContext context)
@@ -46,13 +52,18 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
             return method.invoke(this, args);
 
         IProject project = firstProject(args);
-        Object disabledValue = disabledValue(method, project);
-        if (disabledValue != null)
-            return disabledValue;
-
         DelegateService delegate = delegate();
         try
         {
+            if ("updateAllInfobases".equals(method.getName()) && shouldFilterUpdateAll(project)) //$NON-NLS-1$
+                return updateAllInfobases(delegate.service, ContextLinks.getApplicationProject(project), project, args);
+
+            Object disabledValue = disabledValue(method, project);
+            if (disabledValue == SKIPPED_VOID)
+                return null;
+            if (disabledValue != NOT_DISABLED)
+                return disabledValue;
+
             return invokeDelegate(delegate.service, method, args);
         }
         finally
@@ -64,10 +75,9 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
     private Object disabledValue(Method method, IProject updateProject)
     {
         if (updateProject == null || !isDisabled(updateProject, method.getName()))
-            return null;
+            return NOT_DISABLED;
 
         String name = method.getName();
-        Class<?> returnType = method.getReturnType();
         if ("getEqualityState".equals(name)) //$NON-NLS-1$
             return InfobaseEqualityState.EQUAL;
         if ("isConnected".equals(name)) //$NON-NLS-1$
@@ -76,11 +86,9 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
             return Boolean.TRUE;
         if ("retrieveInfobaseChanges".equals(name)) //$NON-NLS-1$
             return InfobaseChangesResolutionResult.NO_CHANGES;
-        if ("updateAllInfobases".equals(name)) //$NON-NLS-1$
-            return Map.of();
-        if (returnType == Void.TYPE)
-            return null;
-        return null;
+        if ("connectInfobase".equals(name) || "reconnectIfConnected".equals(name)) //$NON-NLS-1$ //$NON-NLS-2$
+            return SKIPPED_VOID;
+        return NOT_DISABLED;
     }
 
     private boolean isDisabled(IProject updateProject, String operation)
@@ -92,6 +100,112 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         ContextLinks.logDebug("EDT Context Links DEBUG [application.update.skip] operation=" + operation //$NON-NLS-1$
             + " applicationProject=" + applicationProject.getName() + " updateProject=" + updateProject.getName()); //$NON-NLS-1$ //$NON-NLS-2$
         return true;
+    }
+
+    private boolean shouldFilterUpdateAll(IProject updateProject)
+    {
+        IProject applicationProject = ContextLinks.getApplicationProject(updateProject);
+        return applicationProject != null
+            && !ContextLinks.getDisabledApplicationUpdateProjectNames(applicationProject).isEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<Object, Boolean> updateAllInfobases(Object delegate, IProject applicationProject, IProject project,
+        Object[] args)
+        throws Throwable
+    {
+        Object callback = args != null && args.length > 1 ? args[1] : null;
+        Object monitor = args != null && args.length > 2 ? args[2] : null;
+        Map<Object, Boolean> result = new HashMap<>();
+
+        if (!ContextLinks.isApplicationUpdateDisabled(applicationProject, project))
+        {
+            Object synchronization = getSynchronization(delegate, project);
+            if (synchronization != null)
+            {
+                invokeMethod(delegate, "synchronizeConnectionsWithApplications", 2, project, synchronization); //$NON-NLS-1$
+                Object updateResult = invokeMethod(synchronization, "updateAllConnectedInfobases", 2, callback, //$NON-NLS-1$
+                    monitor);
+                if (updateResult instanceof Map)
+                    result.putAll((Map<Object, Boolean>)updateResult);
+            }
+        }
+        else
+        {
+            ContextLinks.logDebug("EDT Context Links DEBUG [application.update.skip] operation=updateAllInfobases" //$NON-NLS-1$
+                + " applicationProject=" + applicationProject.getName() + " updateProject=" + project.getName()); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+
+        for (IProject dependentProject : getDependentExtensionProjects(delegate, project))
+            updateAllInfobases(delegate, applicationProject, dependentProject, args);
+
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Collection<IProject> getDependentExtensionProjects(Object delegate, IProject project)
+        throws Throwable
+    {
+        Object result = invokeMethod(delegate, "getDependentExtensionProjects", 1, project); //$NON-NLS-1$
+        return result instanceof Collection ? (Collection<IProject>)result : Set.of();
+    }
+
+    private Object getSynchronization(Object delegate, IProject project)
+        throws ReflectiveOperationException
+    {
+        Field field = findField(delegate.getClass(), "synchronizations"); //$NON-NLS-1$
+        field.setAccessible(true);
+        Object synchronizations = field.get(delegate);
+        return synchronizations instanceof Map ? ((Map<?, ?>)synchronizations).get(project) : null;
+    }
+
+    private Object invokeMethod(Object target, String name, int parameterCount, Object... args)
+        throws Throwable
+    {
+        Method method = findMethod(target.getClass(), name, parameterCount);
+        method.setAccessible(true);
+        try
+        {
+            return method.invoke(target, args);
+        }
+        catch (InvocationTargetException e)
+        {
+            throw e.getTargetException();
+        }
+    }
+
+    private Method findMethod(Class<?> type, String name, int parameterCount)
+        throws NoSuchMethodException
+    {
+        Class<?> current = type;
+        while (current != null)
+        {
+            for (Method method : current.getDeclaredMethods())
+            {
+                if (name.equals(method.getName()) && method.getParameterCount() == parameterCount)
+                    return method;
+            }
+            current = current.getSuperclass();
+        }
+        throw new NoSuchMethodException(name);
+    }
+
+    private Field findField(Class<?> type, String name)
+        throws NoSuchFieldException
+    {
+        Class<?> current = type;
+        while (current != null)
+        {
+            try
+            {
+                return current.getDeclaredField(name);
+            }
+            catch (NoSuchFieldException e)
+            {
+                current = current.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(name);
     }
 
     private static IProject firstProject(Object[] args)
