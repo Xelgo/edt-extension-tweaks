@@ -2378,3 +2378,14 @@ Change:
 Hypothesis update:
 - User observation about duplicated exported procedures matches the marker duplicate diagnostics and the earlier duplicate table/context symptoms.
 - The plugin likely allows the same linked extension context/scope to be registered or merged more than once during rebuild/restart lifecycle.
+
+## 2026-06-15 Capture script JFR filename fix
+
+Observation:
+- The 240 second JFR was recorded, but jcmd split the output path at the space in EDT Plugins.
+- The recording was written as C:\Users\USER\Documents\EDT without the intended .jfr name.
+- The file was copied into the diagnostics directory as recording-rescued.jfr.
+
+Change:
+- JFR output now goes to %TEMP%\edt-extension-tweaks-jfr with a sanitized file name.
+- The diagnostics folder records the exact JFR path in jfr-file.txt.

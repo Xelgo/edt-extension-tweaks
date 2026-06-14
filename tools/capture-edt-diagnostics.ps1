@@ -144,7 +144,11 @@ Invoke-Jcmd $jcmd $targetPid @("VM.command_line") (Join-Path $outputDir "vm-comm
 Invoke-Jcmd $jcmd $targetPid @("VM.system_properties") (Join-Path $outputDir "vm-system-properties.txt") $CommandTimeoutSec | Out-Null
 Invoke-Jcmd $jcmd $targetPid @("GC.heap_info") (Join-Path $outputDir "gc-heap-info-before.txt") $CommandTimeoutSec | Out-Null
 
-$jfrFile = Join-Path $outputDir "recording.jfr"
+$safeWorkspaceName = $workspaceName -replace '[^A-Za-z0-9_.-]', '_'
+$jfrRoot = Join-Path $env:TEMP "edt-extension-tweaks-jfr"
+New-Item -ItemType Directory -Path $jfrRoot -Force | Out-Null
+$jfrFile = Join-Path $jfrRoot ("recording-$safeWorkspaceName-$targetPid-$stamp.jfr")
+$jfrFile | Set-Content -Path (Join-Path $outputDir "jfr-file.txt") -Encoding UTF8
 Invoke-Jcmd $jcmd $targetPid @(
     "JFR.start",
     "name=edt_extension_tweaks_capture",
