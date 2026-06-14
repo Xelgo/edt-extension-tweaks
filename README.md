@@ -27,6 +27,23 @@
 
 Плагин для 1C:EDT: общий BSL-контекст между проектами, метаданные расширений в конструкторе запросов и гибкая настройка обновления ИБ.
 
+## Установка и обновление из EDT
+
+В EDT откройте **Справка -> Установить новое ПО...** и добавьте update site:
+
+```text
+jar:https://github.com/Xelgo/edt-extension-tweaks/releases/latest/download/edt-extension-tweaks-update-site.zip!/
+```
+
+После добавления выберите **EDT Extension Tweaks** и завершите установку. Для обновления плагина можно использовать
+тот же update site: ссылка `latest` всегда указывает на последний опубликованный релиз.
+
+Архив update site последнего релиза:
+
+```text
+https://github.com/Xelgo/edt-extension-tweaks/releases/latest/download/edt-extension-tweaks-update-site.zip
+```
+
 ## Сборка
 
 Требования:
