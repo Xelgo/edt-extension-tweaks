@@ -2246,3 +2246,55 @@ Verification:
 - EDT started with a single `1cedt.exe` process and the command line contains `-data "C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH"`.
 - `bundles.info` points to `ru.xelgo.edt.contextlinks.ui_1.1.1.v202606142040.jar`.
 - Workspace log shows EDT Extension Tweaks services registered.
+
+## 2026-06-15 Research - v1.1.1 vs current BSL content assist regression
+
+Goal:
+- Stop iterating blindly on external object BSL content assist.
+- Compare the release build that mostly worked for context completion (`v1.1.1`, commit `c64dfbc`) with the current build (`c9736ab`).
+
+Baseline:
+- `v1.1.1` keeps the BSL runtime module registration unchanged:
+  - `BslCachedScopeProvider -> ContextLinksCachedScopeProvider`
+  - `IScopeProvider -> ContextLinksBslScopeProvider`
+  - `IBslModuleContextDefService -> ContextLinksModuleContextDefService`
+  - `IContainer.Manager -> ContextLinksContainerManager`
+- Current `HEAD` has the same runtime-module binding surface. The regression is not caused by missing extension registration.
+
+Major behavior removed after `v1.1.1`:
+- Startup warm-up builds were removed from `ContextLinksStartup`.
+  - Release behavior: schedule two delayed workspace warm-up passes and call `project.build(FULL_BUILD, ...)` for linked extension projects.
+  - Current behavior: only registers wrappers and logs `startup warm-up builds are disabled`.
+- `ContextLinksCachedScopeProvider` lost the release-era BSL cache mirrors:
+  - `stableProjectScopes` for last-known-good project type/property scopes;
+  - `moduleScopes`, `moduleScopeVersions`, and `projectScopeVersions` for BSL block/module scope fallback;
+  - overrides for `addScope(...)`, `getScope(...)`, and `clearScopes(...)`.
+- The current provider uses only EDT's current direct scope from `super.getTypeItemScope(...)` / `super.getPropertyScope(...)` and lazy linked scope composition.
+
+Why those removals made sense for build stability:
+- The original EDT UH hang dump showed build threads inside plugin BSL wrappers:
+  - `ContextLinksCachedScopeProvider.forgetModuleScope(...)` scanning retained module scope keys;
+  - `ContextLinks.getContextProjectNames(...)` reading Eclipse persistent properties through `PropertyManager2` from parallel `LCBuilderState-*` threads.
+- Later diagnostics showed heap/CPU overload, so retaining full BSL `IScope` graphs globally was a plausible memory multiplier.
+
+Why the same removals likely broke content assist:
+- Older research in this log already identified the core issue: during rebuild EDT can temporarily return `null` or incomplete direct scopes for a linked producer project. `stableProjectScopes` was introduced exactly to keep consumer projects seeing the last-known-good linked context during that gap.
+- Current logs prove the plugin is invoked by content assist and links `ВнешняяОбработка -> cf.МагнитМаркет`:
+  - `scope.extend feature=bsl-containers ... ContentAssist resource sync ... added=[cf.МагнитМаркет=cf.МагнитМаркет]`
+  - `scope.extend feature=bsl-cache-property ... linked=[cf.МагнитМаркет]`
+  - `scope.extend feature=bsl-cache-type-item ... linked=[cf.МагнитМаркет]`
+- But that only proves a linked `IScope` object exists. It does not prove the linked scope has useful BSL elements. The old warm-up/mirror system likely populated or preserved those elements.
+- Current logs show `module-context-fallback` never extends during interactive content assist; it is only skipped on background/reconciler/build threads. In the release build, fallback context could be created during warm-up/background indexing and then reused.
+
+Current conclusion:
+- The safe build direction is still correct: do not let linked BSL context participate in full workspace build/DD/indexing.
+- The current implementation overcorrected by removing all release-era fallback state. The next fix should restore only the interactive/content-assist part of the release mechanism, not the build-time/global retention.
+
+Next proposed experiment:
+- Do not restore startup full-build warm-up yet.
+- Reintroduce a bounded, assist-only last-known-good cache for BSL project scopes:
+  - update it only while `shouldSkipBslContextExtension(...)` would allow an interactive content-assist request/continuation;
+  - never update it from `LCBuilderState-*`, `derived_data_executor_*`, Xtext reconciler/check/build threads;
+  - keep a short TTL and/or small per-project map so large scope graphs are not retained indefinitely.
+- Consider reintroducing module scope fallback only behind the same assist-only gate if project scope fallback is not enough.
+- Add one low-noise diagnostic first: for content assist only, sample the first few names from linked type/property scopes to confirm whether the current linked scopes are empty or populated.
