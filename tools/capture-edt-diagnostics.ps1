@@ -149,15 +149,26 @@ Invoke-Jcmd $jcmd $targetPid @(
     "JFR.start",
     "name=edt_extension_tweaks_capture",
     "settings=profile",
-    "delay=0s",
+    "delay=1s",
     "duration=${DurationSec}s",
     "filename=$jfrFile",
+    "dumponexit=true",
     "disk=true"
 ) (Join-Path $outputDir "jfr-start.txt") $CommandTimeoutSec | Out-Null
 
 $samples = [Math]::Max(1, [Math]::Ceiling($DurationSec / [Math]::Max(1, $IntervalSec)))
+$threadDumpTimeouts = 0
 for ($i = 0; $i -lt $samples; $i++) {
-    Invoke-Jcmd $jcmd $targetPid @("Thread.print", "-l") (Join-Path $outputDir ("thread-dump-{0:d2}.txt" -f $i)) $CommandTimeoutSec | Out-Null
+    $threadDumpFile = Join-Path $outputDir ("thread-dump-{0:d2}.txt" -f $i)
+    if ($threadDumpTimeouts -lt 2) {
+        $threadDumpOk = Invoke-Jcmd $jcmd $targetPid @("Thread.print", "-l") $threadDumpFile $CommandTimeoutSec
+        if (!$threadDumpOk) {
+            $threadDumpTimeouts++
+        }
+    } else {
+        "Skipped after two consecutive jcmd Thread.print failures." | Set-Content -Path $threadDumpFile -Encoding UTF8
+    }
+
     if ($i -lt $samples - 1) {
         Start-Sleep -Seconds $IntervalSec
     }

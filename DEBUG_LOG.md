@@ -2362,3 +2362,19 @@ Change:
 
 Expected result:
 - EDT should start through the explicit JDK javaw.exe and become visible to jcmd for 240 second JFR captures.
+
+## 2026-06-15 Capture script JFR start fix
+
+Observation:
+- The 240 second capture against EDT UH PID 2792 reproduced the hang, but JFR did not start.
+- jcmd reported: Could not start recording, delay must be at least 1 second.
+- Thread.print timed out from the first sample and repeatedly consumed capture time while the JVM was already overloaded.
+- Workspace log still captured the failure pattern: DD waits, CPU overload, memory close to the 20g heap ceiling, and marker duplicate diagnostics.
+
+Change:
+- JFR.start now uses delay=1s and dumponexit=true.
+- Repeated Thread.print sampling stops after two consecutive jcmd failures, leaving the JFR duration window intact.
+
+Hypothesis update:
+- User observation about duplicated exported procedures matches the marker duplicate diagnostics and the earlier duplicate table/context symptoms.
+- The plugin likely allows the same linked extension context/scope to be registered or merged more than once during rebuild/restart lifecycle.
