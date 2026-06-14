@@ -17,9 +17,7 @@ import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseSynchronizationManager;
-import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseUpdateCallback;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseChangesResolutionResult;
-import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseConflictResolutionResult;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseEqualityState;
 
 /**
@@ -138,39 +136,11 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
                 + operation + " fromProject=" + project.getName() + " updateProject=" //$NON-NLS-1$ //$NON-NLS-2$
                 + dependentProject.getName());
             Object dependentResult = invokeMethod(synchronization, "updateConnectedInfobase", 4, //$NON-NLS-1$
-                Boolean.valueOf(reload), infobase, wrapUpdateCallback(applicationProject, dependentProject, callback),
-                monitor);
+                Boolean.valueOf(reload), infobase, callback, monitor);
             if (dependentResult instanceof Boolean)
                 result &= ((Boolean)dependentResult).booleanValue();
         }
         return Boolean.valueOf(!hasDependentProjects || result);
-    }
-
-    private Object wrapUpdateCallback(IProject applicationProject, IProject routedProject, Object callback)
-    {
-        if (!(callback instanceof IInfobaseUpdateCallback))
-            return callback;
-
-        return Proxy.newProxyInstance(IInfobaseUpdateCallback.class.getClassLoader(),
-            new Class<?>[] { IInfobaseUpdateCallback.class }, (proxy, method, args) -> {
-                if ("resolveInfobaseChanges".equals(method.getName())) //$NON-NLS-1$
-                {
-                    IProject conflictProject = firstProject(args);
-                    ContextLinks.logDebug("EDT Context Links DEBUG [application.update.conflict.skip]" //$NON-NLS-1$
-                        + " applicationProject=" + applicationProject.getName() //$NON-NLS-1$
-                        + " routedProject=" + routedProject.getName() //$NON-NLS-1$
-                        + " conflictProject=" + (conflictProject != null ? conflictProject.getName() : "<null>")); //$NON-NLS-1$ //$NON-NLS-2$
-                    return InfobaseConflictResolutionResult.IGNORED;
-                }
-                try
-                {
-                    return method.invoke(callback, args);
-                }
-                catch (InvocationTargetException e)
-                {
-                    throw e.getTargetException();
-                }
-            });
     }
 
     private boolean shouldFilterUpdateAll(IProject updateProject)
