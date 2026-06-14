@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.osgi.framework.Constants;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
@@ -61,7 +63,7 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
             if ("updateAllInfobases".equals(method.getName()) && shouldFilterUpdateAll(project)) //$NON-NLS-1$
                 return updateAllInfobases(delegate.service, ContextLinks.getApplicationProject(project), project, args);
             if (isUpdateOperation(method.getName()) && isDisabled(project, method.getName()))
-                return updateEnabledDependentInfobases(delegate.service, method.getName(), project, args);
+                return updateEnabledDependentInfobases(delegate.service, method, project, args);
 
             Object disabledValue = disabledValue(method, project);
             if (disabledValue == SKIPPED_VOID)
@@ -88,9 +90,9 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         if ("isConnected".equals(name)) //$NON-NLS-1$
             return Boolean.TRUE;
         if ("updateInfobase".equals(name) || "reloadInfobase".equals(name)) //$NON-NLS-1$ //$NON-NLS-2$
-            return Boolean.TRUE;
+            return successfulUpdateResult(method.getReturnType(), true);
         if ("retrieveInfobaseChanges".equals(name)) //$NON-NLS-1$
-            return InfobaseChangesResolutionResult.NO_CHANGES;
+            return noInfobaseChangesResult(method.getReturnType());
         if ("connectInfobase".equals(name) || "reconnectIfConnected".equals(name)) //$NON-NLS-1$ //$NON-NLS-2$
             return SKIPPED_VOID;
         return NOT_DISABLED;
@@ -112,9 +114,10 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         return "updateInfobase".equals(operation) || "reloadInfobase".equals(operation); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
-    private Boolean updateEnabledDependentInfobases(Object delegate, String operation, IProject project, Object[] args)
+    private Object updateEnabledDependentInfobases(Object delegate, Method publicMethod, IProject project, Object[] args)
         throws Throwable
     {
+        String operation = publicMethod.getName();
         IProject applicationProject = ContextLinks.getApplicationProject(project);
         Object infobase = args != null && args.length > 1 ? args[1] : null;
         Object callback = args != null && args.length > 2 ? args[2] : null;
@@ -141,10 +144,77 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
             Object routedCallback = wrapUpdateCallbackForLogging(applicationProject, dependentProject, callback);
             Object dependentResult = invokeMethod(synchronization, "updateConnectedInfobase", 4, //$NON-NLS-1$
                 Boolean.valueOf(reload), infobase, routedCallback, monitor);
-            if (dependentResult instanceof Boolean)
-                result &= ((Boolean)dependentResult).booleanValue();
+            result &= isSuccessfulUpdateResult(dependentResult);
         }
-        return Boolean.valueOf(!hasDependentProjects || result);
+        return successfulUpdateResult(publicMethod.getReturnType(), !hasDependentProjects || result);
+    }
+
+    private Object successfulUpdateResult(Class<?> returnType, boolean success)
+    {
+        if (returnType == Boolean.TYPE || returnType == Boolean.class)
+            return Boolean.valueOf(success);
+        if (returnType == Void.TYPE)
+            return null;
+        if (IStatus.class.isAssignableFrom(returnType))
+            return success ? Status.OK_STATUS : Status.CANCEL_STATUS;
+        return null;
+    }
+
+    private boolean isSuccessfulUpdateResult(Object result)
+    {
+        if (result instanceof Boolean)
+            return ((Boolean)result).booleanValue();
+        if (result instanceof IStatus)
+            return ((IStatus)result).isOK();
+        Boolean imported = invokeBooleanGetter(result, "areProjectChangesImportedToInfobase"); //$NON-NLS-1$
+        if (imported != null)
+            return imported.booleanValue();
+        Boolean finished = invokeBooleanGetter(result, "isFinished"); //$NON-NLS-1$
+        if (finished != null)
+            return finished.booleanValue();
+        return true;
+    }
+
+    private Boolean invokeBooleanGetter(Object target, String name)
+    {
+        if (target == null)
+            return null;
+        try
+        {
+            Method method = findMethod(target.getClass(), name, 0);
+            method.setAccessible(true);
+            Object value = method.invoke(target);
+            return value instanceof Boolean ? (Boolean)value : null;
+        }
+        catch (ReflectiveOperationException | RuntimeException e)
+        {
+            return null;
+        }
+    }
+
+    private Object noInfobaseChangesResult(Class<?> returnType)
+    {
+        if (returnType.isInstance(InfobaseChangesResolutionResult.NO_CHANGES))
+            return InfobaseChangesResolutionResult.NO_CHANGES;
+
+        Object syncResolution = createInfobaseSyncResolution(InfobaseChangesResolutionResult.NO_CHANGES);
+        return returnType.isInstance(syncResolution) ? syncResolution : null;
+    }
+
+    private Object createInfobaseSyncResolution(InfobaseChangesResolutionResult result)
+    {
+        try
+        {
+            Class<?> type = Class.forName(
+                "com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseSyncResolution", //$NON-NLS-1$
+                false, InfobaseChangesResolutionResult.class.getClassLoader());
+            return type.getConstructor(InfobaseChangesResolutionResult.class)
+                .newInstance(result);
+        }
+        catch (ReflectiveOperationException | RuntimeException e)
+        {
+            return null;
+        }
     }
 
     private Object wrapUpdateCallbackForLogging(IProject applicationProject, IProject routedProject, Object callback)
@@ -220,13 +290,13 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
     }
 
     @SuppressWarnings("unchecked")
-    private Map<Object, Boolean> updateAllInfobases(Object delegate, IProject applicationProject, IProject project,
+    private Map<Object, Object> updateAllInfobases(Object delegate, IProject applicationProject, IProject project,
         Object[] args)
         throws Throwable
     {
         Object callback = args != null && args.length > 1 ? args[1] : null;
         Object monitor = args != null && args.length > 2 ? args[2] : null;
-        Map<Object, Boolean> result = new HashMap<>();
+        Map<Object, Object> result = new HashMap<>();
 
         if (!ContextLinks.isApplicationUpdateDisabled(applicationProject, project))
         {
@@ -237,7 +307,7 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
                 Object updateResult = invokeMethod(synchronization, "updateAllConnectedInfobases", 2, callback, //$NON-NLS-1$
                     monitor);
                 if (updateResult instanceof Map)
-                    result.putAll((Map<Object, Boolean>)updateResult);
+                    result.putAll((Map<Object, Object>)updateResult);
             }
         }
         else
@@ -247,7 +317,7 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         }
 
         for (IProject dependentProject : getDependentExtensionProjects(delegate, project))
-            updateAllInfobases(delegate, applicationProject, dependentProject, args);
+            result.putAll(updateAllInfobases(delegate, applicationProject, dependentProject, args));
 
         return result;
     }
