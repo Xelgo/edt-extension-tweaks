@@ -2006,3 +2006,18 @@ Verification still needed after redeploy:
 - Updated public display metadata: README, Maven project name, feature name/description, source feature name, p2 category label, plugin name, command category, and Java log prefix.
 - Kept internal bundle/package/repository identifiers as `ru.xelgo.edt.contextlinks.*` to avoid a risky OSGi/package rename while the plugin is under active debugging.
 - `mvn -q -DskipTests package` succeeded.
+
+## 2026-06-16 - Guice Singleton Lifecycle Root Cause
+
+- Root cause of the heavy-project build freeze was a lifecycle mismatch in BSL service replacements.
+- Native EDT services used by BSL scope construction are Guice singletons:
+  - `com._1c.g5.v8.dt.bsl.scoping.BslCachedScopeProvider`
+  - `com._1c.g5.v8.dt.bsl.scoping.BslScopeProvider`
+  - `com._1c.g5.v8.dt.internal.bsl.contextdef.BslModuleContextDefService`
+- The plugin replaced these services with subclasses/implementations but initially did not copy `@com.google.inject.Singleton` to the replacement classes.
+- Without `@Singleton`, Guice could create multiple service instances, each with its own caches and repeated scope/model traversal. On a large configuration this manifested as duplicated scope entries, high CPU load, and build freezes around resource description updates.
+- Fixed by adding `@Singleton` to:
+  - `ContextLinksCachedScopeProvider`
+  - `ContextLinksBslScopeProvider`
+  - `ContextLinksModuleContextDefService`
+- Release hygiene rule: whenever replacing or subclassing an EDT/Guice/Xtext service, check the original class with `javap -v` and preserve lifecycle annotations such as `@Singleton`.
