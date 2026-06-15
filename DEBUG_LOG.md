@@ -1807,8 +1807,8 @@ Computer Use native pipe path is unavailable
 
 User confirmed on screenshot `codex-clipboard-1445ce3c-b1e1-4f17-a7a0-3a226575bb64.png` that two defects remain in extension Query Wizard:
 
-- Selecting attributes from the left **Database** tree under `Справочник_конфигурации` keeps creating new table aliases: `Справочник_конфигурации`, `Справочник_конфигурации1`, `...2`, etc.
-- Selecting metadata from another linked extension still triggers the **Добавить используемые объекты в расширение конфигурации?** prompt on `OK`; linked-extension objects must not be adopted into the current extension, while base configuration objects may still use normal EDT adoption.
+- Selecting attributes from the left **Database** tree under `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ` keeps creating new table aliases: `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`, `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ1`, `...2`, etc.
+- Selecting metadata from another linked extension still triggers the **пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ?** prompt on `OK`; linked-extension objects must not be adopted into the current extension, while base configuration objects may still use normal EDT adoption.
 
 Bytecode direction for this attempt:
 
@@ -1865,23 +1865,23 @@ EDT Context Links patched Query Wizard table matching
 
 - No `TypeNotPresentException`, `ClassFormatError`, `VerifyError`, or plugin-specific unhandled event-loop exception was observed after opening Query Wizard with the patched class writer.
 - Manual Query Wizard check from the left **Database** tree:
-  - expanded `Справочник_конфигурации`;
-  - selected fields `ВерсияДанных`, `ИмяПредопределенныхДанных`, `Код`, `Наименование`;
-  - middle **Tables** list contained exactly one `Справочник_конфигурации`;
+  - expanded `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`;
+  - selected fields `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`, `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`, `пїЅпїЅпїЅ`, `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`;
+  - middle **Tables** list contained exactly one `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`;
   - right **Fields** list contained all four selected fields using the same table alias.
 - Screenshot evidence is in `target\screens\qw-after-keyboard-fields-2.png`.
-- This confirms the duplicate-table alias defect is fixed for the tested `Справочник_конфигурации` selection path.
-- The foreign-extension adoption filter is implemented in bytecode, but the live `OK` scenario still needs a focused verification with `Расш2_*` objects. The expected confirmation log is `EDT Context Links patched Query Wizard adoption filter`; it was not emitted during the table-alias verification because `QueryWizardAdoptSupport` was not loaded on that path.
+- This confirms the duplicate-table alias defect is fixed for the tested `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ` selection path.
+- The foreign-extension adoption filter is implemented in bytecode, but the live `OK` scenario still needs a focused verification with `пїЅпїЅпїЅпїЅ2_*` objects. The expected confirmation log is `EDT Context Links patched Query Wizard adoption filter`; it was not emitted during the table-alias verification because `QueryWizardAdoptSupport` was not loaded on that path.
 
 Follow-up for attempt 1d:
 
 - After commit `9c73a9e`, checked the still-open Query Wizard through Win32/UI Automation instead of coordinate clicks.
-- Native dialog handle was found as `#32770` with title `Конструктор запроса`; button handles were visible, including `OK`.
+- Native dialog handle was found as `#32770` with title `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ`; button handles were visible, including `OK`.
 - Sending `BM_CLICK` to the native `OK` button worked and opened EDT's normal confirmation dialog:
 
 ```text
-Запрос использует объекты, отсутствующие в расширении конфигурации.
-Добавить используемые объекты в расширение конфигурации?
+пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
+пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ?
 ```
 
 - This proves the earlier "OK does not work" observation was caused by missed coordinates/focus, not by the current weaving patch.
@@ -1891,8 +1891,8 @@ Follow-up for attempt 1d:
 EDT Context Links patched Query Wizard adoption filter
 ```
 
-- Pressed `Нет`; the Query Wizard closed cleanly.
-- Remaining live verification gap: reproduce a clean `Расш2_*`-only selection and confirm that `filterObjectsToAdopt(...)` logs `QW adoption skip foreign extension object=...` and suppresses the confirmation prompt when all adoption candidates belong to linked extensions.
+- Pressed `пїЅпїЅпїЅ`; the Query Wizard closed cleanly.
+- Remaining live verification gap: reproduce a clean `пїЅпїЅпїЅпїЅ2_*`-only selection and confirm that `filterObjectsToAdopt(...)` logs `QW adoption skip foreign extension object=...` and suppresses the confirmation prompt when all adoption candidates belong to linked extensions.
 
 ## 2026-06-14 - Application Infobase Update Skip Settings, Attempt 1
 
@@ -1906,7 +1906,7 @@ User requested the last feature for the Applications view:
 Implementation direction:
 
 - Added persistent project setting on the application/base project: `disabledApplicationUpdateProjects`.
-- Added menu command `Настроить обновляемые проекты` into `popup:com.e1c.g5.dt.applications.ui.view`.
+- Added menu command `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ` into `popup:com.e1c.g5.dt.applications.ui.view`.
 - The dialog lists the application project plus dependent extension projects; selected items are excluded from update/check flows.
 - Added an OSGi wrapper for `IInfobaseSynchronizationManager` with service ranking 1000 and a wrapper marker, following the existing QL global-scope wrapper pattern.
 - For disabled projects the wrapper softly answers:
@@ -1926,7 +1926,7 @@ Build notes:
 
 Verification still needed after redeploy:
 
-- Open Applications view, right-click an infobase application, confirm `Настроить обновляемые проекты` is visible.
+- Open Applications view, right-click an infobase application, confirm `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ` is visible.
 - Disable the base configuration and/or an extension project.
 - Change a disabled project, then start/update the application and confirm EDT does not show the update prompt for that disabled project.
 - Confirm non-disabled extensions still update normally.
@@ -1947,8 +1947,8 @@ Verification still needed after redeploy:
 ## 2026-06-14 - Application Update Skip Chain, Attempt 3
 
 - Checked active workspace log: `C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDTDEV\.metadata\.log`.
-- Found persisted update skip setting on project `Конфигурация`: `disabledApplicationUpdateProjects = Конфигурация`.
-- Root cause: previous proxy returned an empty result for `updateAllInfobases(Конфигурация, ...)`, which skipped the whole application update chain, including enabled extensions such as `Конфигурация.Расширение`.
+- Found persisted update skip setting on project `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`: `disabledApplicationUpdateProjects = пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`.
+- Root cause: previous proxy returned an empty result for `updateAllInfobases(пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, ...)`, which skipped the whole application update chain, including enabled extensions such as `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`.
 - Changed `updateAllInfobases` handling: when any project is disabled, the proxy reflects EDT's internal chain and skips only the disabled project while still traversing dependent extension projects.
 - Fixed disabled `void` methods: `connectInfobase` and `reconnectIfConnected` now truly no-op for disabled projects instead of logging skip and then delegating.
 - Fixed `tools\redeploy-edt-main.ps1` process detection for workspace `EDTDEV`: it now matches both Windows paths and `file:/C:/.../EDTDEV/` command-line forms, so the real EDT `javaw.exe` process is killed before redeploy.
@@ -1956,11 +1956,11 @@ Verification still needed after redeploy:
 - Removed noisy warm-up/fallback logs from normal plugin logging.
 - Rebuilt and redeployed to `EDTDEV`; installed feature version `1.0.0.v202606140816`.
 - Post-start log check shows only plugin registrations and no `NoSuchMethodException`, `NoSuchFieldException`, `InaccessibleObjectException`, `ClassNotFoundException`, `NoClassDefFoundError`, `ClassCastException`, `BundleException`, or `Unhandled event loop exception` from the plugin.
-- Manual UI validation still needed: with `Конфигурация` disabled, `Конфигурация.Расширение` should still update when the application update flow runs.
+- Manual UI validation still needed: with `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ` disabled, `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ` should still update when the application update flow runs.
 
 ## 2026-06-14 - Disabled Application Update Conflict Prompt, Attempt 4
 
-- Reproduced the remaining symptom from EDT log after a successful routed extension update: the next application update could still open EDT's "Изменения конфигурации информационной базы" dialog for `Конфигурация`, listing extension-owned objects such as `Catalog.Расш2_Справочник` and `Configuration.Расширение`.
+- Reproduced the remaining symptom from EDT log after a successful routed extension update: the next application update could still open EDT's "пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ" dialog for `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`, listing extension-owned objects such as `Catalog.пїЅпїЅпїЅпїЅ2_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ` and `Configuration.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`.
 - The conflict is not produced by the public `retrieveInfobaseChanges(...)` manager method; stack trace shows it comes from `AbstractInfobaseConnection.updateDatabase(...)` through `InfobaseUpdateDialogBasedCallback.resolveInfobaseChanges(...)` while EDT updates a routed extension.
 - Kept the previous route fix: disabled base `updateInfobase(...)` is not delegated with a swapped project anymore. Instead the proxy gets the dependent extension's own `InfobaseSynchronization`, synchronizes its connections, and calls `updateConnectedInfobase(...)` on that synchronization.
 - Added a wrapper around routed `IInfobaseUpdateCallback`:
@@ -1973,31 +1973,31 @@ Verification still needed after redeploy:
 
 ## 2026-06-14 - Reverse Synchronization Regression, Attempt 5
 
-- User added `Расш2_Справочник2` through Configurator into one extension and EDT did not offer to import it back.
+- User added `пїЅпїЅпїЅпїЅ2_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ2` through Configurator into one extension and EDT did not offer to import it back.
 - Fresh log showed the previous suppression was too broad:
-  - `application.update.conflict.skip applicationProject=Конфигурация routedProject=Конфигурация.Расширение2 conflictProject=Конфигурация.Расширение2`;
-  - `application.update.conflict.skip applicationProject=Конфигурация routedProject=Конфигурация.Расширение conflictProject=Конфигурация.Расширение`.
+  - `application.update.conflict.skip applicationProject=пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ routedProject=пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ2 conflictProject=пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ2`;
+  - `application.update.conflict.skip applicationProject=пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ routedProject=пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ conflictProject=пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`.
 - Root cause: the wrapped `IInfobaseUpdateCallback.resolveInfobaseChanges(...)` ignored conflicts for the routed extension project itself, hiding legitimate reverse-sync changes made in Configurator.
 - Removed the callback suppression wrapper and restored EDT's normal conflict/import dialog behavior for routed extension projects.
 - Kept the safer routed update logic that updates enabled dependent extensions through their own `InfobaseSynchronization` instead of invoking the public manager with a swapped `IProject`.
 - Next investigation, if the stale post-update prompt remains: distinguish false echo conflicts from real Configurator edits using `IInfobaseConfigurationChange.getObjectChanges()` / `ObjectChange.getPlatformQualifiedName()` instead of suppressing all routed extension conflicts.
 ## 2026-06-14 - Routed Update Conflict Object Diagnostics, Attempt 6
 
-- User confirmed that in EDT's import-changes dialog only `Catalog.Расш2_Справочник2` is a real Configurator-side change; `Catalog.Расш2_Справочник`, `Catalog.Расш2_Справочник1`, and `Configuration.Расширение` look like stale echo changes after previous EDT-to-infobase extension update.
+- User confirmed that in EDT's import-changes dialog only `Catalog.пїЅпїЅпїЅпїЅ2_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ2` is a real Configurator-side change; `Catalog.пїЅпїЅпїЅпїЅ2_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`, `Catalog.пїЅпїЅпїЅпїЅ2_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ1`, and `Configuration.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ` look like stale echo changes after previous EDT-to-infobase extension update.
 - Added a non-invasive wrapper around routed `IInfobaseUpdateCallback.resolveInfobaseChanges(...)` that only logs `IInfobaseConfigurationChange` details and then delegates to EDT normally.
 - New debug marker: `EDT Context Links DEBUG [application.update.conflict.inspect] applicationProject=... routedProject=... conflictProject=... empty=... fullReload=... objectChanges=[TYPE:Platform.Name,...]`.
-- Important: this attempt does not return `InfobaseConflictResolutionResult.IGNORED`; legitimate reverse synchronization, including `Расш2_Справочник2`, should still be offered by EDT.
+- Important: this attempt does not return `InfobaseConflictResolutionResult.IGNORED`; legitimate reverse synchronization, including `пїЅпїЅпїЅпїЅ2_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ2`, should still be offered by EDT.
 - Rebuilt and redeployed to workspace `EDTDEV` with `-DebugPlugin`; installed feature version: `1.0.0.v202606140854`.
 - Post-start log check shows plugin registrations and no `NoSuchMethodException`, `NoSuchFieldException`, `ClassCastException`, `NoClassDefFoundError`, `BundleException`, or `Unhandled event loop exception` from the plugin.
 - Next step after reproducing the dialog: inspect `application.update.conflict.inspect` lines and use the object/type list to decide which changes are stale echoes and which are real Configurator imports.
 
 ## 2026-06-14 - Duplicate Extension Identity Finding
 
-- The new `application.update.conflict.inspect` diagnostics fired during routed update of `Конфигурация.Расширение2`.
-- EDT reported the conflict as belonging to `conflictProject=Конфигурация.Расширение2`, but object changes were `NEW:Catalog.Расш2_Справочник`, `NEW:Catalog.Расш2_Справочник1`, `MODIFIED:Configuration.Расширение`, and `MODIFIED:CommonModule.Расш2_Модуль.Module`.
-- `Catalog.Расш2_Справочник2` was not present in this logged conflict set, so the current prompt is not simply "all real changes plus noise"; it is comparing the wrong/stale extension content.
-- Workspace inspection showed both extension projects have the same extension identity in `src/Configuration/Configuration.mdo`: `uuid="76d717b9-bdaa-4259-811a-57d7c3af5154"` and `<name>Расширение</name>`.
-- The false `NEW` objects are present in project `Конфигурация.Расширение`, but absent from `Конфигурация.Расширение2`; because both projects use the same extension identity, the infobase synchronization can see objects from one extension project as changes for the other.
+- The new `application.update.conflict.inspect` diagnostics fired during routed update of `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ2`.
+- EDT reported the conflict as belonging to `conflictProject=пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ2`, but object changes were `NEW:Catalog.пїЅпїЅпїЅпїЅ2_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`, `NEW:Catalog.пїЅпїЅпїЅпїЅ2_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ1`, `MODIFIED:Configuration.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`, and `MODIFIED:CommonModule.пїЅпїЅпїЅпїЅ2_пїЅпїЅпїЅпїЅпїЅпїЅ.Module`.
+- `Catalog.пїЅпїЅпїЅпїЅ2_пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ2` was not present in this logged conflict set, so the current prompt is not simply "all real changes plus noise"; it is comparing the wrong/stale extension content.
+- Workspace inspection showed both extension projects have the same extension identity in `src/Configuration/Configuration.mdo`: `uuid="76d717b9-bdaa-4259-811a-57d7c3af5154"` and `<name>пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ</name>`.
+- The false `NEW` objects are present in project `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ`, but absent from `пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ2`; because both projects use the same extension identity, the infobase synchronization can see objects from one extension project as changes for the other.
 - This explains why objects previously uploaded from EDT are offered back as external changes: there are two workspace projects representing the same runtime extension identity.
 
 ## 2026-06-14 - Product Rename to EDT Extension Tweaks
@@ -2453,7 +2453,7 @@ Verification:
 
 Observation:
 - After the BSL scope deduplication build, EDT still logged module-context-fallback from LCBuilderState-11:
-  feature=module-context-fallback project=cf thread=LCBuilderState-11 moduleUri=platform:/resource/cf/src/CommonModules/МиграцияПриложенийГлобальный/Module.bsl.
+  feature=module-context-fallback project=cf thread=LCBuilderState-11 moduleUri=platform:/resource/cf/src/CommonModules/пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ/Module.bsl.
 - Immediately after that, EDT threw NullPointerException in BslCommentUiUtils.parseTemplateComment because a Resource was null while building documentation for a ContextDef method.
 - This means our synthetic fallback ContextDef was still created during build/validation, not only during interactive content assist.
 
@@ -2486,7 +2486,7 @@ Verification:
 
 Observation:
 - The previous guard correctly skipped plugin BSL context on build/derived/Xtext threads, but EDT still hung during cf resource description build.
-- The log shows the remaining trigger: while the build was active, the open external data processor editor repeatedly ran ContentAssist resource sync and extended BSL containers/cache from cf.МагнитМаркет.
+- The log shows the remaining trigger: while the build was active, the open external data processor editor repeatedly ran ContentAssist resource sync and extended BSL containers/cache from cf.пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
 - Memory jumped from about 8 GB to 15 GB after those ContentAssist scope extensions, then grew to the 20 GB heap ceiling and EDT stopped responding.
 
 Updated hypothesis:
@@ -2501,3 +2501,1340 @@ Change:
 
 Verification:
 - Maven/Tycho build succeeded with mvn clean package -DskipTests.
+
+## 2026-06-15 JFR build hang profile and build-job guard
+
+Profile inspected:
+
+```text
+C:\temp\edt-profile-20260615-103349-15s.jfr
+```
+
+Scenario:
+- Workspace: `C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH`.
+- EDT was around `Build cf: resource description update`.
+- Recording duration: 15 seconds.
+
+Key JFR findings:
+- `jdk.ExecutionSample`: 4167 samples.
+- Hot threads were mostly `LCBuilderState-*`, `derived_data_executor_*`, and `Worker-7: Build cf`.
+- JVM CPU load averaged about 46%, with a 76% peak.
+- 11 G1 young collections occurred in 15 seconds. Heap before GC was about 16.5-18.1 GB; after GC it was about 7.9-11.3 GB. GC pressure is high, but not the only explanation.
+- JFR captured one `com._1c.g5.v8.bm.core.BmDeadlockDetectedException` on `derived_data_executor_8`.
+
+Deadlock event stack excerpt:
+
+```text
+com._1c.g5.v8.bm.core.internal.lock.LockManager.acquireResourceReadLock
+com._1c.g5.v8.bm.core.internal.fasturi.FastUriResolver.resolveFastUri
+com._1c.g5.v8.bm.core.internal.reference.ReferenceValueResolver.resolve
+com._1c.g5.v8.dt.form.model.impl.FormImpl.getBaseForm
+com._1c.g5.v8.dt.internal.form.bm.derived.FormDerivedDataComputer$1.compute
+com._1c.g5.v8.internal.derived.WorkerManager$TaskProcessor.processTask
+```
+
+Plugin-related hotspots in the same recording:
+- `ContextLinksCachedScopeProvider.clearScopes -> forgetModuleScope` from the release build was visible under `BslResource.resolveLazyCrossReferences`, `BslDerivedStateComputer.installDerivedState`, and `BslResourceDescription.lightComputeReferenceDescriptionsAndExportedNames`.
+- `ContextLinks.getContextProjectNames` in the release build repeatedly read Eclipse persistent project properties inside the scope hot path.
+- `ContextLinksModuleContextDefService.ensureFallbackContextDef` was visible from BSL linking and context method/property scope construction.
+- `ContextLinksBslScopeProvider.getScope` appeared in many stacks because it wraps EDT's normal BSL scope provider; the expensive work around it is mostly EDT linking/derived-state work, but our extensions can amplify it.
+
+Updated conclusion:
+- The release build was still too active during EDT derived-state/resource-description build.
+- Disabling only obvious build-thread paths is not enough: an editor/content-assist path can run while a workspace build job is active and can pull linked project scopes concurrently with EDT derived data.
+- The module-scope mirror cache from the release line is especially risky on large projects because `clearScopes(module)` removes keys by scanning concurrent maps for the module and every method.
+
+Change:
+- Added an explicit Eclipse workspace build-job guard using `ResourcesPlugin.FAMILY_AUTO_BUILD` and `ResourcesPlugin.FAMILY_MANUAL_BUILD`.
+- The guard is throttled by `-Dru.xelgo.edt.contextlinks.ui.buildJobPollMillis=...` and defaults to 1000 ms, so it should not become another hot path.
+- While an auto/manual build job is running or waiting, BSL context extension is skipped and the existing build quiet window is activated.
+- `ContextLinksCachedScopeProvider.ContextLinksProjectScope` now stores resolved linked scopes once, instead of resolving linked project scopes again on every `getElements(...)` / `getAllElements(...)` traversal.
+
+Expected result:
+- During `Build cf` the plugin should not expand BSL context from linked projects, even if an editor tries to refresh content assist in parallel.
+- After the build becomes quiet for the configured quiet window, interactive content assist can resume linked-context behavior.
+
+## 2026-06-15 Recheck after build-job guard still hangs at 33 percent
+
+Observation:
+- User reported the project still hangs around `Build cf: resource description update` at about 33 percent.
+- Workspace: `C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH`.
+- Installed bundle was `ru.xelgo.edt.contextlinks.ui_1.1.1.v202606150657.jar`.
+
+Plugin log evidence:
+- The new guard did fire:
+  - `build.skip feature=bsl-containers ... frame=active-build-job`
+  - `build.skip feature=bsl-cache-property ... frame=active-build-job`
+  - `build.skip feature=module-context-fallback ... frame=active-build-job`
+  - `build.skip feature=bsl-cache-type-item thread=LCBuilderState-10 frame=active-build-job`
+  - `build.skip feature=ql-bm-scope thread=derived_data_executor_9 frame=active-build-job`
+- After that point there were no new plugin log entries in the hot part of the hang.
+
+EDT log evidence:
+- EDT reached repeated critical overload messages:
+  - memory grew from about `20673 MB used of 21474 MB`
+  - then stayed almost at the heap ceiling, up to about `21430 MB used of 21474 MB`
+- Eclipse jobs logged `IJobChangeListener timeout detected ... Possible deadlock`.
+- EDT also logged native validation/model errors:
+  - `StringIndexOutOfBoundsException` in `BslJavaValidator.checkStringLiteral`
+  - `IllegalStateException: Transaction is not active` in `ExportMethodTypeProvider.updateExportMethodIndex`
+
+Thread dump:
+- File: `C:\temp\edt-thread-36820-20260615-110603.txt`.
+- No thread stack contained `ru.xelgo` or `ContextLinks`.
+- Hot threads were native EDT/Xtext build threads:
+  - `LCBuilderState-*`
+  - `BslDerivedStateComputer`
+  - `StaticFeatureAccessProcessor`
+  - `BslLazyUriEncoder`
+  - `BslResource.resolveCrossReferences`
+- `System slowdown watchdog` was active, matching the critical overload log.
+
+Conclusion:
+- The build-job guard is working as intended for BSL/QL linked-context extension.
+- This particular 33 percent hang no longer shows the plugin on the active Java stacks.
+- The current failure looks like EDT's own BSL derived-state/resource-description build entering memory/CPU overload on the large project.
+
+Next useful experiment:
+- Run the same build with the plugin fully disabled/removed from `bundles.info`.
+- If the hang remains, the root is likely the EDT/project model itself.
+- If the hang disappears, the plugin probably creates an earlier side effect before the sampled hang, and the next fix should be a stricter startup/build-safe mode rather than another hot-path guard.
+
+## 2026-06-15 Extra transparent BSL build path
+
+Goal:
+- Reduce plugin participation during BSL build/resource-description phases even further.
+- Keep the interactive linked context feature available after the build becomes quiet.
+
+Change:
+- Removed the `IScopeProvider -> ContextLinksBslScopeProvider` binding from `ContextLinksBslRuntimeModule`.
+  - That class was only a diagnostic logger and did not provide the actual linked-context behavior.
+  - This removes one wrapper from the normal BSL scope path.
+- `ContextLinksContainerManager.getVisibleContainers(...)` now checks `shouldSkipBslContextExtension("bsl-containers")` before project resolution, linked project lookup, or ArrayList wrapping.
+  - During build/non-interactive calls it returns EDT's `super.getVisibleContainers(...)` directly.
+- `ContextLinksCachedScopeProvider.canExtend(...)` now checks the build/non-interactive guard before asking EDT project-manager services whether the project is a base configuration.
+
+Verification:
+- Maven/Tycho build succeeded with `mvn clean package -DskipTests`.
+- Built bundle version: `1.1.1.v202606150715`.
+
+## 2026-06-15 Revisit yesterday's working iteration
+
+User note:
+- The 33 percent hang was solved in one of yesterday's iterations.
+
+Findings from git/debug history:
+- Commit `fc0b524` removed the whole `com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension` registration from `plugin.xml`.
+- After that, Attempt 8 recorded: `Large workspace build passed with 1.1.1.v202606142014`.
+- The same entry says logs no longer showed BSL `scope.extend` or `build.skip`, confirming the BSL runtime module was fully detached.
+- Then `a7504c1` restored the BSL runtime module but kept `IContainer.Manager` detached.
+- Later `200a997` restored `IContainer.Manager -> ContextLinksContainerManager` for content assist.
+- The current fresh failure still shows `bsl-containers` build skips before EDT enters memory/BM lock overload, so the container-manager binding is still part of the dangerous path even when it returns `super`.
+
+Change:
+- Removed `IContainer.Manager -> ContextLinksContainerManager` binding from `ContextLinksBslRuntimeModule` again.
+- Kept the stricter previous removal of `IScopeProvider -> ContextLinksBslScopeProvider`, because it was only diagnostic.
+- BSL runtime participation is now limited to:
+  - `BslCachedScopeProvider -> ContextLinksCachedScopeProvider`;
+  - `IBslModuleContextDefService -> ContextLinksModuleContextDefService`.
+
+Expected result:
+- Large build should behave closer to the passing `1.1.1.v202606142014` run.
+- If build passes but external-object BSL completion regresses, the next implementation should find a non-container-manager way to feed external-object content assist, not reintroduce the global `IContainer.Manager` binding.
+
+Verification:
+- Maven/Tycho build succeeded with `mvn clean package -DskipTests`.
+- Built bundle version: `1.1.1.v202606150725`.
+
+## 2026-06-15 Full BSL runtime detachment control build
+
+Observation:
+- Build `1.1.1.v202606150725` still hung at 33 percent.
+- The `bsl-containers` line disappeared, proving the container-manager binding was removed from the active path.
+- The log still showed:
+  - `build.skip feature=module-context-fallback ...`
+  - `build.skip feature=bsl-cache-property ...`
+  - `build.skip feature=bsl-cache-type-item ...`
+- EDT then entered the same critical CPU/memory overload.
+
+Conclusion:
+- Partial removal is insufficient.
+- The yesterday-passing state was not just "no custom container manager"; it was full removal of the BSL runtime module extension point.
+
+Change:
+- Removed `com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension` from `plugin.xml`, matching commit `fc0b524`.
+- Query Wizard weaving, QL BM scope wrapper, application update skip UI/proxy remain active.
+- BSL context-completion bridge is intentionally disabled for this control build.
+
+Verification:
+- Maven/Tycho build succeeded with `mvn clean package -DskipTests`.
+- Built bundle version: `1.1.1.v202606150732`.
+
+## 2026-06-15 Release-line narrow patch candidate
+
+User direction:
+- The full BSL runtime detachment passed the critical build point.
+- Need localize the concrete place and keep only one small patch on the release behavior, then verify context assist.
+
+Reasoning:
+- Full removal of `bslRuntimeModuleExtension` proves Query Wizard, QL wrapper, and infobase update wrapper are not the build-hang trigger.
+- Partial removal of the container manager did not help.
+- The fresh overload stacks and errors center around BSL method context indexes (`*.mCtxIdx.mti`) and `ExportMethodTypeProvider`.
+- Therefore the most suspicious binding is `IBslModuleContextDefService -> ContextLinksModuleContextDefService`.
+
+Change for candidate build:
+- Restored BSL-related files to release-line behavior.
+- Kept BSL runtime module registered.
+- Removed exactly one binding from `ContextLinksBslRuntimeModule`:
+  - `IBslModuleContextDefService -> ContextLinksModuleContextDefService`.
+- Kept release BSL cache/scope/container bindings so content assist has the best chance to remain alive.
+
+Verification:
+- First compile failed because old release `ContextLinks.java` lacked newer helper methods used by current QL/startup code.
+- Returned only `ContextLinks.java` to the current compatible version.
+- Maven/Tycho build then succeeded with `mvn clean package -DskipTests`.
+- Built bundle version: `1.1.1.v202606150740`.
+
+## 2026-06-15 Release-line narrow patch candidate 2
+
+Observation:
+- User reported candidate `1.1.1.v202606150740` still hangs.
+- That rules out `IBslModuleContextDefService` as the only concrete culprit.
+
+Change for candidate 2:
+- Restored `IBslModuleContextDefService -> ContextLinksModuleContextDefService`.
+- Removed exactly one different binding from `ContextLinksBslRuntimeModule`:
+  - `BslCachedScopeProvider -> ContextLinksCachedScopeProvider`.
+- Kept release `IScopeProvider` and `IContainer.Manager` bindings so content assist still has linked-resource visibility paths.
+
+Hypothesis:
+- The hang is driven by the release cache wrapper and its stable/mirrored scope retention, visible earlier in JFR/thread stacks around BSL resource description/type state work.
+
+Verification:
+- Maven/Tycho build succeeded with `mvn clean package -DskipTests`.
+- Built bundle version: `1.1.1.v202606150749`.
+
+## 2026-06-15 - Candidate 3: keep BslCachedScopeProvider binding, remove owned BSL scope mirrors
+
+User reported candidate 2 breaks model building and kills extension content assist.
+
+Changed direction:
+- restored `bindBslCachedScopeProvider()` so EDT still gets the plugin scope provider;
+- removed plugin-owned module scope mirror maps and version tracking from `ContextLinksCachedScopeProvider`;
+- removed plugin-owned stable project scope fallback cache;
+- kept only the thin linked-scope composition for `getTypeItemScope` and `getPropertyScope`;
+- added `ContextLinks.shouldSkipBslContextExtension("bsl-cache-*", project)` before linked-scope composition, so build/background paths should receive the native EDT scope unchanged;
+- stopped enumerating all scope elements in cache debug logs to avoid heavy diagnostic traversal.
+
+Hypothesis: the hard hang is caused by retaining/reusing large BSL scope graphs or by resolving linked scopes during build. This candidate preserves the content-assist entry point but avoids adding a second cache lifecycle over EDT's own BSL cache.
+
+## 2026-06-15 - Candidate 3b: restore BSL build guards around all extension entry points
+
+While checking the worktree after candidate 3, found old staged changes that had removed build guards from:
+- `ContextLinksContainerManager`
+- `ContextLinksModuleContextDefService`
+
+Restored the guards:
+- `bsl-containers` returns standard EDT containers during build/background paths;
+- `module-context-fallback` is disabled during build/background paths;
+- both paths remain available for interactive BSL assist according to `shouldSkipBslContextExtension`.
+
+This makes the candidate coherent: keep BSL runtime bindings for content assist, but avoid linked context extension during project model/resource build.
+
+## 2026-06-15 - Candidate 3c: content-assist access diagnostics
+
+User reports extension content assist still does not work.
+
+Added lightweight INFO diagnostics (not debug-gated):
+- `EDT Extension Tweaks [bsl.gate]` logs every unique BSL extension gate decision by feature/project/thread/reason/links;
+- `EDT Extension Tweaks [bsl.cache]` logs whether `ContextLinksCachedScopeProvider` entered, skipped, or composed linked scopes for type/property scope;
+- `EDT Extension Tweaks [bsl.scope.access]` logs normal BSL scope requests for external object modules or projects with configured context links.
+
+Also changed `shouldSkipBslContextExtension(...)` order:
+- hard build/background path still skips first;
+- real interactive content assist is now allowed before the recent-build quiet window check;
+- recent build activity still blocks non-interactive BSL paths.
+
+Reason: previous order could suppress legitimate content assist for up to `buildQuietWindowMillis` after a build event.
+
+## 2026-06-15 - Candidate 3d: allow validation scope only for external object projects
+
+Log analysis after 1.1.1.v202606150805:
+- interactive content assist for `Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР°` works and composes linked scopes;
+- module names are visible because `bsl-containers` extends scope during ContentAssist;
+- red validation remains because `Xtext Editor Reconciler`, `РџСЂРѕРІРµСЂРєР° XС‚РµРєСЃС‚`, and `derived_data_executor_*` are classified as build-sensitive and skip linked BSL context;
+- skipped lines show `project=Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР° links=[cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚] reason=build-sensitive-path`.
+
+Patch:
+- added `shouldAllowExternalObjectsBslContext(...)` before the hard build guard;
+- only EDT external object projects with configured context links bypass the BSL build guard;
+- configuration and extension projects still skip linked context in build-sensitive/background paths.
+
+Intent: keep heavy configuration/extension builds protected, but allow external processing/report validation to see linked extension/configuration context so the editor stops showing false red diagnostics.
+
+## 2026-06-15 - Candidate 3e: allow linked module fallback only while reading external linked scope
+
+User reports external object validation still red after candidate 3d.
+
+Fresh logs show:
+- `Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР°` gets `reason=external-objects-context` and linked scopes are composed in reconciler/check threads;
+- method lookup still triggers `module-context-fallback` for linked project `cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚` where `links=[]`, so the fallback is skipped as build/recent-build activity;
+- this explains module names being visible while procedures/functions from the module remain unresolved.
+
+Patch:
+- added a ThreadLocal linked-project marker in `ContextLinks`;
+- `ContextLinksProjectScope` now wraps linked scope reads with `ContextLinks.withLinkedBslContextProject(linkedProjectName, ...)`;
+- `module-context-fallback` is allowed for a linked project only while the call is inside such linked scope read.
+
+Intent: permit fallback ContextDef for linked modules needed by external object validation, without globally enabling fallback during extension/configuration builds.
+
+## 2026-06-15 - Candidate 3f: short-lived linked module fallback marker
+
+User still reports external object context is red; also confirmed installed EDT was still on `1.1.1.v202606150810`, so `3e` had not been tested before redeploy.
+
+Additional issue found in old logs:
+- EDT may read the linked project scope in one thread and resolve common-module methods in a neighboring `ForkJoinPool` thread;
+- pure `ThreadLocal` marker from `3e` is too narrow for this asynchronous lookup;
+- module names appear, but methods/functions/objects from linked common modules remain unresolved.
+
+Patch:
+- added a short-lived linked-project marker keyed by linked project name;
+- `module-context-fallback` can pass the BSL gate for a recently used linked project only on assist/assist-continuation threads;
+- wrapped direct linked scope acquisition with `withLinkedBslContextProject(...)`, not only later reads of the composed scope.
+
+Intent: let external processing/report validation resolve linked common-module methods while keeping normal configuration/extension build paths guarded.
+
+## 2026-06-15 - Candidate 3g: keep external context out of derived-data/model build
+
+Observation after deploying `1.1.1.v202606150816`:
+- user confirmed external object context assist/validation came back;
+- heavy project build then hung immediately;
+- `.metadata/.log` shows external object linked BSL context was allowed in `derived_data_executor_4`;
+- thread dump `diagnostics/thread-dump-EDTUH-20260615-122620.txt` shows `LCBuilderState-*` consuming CPU in BSL resource resolution and `ContextDefImpl.allMethods(...)`, while memory climbs to the 20 GB heap ceiling.
+
+Conclusion:
+- allowing external object context before the build guard is correct for editor/reconciler/check paths;
+- allowing it inside derived-data/model build paths reintroduces the large-project hang.
+
+Patch:
+- abandoned the unbuilt `3f` short-lived marker experiment;
+- kept the working `3e` behavior from installed `1.1.1.v202606150816`;
+- added an explicit model-build guard for external object BSL context:
+  - `LCBuilderState*`
+  - `derived_data_executor_*`
+  - threads containing `РЎР±РѕСЂРєР°`
+  - Xtext builder/resource-description/derived-data stack frames
+
+Intent: keep external object context alive in the editor, but never compose linked BSL scopes during model/resource build.
+
+## 2026-06-15 - Candidate 3h: do not classify Xtext validation stack as build
+
+User reported context died after `3g`.
+
+Fresh log from `1.1.1.v202606150829`:
+- `ContentAssist resource sync` and `Xtext Editor Reconciler` still compose linked scopes successfully;
+- red validation path shows `module-context-fallback project=Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР° skip=true reason=build-sensitive-path thread=Worker-*: РџСЂРѕРІРµСЂРєР° XС‚РµРєСЃС‚`;
+- this means the new stack-frame based model-build guard is too broad and catches normal Xtext validation.
+
+Patch:
+- keep the hard guard for real build threads only:
+  - `LCBuilderState*`
+  - `derived_data_executor_*`
+  - threads containing `РЎР±РѕСЂРєР°`
+- remove stack-class checks from `isBslModelBuildContext()`.
+
+Intent: restore validation context while still blocking the exact derived-data/build threads that caused the memory runaway.
+
+## 2026-06-15 - Candidate 3i: global workspace build activity gate
+
+User reports `3h` still hangs and proposes a different boundary:
+- detect the beginning of any project build;
+- while any project is building, disable plugin BSL context functionality completely;
+- after builds finish, restore the functionality.
+
+Patch:
+- registered an Eclipse workspace `IResourceChangeListener` in `ContextLinksPlugin`;
+- on `PRE_BUILD`, `ContextLinks.workspaceBuildStarted(...)` increments a global build depth and disables BSL context extensions before `external-objects-context` can allow them;
+- on `POST_BUILD`, `ContextLinks.workspaceBuildFinished(...)` decrements build depth and keeps a short post-build hold window for derived-data tail work;
+- `shouldSkipBslContextExtension(...)` now checks this global build activity before allowing external object context;
+- `shouldSkipContextExtensionDuringBuild(...)` also respects the global build activity for non-BSL context hooks;
+- reduced the old heuristic build quiet window from 60s to 5s so context returns quickly after build events finish.
+
+Intent: use EDT/workspace build lifecycle as the hard switch, instead of guessing individual worker thread names.
+
+## 2026-06-15 - Candidate 3j: quiet bypass inside BSL wrappers during build
+
+Log review after `3i`:
+- workspace build listener fires and records `workspace.build state=start/finish`;
+- after `POST_BUILD`, EDT still runs many `LCBuilderState-*` resource-description/DD workers;
+- our BSL wrappers no longer compose linked context, but still enter `canExtend(...)`, read context-link settings and emit `bsl.gate` / `bsl.cache` diagnostics on the hottest build path;
+- memory then climbs to the 20 GB heap ceiling with `Too long wait of DD computation finishing before exit` and `Critical CPU overload`.
+
+Patch:
+- added `ContextLinks.shouldQuietlyBypassBslHooks()`;
+- it returns true during active workspace build/hold and on hard BSL model build threads (`LCBuilderState*`, `derived_data_executor_*`, threads containing `РЎР±РѕСЂРєР°`);
+- hard BSL model threads also extend the post-build hold window because Eclipse `POST_BUILD` arrives before EDT's derived-data tail is done;
+- `ContextLinksCachedScopeProvider`, `ContextLinksBslScopeProvider`, `ContextLinksContainerManager`, and `ContextLinksModuleContextDefService` now return the native EDT result immediately under that quiet bypass, before context-link reads, fallback context construction, or diagnostic spam.
+
+Intent: keep the release-era interactive context behavior outside build, but make the plugin almost invisible while EDT builds resource descriptions and derived data.
+
+Result after deploying `1.1.1.v202606150853` to `EDT UH`:
+- `bundles.info` points to `ru.xelgo.edt.contextlinks.ui_1.1.1.v202606150853.jar`;
+- fresh workspace log shows plugin services registered and workspace build events:
+  - `state=start kind=incremental thread=Worker-6: РЎР±РѕСЂРєР° cf`;
+  - `state=finish kind=incremental`;
+  - `state=start kind=clean`;
+  - `state=start kind=incremental thread=Worker-18: РЎР±РѕСЂРєР° cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`;
+- unlike previous attempts, there is no longer a flood of `bsl.cache` / `bsl.gate` lines from `LCBuilderState-*`;
+- nevertheless EDT still reaches `Too long wait of DD computation finishing before exit`, `CPU overload`, and `Critical CPU overload`.
+
+Thread dump:
+- saved as `diagnostics/thread-dump-EDTUH-20260615-quiet-bypass.txt`;
+- `Select-String` for `ru.xelgo|ContextLinks` returned `0`;
+- hot stacks are pure EDT/Xtext/BSL:
+  - `LightClusteringBuilderState.updateNewResourceDescriptionsForQueue(...)`;
+  - `BslResource.resolveLazyCrossReferences(...)`;
+  - `BslDerivedStateComputer.installDerivedState(...)`;
+  - `StaticFeatureAccessProcessor.process(...)`;
+  - `BslResourceDescription.lightComputeReferenceDescriptionsAndExportedNames(...)`.
+
+Conclusion:
+- quiet bypass removes active plugin work from the hot build threads;
+- the remaining hang is not caused by diagnostic spam or linked-scope composition in the sampled stacks;
+- next candidate should avoid installing broad BSL runtime wrappers for build sessions entirely, or split the interactive external-object context path away from EDT's global build-time BSL runtime bindings.
+
+## 2026-06-15 - Candidate 3k: clear linked BSL caches before workspace build
+
+Hypothesis:
+- even when build threads no longer execute plugin code, interactive content assist may have left composed linked scopes in EDT's BSL cached scope provider;
+- those composed scopes can retain large linked project scope graphs and increase memory pressure during the following DD/resource-description build.
+
+Patch:
+- `ContextLinksCachedScopeProvider` now tracks live provider instances;
+- on every `PRE_BUILD`, `ContextLinks.workspaceBuildStarted(...)` clears type-item and property scopes for all accessible workspace projects in those provider instances;
+- removed the broad `IScopeProvider -> ContextLinksBslScopeProvider` runtime binding because it was only diagnostic and should not participate in normal BSL linking/build.
+
+Intent: make build start from native/recomputed EDT BSL caches, without retained composed linked scopes from previous interactive external-object context assists.
+
+Result after deploying `1.1.1.v202606150901`:
+- build startup is cleaner and logs `clear-before-workspace-build providers=5 projects=5`;
+- early clean/incremental/full `cf` build lifecycle events finish;
+- however memory still grows into the danger zone and CPU overload appears;
+- thread dump `diagnostics/thread-dump-EDTUH-20260615-cache-clear.txt` again has `0` hits for `ru.xelgo|ContextLinks`;
+- hot stacks moved to EDT derived-data / metadata context-def work:
+  - `MdContextDefInferrer`;
+  - `MdObjectDynamicTypesProvider`;
+  - `DerivedDataPartBasedComputer`;
+  - BM/Ignite commit/backreference indexing.
+
+## 2026-06-15 - Candidate 3l: remove module ContextDef service binding
+
+Hypothesis:
+- even if plugin code is not present in the sampled hot stack, replacing `IBslModuleContextDefService` may alter EDT's context-definition graph enough to amplify derived-data rebuilds;
+- this binding was mainly for resolving exported methods of linked common modules in external-object validation.
+
+Patch:
+- removed `IBslModuleContextDefService -> ContextLinksModuleContextDefService` from `ContextLinksBslRuntimeModule`;
+- keep only the narrower BSL cached-scope and container-manager bindings for now.
+
+Intent: test whether the ContextDef service replacement is the indirect trigger for DD rebuild/memory growth, accepting that linked common-module procedure validation may regress if this is the critical path.
+
+Result after deploying `1.1.1.v202606150907`:
+- removing the module ContextDef service binding did not stop the memory growth;
+- logs still show `build.skip feature=ql-bm-scope thread=derived_data_executor_* frame=workspace-build-active`;
+- this means the OSGi `IV8GlobalScopeProvider` wrapper is still selected and invoked by EDT derived-data work, even when it returns native/skip behavior.
+
+## 2026-06-15 - Candidate 3m: unregister QL BM scope wrapper during workspace build
+
+Hypothesis:
+- a `skip` inside the proxy is not equivalent to removing our proxy from EDT's service chain;
+- during DD/build, EDT should use its native `IV8GlobalScopeProvider` service directly, without wrapper lookup/delegation at all.
+
+Patch:
+- added `ContextLinksV8GlobalScopeProviderRegistrar.suspendForWorkspaceBuild()`:
+  - unregisters the QL BM global scope wrapper service on `PRE_BUILD`;
+  - keeps it suspended so accidental `ensureRegistered()` calls do not put it back mid-build;
+- added delayed resume after `POST_BUILD`:
+  - waits 15s by default;
+  - checks for active workspace/model build threads (`LCBuilderState*`, `derived_data_executor_*`, `РЎР±РѕСЂРєР°`);
+  - retries every 10s while build/DD threads are still active;
+- plugin shutdown now unregisters the QL BM wrapper explicitly.
+
+Intent: make "disable plugin during build" literal for the OSGi global scope service, then restore query-console context after the build/DD tail is quiet.
+
+Result after deploying `1.1.1.v202606150912`:
+- QL BM wrapper does suspend on `PRE_BUILD`;
+- no further `ql-bm-scope` skip lines are emitted during derived-data work;
+- thread dump `diagnostics/thread-dump-EDTUH-20260615-ql-unregister.txt` still has `0` hits for `ru.xelgo|ContextLinks`;
+- EDT still spends heavy CPU/memory in `LCBuilderState-*` / `BslResourceDescription` / `BslResource` and logs validation `Object is removed` errors from native `BslJavaValidator.checkMethodNamesAreUnique`.
+
+## 2026-06-15 - Candidate 3n: diagnostic build without BSL runtime extension
+
+Hypothesis:
+- if removing the QL wrapper and ContextDef binding is not enough, the remaining risk is simply contributing any BSL runtime module;
+- even a quiet subclass of `BslCachedScopeProvider` / `BslLightStateBasedContainerManager` may alter EDT build behavior or cache lifetime.
+
+Patch:
+- removed the `com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension` entry from `plugin.xml`;
+- leaves startup, QL BM wrapper, query wizard weaving, and infobase update skip wrapper in place.
+
+Intent: isolate whether the broad BSL runtime extension itself is the build-hang trigger. This candidate is diagnostic and may temporarily disable linked BSL context in external processing/report modules.
+
+Result after deploying `1.1.1.v202606150917`:
+- user reported the workspace still hung and killed the process;
+- local process check still showed live `1cedt/javaw` from the diagnostic run, so the remaining session was force-killed;
+- installed `bundles.info` pointed to `ru.xelgo.edt.contextlinks.ui_1.1.1.v202606150917.jar`;
+- `plugin.xml` in this candidate has no `bslRuntimeModuleExtension` entry;
+- fresh `.metadata/.log` only reached startup/service registration lines and did not contain `workspace.build` events before the reported hang/kill.
+
+Conclusion:
+- the hang is not explained solely by the BSL runtime module contribution, because the diagnostic build without that extension still failed according to the live test;
+- next isolation step should disable all remaining active service wrappers (`QL BM global scope wrapper`, query wizard weaving, and infobase update skip wrapper) or install a completely inert plugin shell to separate вЂњplugin presence/startup servicesвЂќ from EDT/project state.
+
+## 2026-06-15 - Candidate 3o: fully inert plugin shell
+
+Patch:
+- `ContextLinksPlugin.start(...)` now only logs inert diagnostic startup and does not register:
+  - query wizard weaving service;
+  - workspace build listener;
+  - QL BM global scope wrapper;
+  - infobase update skip wrapper;
+- `ContextLinksStartup.earlyStartup()` also only logs inert diagnostic startup and does not register QL wrapper;
+- the BSL runtime module extension remains removed from `plugin.xml`.
+
+Intent: install the plugin bundle while executing none of its active runtime hooks. If EDT still hangs with this build, the remaining problem is outside active EDT Extension Tweaks runtime logic.
+
+## 2026-06-15 - Candidate 3p: suspend during build, resume context after build
+
+User clarified the target behavior:
+- if projects are building, EDT Extension Tweaks must disable its runtime context modifications;
+- during that disabled window it must clear modified BSL scopes / caches;
+- after the project build and DD/resource-description tail finish, it must restore the context functionality.
+
+Patch:
+- restored `com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension` in `plugin.xml`;
+- restored active plugin startup registrations:
+  - workspace build listener;
+  - query wizard weaving service;
+  - QL BM global scope wrapper;
+  - infobase update skip wrapper;
+- restored full BSL runtime bindings:
+  - `BslCachedScopeProvider -> ContextLinksCachedScopeProvider`;
+  - `IScopeProvider -> ContextLinksBslScopeProvider`;
+  - `IBslModuleContextDefService -> ContextLinksModuleContextDefService`;
+  - `IContainer.Manager -> ContextLinksContainerManager`;
+- on `PRE_BUILD`, the listener suspends/unregisters the QL BM global scope wrapper and calls `ContextLinksCachedScopeProvider.clearAllCachedScopesForWorkspaceBuild()`;
+- BSL wrappers still exist, but `ContextLinks.shouldQuietlyBypassBslHooks()` makes them return native EDT results immediately while workspace/model build is active;
+- on `POST_BUILD`, the resume job waits for real active build/DD stacks, not merely for alive `LCBuilderState-*` worker threads;
+- when the resume job sees a quiet workspace, it calls `ContextLinks.workspaceBuildContextResumed()` to reset build hold/depth and then registers the QL BM global scope wrapper again.
+
+Build:
+- Maven build succeeded.
+- Produced plugin version: `1.1.1.v202606150933`.
+
+Expected log markers in EDT workspace:
+- `EDT Extension Tweaks workspace build listener registered`;
+- `EDT Extension Tweaks QL BM global scope wrapper registered`;
+- `EDT Extension Tweaks [workspace.build] state=start ...`;
+- `EDT Extension Tweaks QL BM global scope wrapper suspended for workspace build`;
+- `EDT Extension Tweaks [bsl.cache] decision=clear-before-workspace-build ...`;
+- `EDT Extension Tweaks [workspace.build] state=finish ...`;
+- optional `EDT Extension Tweaks QL BM global scope wrapper resume delayed: build/DD still active`;
+- `EDT Extension Tweaks [workspace.build] state=context-resumed ...`;
+- `EDT Extension Tweaks QL BM global scope wrapper registered`.
+
+Follow-up diagnostic polish:
+- `workspaceBuildStarted(...)` and `workspaceBuildFinished(...)` now use `logInfo(...)`, not `logInfoOnce(...)`, so every build wave is visible.
+- `ContextLinksCachedScopeProvider.clearAllCachedScopesForWorkspaceBuild()` now logs every cache cleanup, not only the first one.
+
+Installed/tested build:
+- Rebuilt as `1.1.1.v202606150937`.
+- Deployed to workspace `C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH` with `tools\redeploy-edt-main.ps1 -SkipBuild -ForceKill -MaxHeap 20g`.
+
+Live EDT UH log evidence:
+- startup:
+  - `EDT Extension Tweaks workspace build listener registered`;
+  - `EDT Extension Tweaks Query Wizard weaving service registered`;
+  - `EDT Extension Tweaks QL BM global scope wrapper registered`;
+  - `EDT Extension Tweaks infobase update skip wrapper registered`;
+- build suspension/cleanup:
+  - `EDT Extension Tweaks QL BM global scope wrapper suspended for workspace build`;
+  - repeated `EDT Extension Tweaks [bsl.cache] decision=clear-before-workspace-build providers=... projects=5`;
+  - repeated `EDT Extension Tweaks [workspace.build] state=start ...`;
+  - repeated `EDT Extension Tweaks [workspace.build] state=finish ...`;
+- post-build restore:
+  - `EDT Extension Tweaks [workspace.build] state=context-resumed ...`;
+  - `EDT Extension Tweaks QL BM global scope wrapper registered`.
+
+Current conclusion:
+- The requested lifecycle is now visible in the real workspace: active context wrappers start normally, suspend and clear caches during project builds, then resume after the build/DD tail is quiet.
+- Manual check still needed for the editor-level behavior: after resume, external processing context assist and validation should again see linked extension modules/methods.
+
+## 2026-06-15 - Candidate 3q: allow linked BSL scope when external project own scope is null
+
+User reported:
+- context in external processing did not appear after the build/resume lifecycle fix.
+
+Log review from `EDT UH` build `1.1.1.v202606150937`:
+- lifecycle itself worked:
+  - `state=context-resumed`;
+  - `QL BM global scope wrapper registered`;
+- the external project read its configured link:
+  - `project=Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР° ... links=[cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚]`;
+- BSL containers were extended correctly:
+  - `feature=bsl-containers ... added=[cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚=cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚]`;
+- but BSL cached property scope stopped here:
+  - `kind=property project=Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР° decision=enter ... links=[cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚] own=NULL`;
+  - `kind=property project=Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР° decision=skip-null-or-inaccessible ... own=NULL`.
+
+Conclusion:
+- the editor reached our external-object context gate and got the linked project list;
+- however `ContextLinksCachedScopeProvider.canExtend(...)` rejected external-object scopes when EDT returned `ownScope == null`;
+- for external reports/processings this is a valid native state, because the useful context can come from linked extension/configuration scopes.
+
+Patch:
+- changed `canExtend(...)` so `ownScope == null` no longer blocks a linked-scope compose when the project is accessible and has linked projects;
+- made `ContextLinksProjectScope` null-safe:
+  - null own scope returns no own elements instead of throwing or skipping;
+  - linked scopes are still queried.
+
+Build/deploy:
+- Maven build succeeded.
+- Produced/deployed `1.1.1.v202606150943` to `EDT UH`.
+
+Current observation after redeploy:
+- build/resume lifecycle still works;
+- no new external editor reconcile request has appeared in the fresh log yet, so the `allow-compose` path has not been exercised after installing this build.
+
+Follow-up after user still reported no context:
+- With `1.1.1.v202606150943`, the external module did exercise the new path:
+  - `bsl-cache-property project=Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР° decision=allow-compose`;
+  - `scope.extend feature=bsl-cache-property ... added=[cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚]`;
+  - `bsl-cache-type-item project=Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР° decision=allow-compose`;
+  - `scope.extend feature=bsl-cache-type-item ... added=[cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚]`.
+- Therefore external processing receives linked type/property scopes, but method calls still fail later in `ModuleMethodsScope`.
+
+## 2026-06-15 - Candidate 3r: remember linked BSL project for module context fallback
+
+Hypothesis:
+- `ContextLinksProjectScope` returns a common module description from a linked extension project.
+- EDT then resolves module methods separately through `ModuleMethodsScope` / module context definition.
+- At that later point the current project is the linked extension (`cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`), not the external processing, so the build gate can block `module-context-fallback`.
+
+Patch:
+- Added short-lived `recentLinkedBslContextProjects`.
+- `withLinkedBslContextProject(...)` now remembers the linked project name.
+- `shouldAllowExternalObjectsBslContext(...)` now allows `module-context-*` for a recently used linked project when the current thread is not an EDT model build thread.
+
+Build/deploy:
+- Maven build succeeded.
+- Produced/deployed `1.1.1.v202606150948`.
+
+Observed result:
+- After external linked scope resolution, the log showed:
+  - `module-context-fallback project=cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚ skip=false reason=external-objects-context`.
+- This proved the linked-project fallback gate can now open.
+- However no `scope.extend feature=module-context-fallback` appeared yet.
+
+## 2026-06-15 - Candidate 3s: enrich non-empty module ContextDef with missing export methods
+
+Hypothesis:
+- The fallback gate opens, but `ContextLinksModuleContextDefService.ensureFallbackContextDef(...)` returns `null` when EDT provides any non-empty `ContextDef`.
+- For extension modules, EDT can provide a context definition that exists but lacks export methods from the real BSL module.
+
+Patch:
+- Removed the old `if contextDef.allMethods() is non-empty -> skip` behavior.
+- New behavior:
+  - collect exported BSL methods missing from `contextDef.allMethods()`;
+  - create a new `ContextDef`;
+  - add the original `contextDef` as a ref context;
+  - add only missing exported methods as fallback methods.
+
+Build/deploy:
+- Maven build succeeded.
+- Produced/deployed `1.1.1.v202606150952`.
+
+## 2026-06-15 - Candidate 3t: log ModuleMethodsScope samples
+
+Reason:
+- `1.1.1.v202606150952` still needed a fresh editor reconcile to prove whether the enriched module context reaches method call resolution.
+- Added limited `sampleElements(scope)` to `bsl.scope.access` diagnostics so `ModuleMethodsScope` contents are visible.
+
+Build/deploy:
+- Maven build succeeded.
+- Produced/deployed `1.1.1.v202606150956`.
+
+Current state:
+- EDT started and completed build/resume lifecycle.
+- The opened external module has not yet triggered a new BSL/Xtext reconcile after this deploy, so no fresh `bsl.scope.access sample=...` has appeared.
+- Next action: trigger editor reconcile manually in EDT (focus/change/revert a character) and inspect the fresh `ModuleMethodsScope` sample.
+
+## 2026-06-15 - Candidate 3u: clear clean BSL scopes after build resume
+
+Observation:
+- User confirmed that after build the external processing module still has red extension objects.
+- That means EDT has a built/cached external-object BSL scope without extension links.
+- The plugin resumes after build, but the already-built clean BSL scope can remain in EDT caches.
+
+Patch:
+- `ContextLinksCachedScopeProvider` now composes linked project scopes lazily:
+  - it stores linked project names, not the `IScope` objects captured at compose time;
+  - on each `getSingleElement/getElements/getAllElements` request it asks EDT for the current linked project scope;
+  - this avoids freezing a transient `scope is null` state from immediately after build.
+- `ContextLinks.workspaceBuildContextResumed()` now clears all BSL cached type/property scopes after the build quiet window:
+  - start of build still clears with `decision=clear-before-workspace-build`;
+  - resume now clears with `decision=clear-after-workspace-build`.
+
+Build:
+- Maven build succeeded.
+- Produced `1.1.1.v202606151008`.
+
+Expected log markers after deploy:
+- `EDT Extension Tweaks [bsl.cache] decision=clear-after-workspace-build ...`;
+- fresh `bsl-cache-property/type-item ... added=[cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚]`;
+- external object scope samples should include linked extension metadata after the next editor reconcile/content assist.
+
+Observed after deploy:
+- `clear-after-workspace-build` fired after resume.
+- `bsl-cache-property/type-item` consistently composes `Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР°` with `cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`.
+- `ModuleMethodsScope` still contains only form/current-module methods, not linked common-module methods.
+- No `module.context.*` diagnostic for `РњРњ_РћР±С‰РёР№РњРѕРґСѓР»СЊTEST`; EDT is not reaching the linked common module context definition yet.
+
+## 2026-06-15 - Candidate 3v: trace linked BSL lookups by requested name
+
+Reason:
+- Need to know whether EDT asks `ContextLinksProjectScope` for `РњРњ_РћР±С‰РёР№РњРѕРґСѓР»СЊTEST` / `РњРњ_*` names and whether those requests hit the linked extension scope.
+
+Patch:
+- Added targeted `EDT Extension Tweaks [bsl.lookup]` diagnostics in `ContextLinksProjectScope.getSingleElement(...)`.
+- Logs only interesting names (`РњРњ_`, `MM_`, `РњР°РіРЅРёС‚`, `РќР°СЃС‚СЂРѕР№РєРёР—Р°РіСЂСѓР·РєРё`, `РЎСЂРµРґСЃС‚РІР°РРЅРґРёРІРёРґСѓР°Р»СЊРЅРѕР№Р—Р°С‰РёС‚С‹`) and reports:
+  - scope kind;
+  - project;
+  - requested name;
+  - `own-hit`, `linked-hit`, or `miss`;
+  - linked project name;
+  - returned `IEObjectDescription` name/class/URI.
+
+Build:
+- Maven build succeeded.
+- Produced `1.1.1.v202606151012`.
+
+Observed:
+- No `bsl.lookup` lines appeared, so EDT did not call `getSingleElement(...)` for the interesting `РњРњ_*` names.
+
+## 2026-06-15 - Candidate 3w: trace linked BSL getElements by requested name
+
+Reason:
+- EDT may resolve feature candidates through `getElements(...)` instead of `getSingleElement(...)`.
+
+Patch:
+- Added targeted `bsl.lookup` diagnostics for `ContextLinksProjectScope.getElements(...)`.
+- For interesting names it materializes only that lookup and logs:
+  - `own-elements` / `own-empty`;
+  - `linked-elements` / `linked-empty`;
+  - `elements-miss`;
+  - first returned `IEObjectDescription`.
+
+Build:
+- Maven build succeeded.
+- Produced `1.1.1.v202606151015`.
+
+## 2026-06-15 - Candidate 3x: restore release scope retention under build gate
+
+Baseline:
+- User explicitly set the latest published git release as the reference build, because its context-link behavior was tested.
+- Compared local debug branch with `origin/master` (`98aa816`).
+
+Observation:
+- External object project has configured BSL context link to `cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`.
+- Logs show `bsl-cache-property/type-item` composition is requested for `Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР°`.
+- Targeted lookup asks for extension metadata like `CatalogManager.РњРњ_РќР°СЃС‚СЂРѕР№РєРёР—Р°РіСЂСѓР·РєРёР—Р°РєСѓРїРѕРєРџСЂРѕРґР°Р¶`.
+- At lookup time the linked project list is configured, but the linked project's direct BSL scope is null, so linked metadata is not actually queried.
+
+Patch:
+- Restored the release mechanism that keeps stable project scopes and mirrored module scopes with project-version checks.
+- Kept the current build gate: public `getTypeItemScope/getPropertyScope` still bypasses extension composition during active workspace/model builds.
+- Changed post-build cache clear to clear only consumer projects that have configured context links, so provider extension project scopes are not wiped unnecessarily after build resume.
+
+Expected:
+- During normal editor/content-assist flow after build, external objects should again be able to reuse already-built extension scopes.
+- During workspace/model build, the plugin should still avoid composing linked BSL scopes.
+
+## 2026-06-15 - Candidate 3y: do not clear scope on lightweight auto builds
+
+Observation:
+- Current `EDT UH` log shows linked context is alive before line 1362:
+  - `РњРњ_РћР±С‰РёР№РњРѕРґСѓР»СЊTEST`, `РњРњ_Р”РѕРіРѕРІРѕСЂС‹`, `РњРњ_Р Р°Р±РѕС‚Р°РЎJSONРЎРµСЂРІРµСЂ` resolve as `linked-elements` from `cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`;
+  - type lookups for `CatalogManager.РњРњ_*` also resolve from `cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`.
+- Immediately after that, the plugin receives two `kind=auto` workspace build waves and calls:
+  - `clear-before-workspace-build`;
+  - `workspace.build state=start kind=auto`;
+  - `clear-after-workspace-build`.
+- These auto builds happen while the editor/module model is active, so they cut already-working external-object scopes.
+
+Patch:
+- `ContextLinksPlugin` now treats only `clean`, `full`, and `incremental` build kinds as significant project/workspace builds.
+- `auto` builds are logged as `workspace.build state=ignored` and no longer:
+  - suspend the global scope wrapper;
+  - increment workspace build depth;
+  - clear BSL cached scopes;
+  - schedule post-build cache cleanup.
+
+Expected:
+- Module/editor auto builds should not kill the live linked context.
+- Big project builds still go through the existing suspend/clear/resume path.
+
+Follow-up:
+- `buildKind` alone is not enough: startup project builds arrive as `incremental` (`РЎР±РѕСЂРєР° cf`, `РЎР±РѕСЂРєР° cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`, `РЎР±РѕСЂРєР° Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР°`).
+- Added delta-based classification:
+  - `full`/`clean` always significant;
+  - `auto` is light;
+  - `incremental` is light only when delta contains up to 10 BSL module files (`*.bsl` / `Module.bsl`) and no non-BSL files.
+- Ignored builds now log delta summary in the reason, e.g. `module-only-incremental deltaNull=... files=... fileSamples=...`.
+
+Observed after deploy:
+- Project startup builds are `incremental` with empty delta (`files=0`, `projects=0`), so they remain significant and still clear/suspend.
+- Module/editor builds are `auto` with `moduleOnly=true` and now skip cache clear.
+- However module-only BSL worker threads still triggered `state=extend reason=bsl-model-thread`, which kept the plugin in build bypass mode even without a significant build.
+
+Patch:
+- `shouldQuietlyBypassBslHooks()` now extends/bypasses for BSL model build threads only when a significant build window is already active.
+- Module-only ignored builds no longer create a build hold by themselves.
+
+Observed after deploy `1.1.1.v202606151050`:
+- Pure module/editor `AUTO_BUILD` events are correctly classified as ignored:
+  - `kind=auto reason=auto-build ... moduleOnly=true ... /Module.bsl`;
+  - no `clear-before-workspace-build` is emitted for those events.
+- Startup/project builds still arrive as `INCREMENTAL_BUILD` with an empty delta and are still treated as significant:
+  - worker names look like `РЎР±РѕСЂРєР° cf`, `РЎР±РѕСЂРєР° cf.TEST`, `РЎР±РѕСЂРєР° cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`, `РЎР±РѕСЂРєР° Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР°`;
+  - reason is `project-incremental deltaNull=false moduleOnly=false files=0 projects=0`.
+- A corner case appeared: `PRE_BUILD` for `РЎР±РѕСЂРєР° Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР°` can have an empty delta and be significant, while its `POST_BUILD` delta is module-only.
+
+Patch:
+- Added per-worker tracking for significant `PRE_BUILD` events in `ContextLinksPlugin`.
+- `POST_BUILD` now closes a significant build only when:
+  - its own classification is significant, or
+  - the same worker thread previously received a significant `PRE_BUILD`.
+- A light module-only `POST_BUILD` next to another active project build no longer closes someone else's build window.
+
+Observed after deploy `1.1.1.v202606151054`:
+- `AUTO_BUILD` of `Module.bsl` remains ignored and does not clear scope.
+- Significant project builds still clear before build and resume after build.
+- After `context-resumed`, external object context is restored:
+  - `Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР°` has `skip=false reason=external-objects-context`;
+  - lookups for `РњРњ_Р”РѕРіРѕРІРѕСЂС‹`, `РњРњ_Р Р°Р±РѕС‚Р°РЎJSONРЎРµСЂРІРµСЂ`, `РњРњ_Р”Р¤Р`, `CatalogManager.РњРњ_*` resolve as `linked-elements` from `cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`.
+- `state=extend reason=bsl-model-thread` can still happen during/after a significant project-build window, which is expected while the project model is being rebuilt.
+
+## 2026-06-15 - Manual activation direction from release baseline
+
+Decision:
+- Stop trying to automatically detect all EDT build modes.
+- Use the published working `v1.1.1` code as the behavior baseline.
+- Keep the plugin context enrichment disabled by default for each EDT process/session.
+- Enable it only through an explicit user command from an opened module.
+
+Implementation:
+- Restored core integration files from `v1.1.1`.
+- Added `ContextLinks.isSessionActive()` / `activateSession(...)` / `deactivateSession(...)`.
+- Added session gate to:
+  - `ContextLinksCachedScopeProvider` linked BSL scope composition and manual stable/module caches;
+  - `ContextLinksContainerManager`;
+  - `ContextLinksModuleContextDefService` fallback context generation;
+  - `ContextLinksV8GlobalScopeProviderProxy` QL BM scope extension;
+  - `ContextLinksQueryWizardPatches` enhanced equality/adoption filtering.
+- Added command `ru.xelgo.edt.contextlinks.ui.commands.activateContextLinks`.
+- Added default key binding `Ctrl+Alt+L` (`M1+M3+L`).
+- Added `ActivateContextLinksHandler`:
+  - resolves the current project from the active editor first;
+  - activates the plugin for the current EDT session;
+  - clears only plugin-owned manual caches;
+  - warms direct property/common-module scopes for the current project and configured linked projects;
+  - logs `EDT Extension Tweaks [activation]` and `EDT Extension Tweaks [manual-cache]` lines.
+
+Safety choice:
+- Manual warm-up currently warms only property/common-module scopes, not full type-item metadata scopes.
+- Type-item and QL behavior can still run on demand after manual activation, but the activation command should not force a large full-metadata scan.
+
+Build/deploy:
+- Maven build succeeded.
+- Deployed `1.1.1.v202606151117` to `C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH`.
+
+Observed after deploy:
+- Startup log contains only:
+  - Query Wizard weaving service registered;
+  - QL BM wrapper registered;
+  - infobase update skip wrapper registered;
+  - startup warm-up builds are disabled;
+  - Query Wizard weaving active for EDT QW bundle.
+- No automatic `manual-cache`, `cache.get`, `containers`, `workspace.build`, `scope.extend`, `linked`, or adoption-filter work appeared before manual activation.
+
+## 2026-06-15 - Manual activation should not require editing linked extension modules
+
+Observation from user:
+- After pressing manual activation, context starts working only after changing any line in the extension whose context is needed.
+- That means manual activation opens our gate, but EDT has not built/reconciled the linked extension BSL model yet.
+- Editing a module works because it naturally triggers the project/module model rebuild.
+
+Patch:
+- `ActivateContextLinksHandler` now runs warm-up in a background Eclipse `Job`, not on the UI thread.
+- `ContextLinksCachedScopeProvider.warmProject(...)` now performs, before reading scopes:
+  - `refreshLocal(IResource.DEPTH_INFINITE)`;
+  - `build(IncrementalProjectBuilder.INCREMENTAL_BUILD)`.
+- This is done for the active project and all configured linked context projects.
+- No file content is changed; the goal is to make EDT rebuild/index the needed model without requiring the user to edit a module.
+- Added log markers:
+  - `EDT Extension Tweaks [manual-cache] state=build-start ...`;
+  - `EDT Extension Tweaks [manual-cache] state=build-finish ...`;
+  - existing `state=project-warmed` and `state=finish`.
+
+Build/deploy:
+- Maven build succeeded.
+- Deployed `1.1.1.v202606151123` to `EDT UH`.
+
+Observed after deploy:
+- Startup remains quiet: no automatic `manual-cache` work happens before pressing the manual activation command.
+
+## 2026-06-15 - Do not warm donor extension scope models
+
+Observation from user:
+- During manual warm-up EDT reports that exported procedure `РЎРѕР·РґР°С‚СЊРћР±РЅРѕРІРёС‚СЊР”РѕРіРѕРІРѕСЂРљРѕРЅС‚СЂР°РіРµРЅС‚Р°(...)` is already defined.
+- This looks like the donor extension scope/model is being rebuilt or duplicated.
+- The plugin must touch only projects that need foreign context. Projects that provide context must remain read-only donors.
+
+Problem found:
+- `warmProject(...)` added both the active consumer project and every configured linked project to the warm-up set.
+- It then ran `refreshLocal(...)`, `INCREMENTAL_BUILD`, and direct property-scope reads for all of them.
+- That means donor extensions were being actively refreshed/built by our manual activation flow.
+- A second issue was visible in logs: EDT created many `ContextLinksCachedScopeProvider` instances (`providers=124`), and warm-up repeated the same consumer property-scope read for each provider.
+
+Patch:
+- Added session active project tracking:
+  - `ContextLinks.activateSession(project, ...)` stores the consumer project name;
+  - `ContextLinks.isSessionActive(project)` is true only for activated consumer projects.
+- Changed gates so plugin-owned behavior applies only to the active consumer project:
+  - manual stable/module caches;
+  - BSL container extension;
+  - module context fallback;
+  - QL BM scope extension;
+  - common-module BSL diagnostics.
+- `warmProject(...)` now:
+  - refreshes/builds only the active consumer project;
+  - never refreshes/builds linked donor projects;
+  - warms only one cached-scope provider instance instead of all provider instances.
+
+Build/deploy:
+- Maven build succeeded.
+- Deployed `1.1.1.v202606151137` to `EDT UH`.
+
+Expected logs after pressing `Ctrl+Alt+L`:
+- `state=active ... activeProjects=[<consumer>]`;
+- one `state=build-start project=<consumer> role=consumer`;
+- one `state=build-finish project=<consumer> role=consumer`;
+- one `state=project-warmed project=<consumer> warmed=<consumer> ...`;
+- no donor extension project in `build-start`, `build-finish`, or `project-warmed`.
+
+## 2026-06-15 - Remove startup-side active wrappers
+
+Observation from user:
+- After restarting the DB / workspace build, context was not warmed, but project build still hung.
+- This means something from the plugin still worked before manual activation.
+
+Log evidence before patch:
+- Without pressing manual activation the log still contained:
+  - `EDT Extension Tweaks Query Wizard weaving service registered`;
+  - `EDT Extension Tweaks QL BM global scope wrapper registered`;
+  - `EDT Extension Tweaks infobase update skip wrapper waiting for EDT delegate service`;
+  - `EDT Extension Tweaks infobase update skip wrapper registered`.
+- Code scan found hidden auto-registration points:
+  - `ContextLinksPlugin.start(...)` registered Query Wizard weaving, QL BM wrapper, and infobase sync wrapper immediately;
+  - `ContextLinksStartup.earlyStartup()` registered QL BM wrapper;
+  - `ContextLinksBslRuntimeModule` constructor registered QL BM wrapper;
+  - `ContextLinksCachedScopeProvider` constructor also registered QL BM wrapper, so EDT could register the QL wrapper while merely creating BSL providers during build.
+
+Patch:
+- `ContextLinksPlugin.start(...)` now only logs inactive startup. It no longer registers:
+  - Query Wizard weaving service;
+  - QL BM wrapper;
+  - infobase update skip wrapper.
+- `ContextLinksStartup.earlyStartup()` now only logs inactive startup.
+- Removed QL wrapper registration from:
+  - `ContextLinksBslRuntimeModule` constructor;
+  - `ContextLinksCachedScopeProvider` constructor.
+- Added `ContextLinksV8GlobalScopeProviderRegistrar.unregister()` for clean bundle stop.
+
+Build/deploy:
+- Maven build succeeded.
+- Deployed `1.1.1.v202606151152` to `EDT UH`.
+
+Observed after deploy:
+- Startup log before manual activation now contains only:
+  - `EDT Extension Tweaks started inactive; manual activation is required`;
+  - `EDT Extension Tweaks startup is inactive; manual activation is required`.
+- The previous automatic `Query Wizard`, `QL BM`, and `infobase update` wrapper registration lines disappeared.
+
+Remaining active mechanism:
+- `com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension` is still declared in `plugin.xml`, so EDT can still instantiate our BSL provider classes.
+- Those classes are gated by `ContextLinks.isSessionActive(project)` and should return standard EDT behavior before activation, but if hangs persist with the new build, this extension point is the next thing to isolate.
+
+## 2026-06-15 - Donor common-module methods without donor edit
+
+Observation from user:
+- After manual activation, linked common modules become visible in the external object project, but exported methods are still missing.
+- Editing any line in the donor extension makes methods visible, so EDT rebuilds/reconciles the donor module context after a real donor change.
+
+Patch:
+- Manual activation now stores both:
+  - the active consumer project;
+  - the configured linked donor projects for the session.
+- `ContextLinksModuleContextDefService` may now use the resource-backed exported-method fallback for session donor projects too.
+- To avoid reintroducing the heavy-build duplicate-context problem, this donor fallback is disabled on build-like threads (`РЎР±РѕСЂРєР°`, `build`, `derived_data_executor`).
+
+Expected effect:
+- Pressing the manual warm-up command should make linked common-module exported methods visible without manually editing the donor extension.
+- Donor extensions are still not refreshed or built by the plugin warm-up flow.
+
+## 2026-06-15 - Prevent manual warm-up from duplicating common-module methods
+
+Observation from user:
+- During manual warm-up the donor common module `РњРњ_Р”РѕРіРѕРІРѕСЂС‹` became overheated.
+- Method `РџСЂРёРєСЂРµРїРёС‚СЊР¤Р°Р№Р»С‹РљР”РѕРіРѕРІРѕСЂСѓ` appeared in scope several times.
+
+Likely causes:
+- Manual warm-up still called `project.build(...)` for the consumer project. This can run BSL reconciliation while the linked context is enabled.
+- `ContextLinksProjectScope` recomputed linked scopes on every enumeration and concatenated own + linked elements without de-duplicating descriptions.
+- If EDT returns a common-module `ContextDef` with duplicated `allMethods()`, the service passed those duplicates through.
+
+Patch:
+- Manual warm-up no longer runs an incremental build. It only refreshes the consumer project and reads/composes scopes.
+- `ContextLinksProjectScope` caches linked scopes per wrapper instance and de-duplicates `getElements(...)` / `getAllElements(...)` by qualified name and EObject URI.
+- `ContextLinksModuleContextDefService` now returns a flattened unique `ContextDef` when a common-module context already contains duplicate methods.
+- Resource-backed fallback methods are also de-duplicated by method name and parameter count.
+
+Expected effect:
+- Manual activation should not trigger consumer project build.
+- Linked common-module methods should appear once in the final scope.
+
+## 2026-06-15 - Reconcile external editor instead of replacing ContextDef
+
+Observation from user:
+- After removing the manual build from warm-up, duplicate methods disappeared, but the external object project no longer sees methods from linked common modules.
+- Workspace log also showed NPEs after warm-up:
+  - `IResourceServiceProvider ... rsp is null`;
+  - `EObject.eResource() is null`.
+
+Problem found:
+- The previous duplicate-method patch created a replacement `ContextDef` by copying methods out of EDT's own context definition.
+- These copied methods can be resource-less EMF objects, which matches the `eResource() == null` failures.
+- Removing `project.build(...)` also removed the side effect that forced the already-open external BSL editor to reconcile and request scopes again.
+
+Patch:
+- Removed replacement of non-empty EDT `ContextDef`. Native EDT context definitions are returned as-is.
+- Kept fallback context only for the original case where EDT returns no methods at all.
+- Fallback export methods are de-duplicated directly from the BSL model by method name + parameter count.
+- Scope de-duplication no longer calls `IEObjectDescription.getEObjectURI()`; it uses the qualified name only to avoid lazy-description NPEs.
+- Added `org.eclipse.xtext.ui` dependency and call `XtextEditor.forceReconcile()` for the active editor after manual warm-up.
+
+Expected effect:
+- Manual activation should revalidate/re-resolve the opened external object module without running `project.build(...)`.
+- Linked methods should appear again, while avoiding copied resource-less method objects.
+
+Follow-up:
+- Full EDT stack showed the remaining NPE happens when BSL content assist documentation reads a fallback mcore method:
+  - `BslDocumentationProvider.getDocByMcoreMethod(...)`;
+  - `BslCommentUiUtils.parseTemplateComment(...)`;
+  - `IResourceServiceProvider rsp is null`.
+- This confirms fallback methods are visible enough to reach content assist, but EDT cannot resolve their service provider while their `eResource()` is null.
+
+Patch:
+- Attach fallback `ContextDef` to a lightweight EMF `ResourceImpl` using the original donor `Module.bsl` resource URI.
+- This gives fallback mcore methods a non-null resource URI with the same language/provider mapping as the donor module.
+
+## 2026-06-15 - Activation-only manual command
+
+Observation from user:
+- Forced warm-up still overheats some common modules.
+- The likely correct flow is to wait until EDT finishes calculating the project/model by itself.
+- The plugin must not force variable/scope calculation, because this can corrupt or duplicate the base project's scope while the requesting project still has no linked context.
+
+Patch:
+- Manual activation now only:
+  - resolves the active project;
+  - activates the plugin for the current session;
+  - clears plugin-owned manual caches.
+- Removed forced work from the activation command:
+  - no background warm-up job;
+  - no `refreshLocal`;
+  - no `getDirectPropertyScope`;
+  - no `getPropertyScope`;
+  - no `forceReconcile`.
+- `ContextLinksCachedScopeProvider.warmProject(...)` is now an activation-only no-op, so accidental calls cannot force EDT scope calculation.
+- Removed broad session-linked donor fallback from `ContextLinksModuleContextDefService`; donor fallback is no longer globally enabled just because a donor project is listed in session links.
+
+Expected effect:
+- Pressing the hotkey opens the context bridge only.
+- Linked context appears when EDT's own model/scope is ready and asks for it naturally.
+- The hotkey should no longer overheat donor/base project common-module scopes.
+
+## 2026-06-15 - Inactive BSL fast bypass
+
+Observation:
+- User reported EDT still becomes very slow during build when context is not activated.
+- Fresh workspace log after restart without manual activation shows only:
+  - `EDT Extension Tweaks started inactive; manual activation is required`;
+  - `EDT Extension Tweaks startup is inactive; manual activation is required`.
+- Thread dump captured during the slow state:
+  - `diagnostics/thread-dump-inactive-20260615-164719.txt`;
+  - direct `ContextLinks` / `ru.xelgo` stack matches: `0`;
+  - hot threads are EDT/Xtext `LCBuilderState-*`, validation and resource-description/DD computations.
+
+Problem found in code review:
+- Even when inactive, `com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension` installs our subclasses, so EDT still calls them on BSL hot paths.
+- Some inactive paths still did small plugin work:
+  - cache clear methods bumped plugin version maps;
+  - container manager built debug strings and resolved descriptions before checking session state;
+  - module context service resolved module URI/project after provider lookup;
+  - `ContextLinksCachedScopeProvider.instances` retained every provider instance in a static set. Since the superclass may own EDT caches, this can accidentally retain large BSL scope graphs.
+
+Patch:
+- Added global inactive fast-bypass guards:
+  - `ContextLinksCachedScopeProvider` cache clear/module scope/type/property paths return native `super` behavior before plugin bookkeeping;
+  - `ContextLinksContainerManager` returns `super.getVisibleContainers(...)` before debug/URI/project/context-link work;
+  - `ContextLinksModuleContextDefService` returns the EDT provider context immediately when session is inactive;
+  - `ContextLinksBslScopeProvider` returns the native scope immediately when session is inactive.
+- Removed static retention of `ContextLinksCachedScopeProvider` instances.
+
+Expected effect:
+- Before pressing the activation hotkey, BSL hooks are still technically installed by Eclipse/EDT, but their inactive path is now almost a pure native EDT delegation and should not retain provider/cache instances.
+
+## 2026-06-15 - Diagnostic build without BSL runtime module
+
+Observation from user:
+- EDT still became slow/hung during build even though context was not activated.
+- Since inactive fast-bypass still leaves `com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension` installed, EDT still replaces native BSL/Xtext services with our subclasses/wrappers at startup.
+
+Diagnostic patch:
+- Removed the `com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension` registration from `plugin.xml`.
+- This keeps UI commands/settings/startup, but removes our BSL runtime module from EDT's BSL/Xtext pipeline completely.
+
+Expected result:
+- Before manual activation, our plugin should not participate in BSL scope/container/contextDef services at all.
+- Context completion from linked projects will likely be unavailable in this diagnostic build, but heavy build behavior should show whether the BSL runtime module registration itself is the trigger.
+
+## 2026-06-15 - Diagnostic BSL binding split: cached scope only
+
+Observation:
+- User confirmed that build starts/progresses when `bslRuntimeModuleExtension` is removed.
+- The next question is which concrete binding inside the runtime module causes build breakage.
+
+Patch prepared:
+- Restored `bslRuntimeModuleExtension` registration.
+- Reduced `ContextLinksBslRuntimeModule` to a single binding:
+  - `BslCachedScopeProvider -> ContextLinksCachedScopeProvider`.
+- Removed the other BSL bindings from the diagnostic runtime module:
+  - `IScopeProvider`;
+  - `IBslModuleContextDefService`;
+  - `IContainer.Manager`.
+
+Expected diagnostic:
+- If build hangs with this artifact, `BslCachedScopeProvider` replacement alone is enough to trigger it.
+- If build stays healthy, add the next binding one by one to identify the breaking service.
+
+Result:
+- Built and installed `1.1.1.v202606151308` into workspace `EDT UH`.
+- Triggered `Project -> Clean -> Clean all projects`.
+- EDT reproduced the overload quickly while the plugin stayed manually inactive:
+  - workspace log started `CPU overload`, then `Sustained CPU overload`, then `Critical CPU overload`;
+  - memory approached the `-Xmx20g` limit;
+  - process CPU from `Win32_PerfFormattedData_PerfProc_Process` repeatedly reached about `1500-2300`;
+  - thread dumps were captured under `diagnostics/thread-dump-cachedscope-only-20260615-171530-*.txt`.
+- Direct `ru.xelgo` / `ContextLinks` frames were not present in the sampled hot dumps. The hot threads were EDT/Xtext BSL builder threads (`LCBuilderState-*`) in `BslResource`, `BslResourceDescription`, `ExportMethodProvider`, `BslScopeProvider`, and DD computation.
+
+Conclusion:
+- Replacing `BslCachedScopeProvider` is enough to put EDT's BSL build pipeline on the dangerous path, even when the manual session is inactive and our code delegates to native behavior.
+- The safe approach should avoid this binding during normal builds instead of trying to switch it off from inside the subclass.
+
+## 2026-06-15 - Diagnostic BSL binding split: container manager only
+
+Patch prepared:
+- Removed the `BslCachedScopeProvider -> ContextLinksCachedScopeProvider` binding from `ContextLinksBslRuntimeModule`.
+- Left only:
+  - `IContainer.Manager -> ContextLinksContainerManager`.
+
+Expected diagnostic:
+- If build stays healthy, cached scope provider is the isolated build blocker.
+- If build still overloads, the BSL runtime module/container manager binding also participates and must be avoided or deferred.
+
+Correction:
+- The first container-only patch used method name `bindIContainerManager()`.
+- `javap` on EDT's native BSL runtime module shows the actual Guice binding method is `bindIContainer$Manager()`.
+- With the wrong method name, the diagnostic build could start without installing the container hook at all.
+
+Patch:
+- Renamed the method to `bindIContainer$Manager()`.
+- Added activation-time `touch` for the active resource only:
+  - this is intended to replace the manual "change any line" workaround;
+  - it touches the consumer module/resource, not linked donor projects;
+  - donor extension scopes should not be rebuilt or overheated by plugin activation.
+
+Build verification:
+- Maven build succeeded.
+- `javap` on `ru.xelgo.edt.contextlinks.ui_1.1.1.v202606151328.jar` confirms:
+  - `bindIContainer$Manager()`;
+  - no `BslCachedScopeProvider` binding.
+
+## 2026-06-15 - Query constructor regression after BSL split
+
+Observation from EDT UH log:
+- Installed bundle was `ru.xelgo.edt.contextlinks.ui_1.1.1.v202606151328.jar`.
+- Startup log contained only inactive/manual-activation messages.
+- Startup log did not contain release-style registrations:
+  - `Query Wizard weaving service registered`;
+  - `QL BM global scope wrapper registered`.
+
+Conclusion:
+- The diagnostic startup reduction accidentally removed the release registrations used by the query constructor path.
+- This explains why extendable objects disappeared in the query constructor relative to the published release branch.
+
+Patch:
+- Restored `ContextLinksQueryWizardWeavingServiceFactory` registration in `ContextLinksPlugin.start`.
+- Restored `ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered()` in plugin startup.
+- Restored `ContextLinksInfobaseSynchronizationManagerRegistrar.ensureRegistered()` in plugin startup.
+- Kept `BslCachedScopeProvider -> ContextLinksCachedScopeProvider` disabled, because the cached scope binding was isolated as the build overload trigger.
+- Kept BSL runtime module limited to:
+  - `IContainer.Manager -> ContextLinksContainerManager`;
+  - `IBslModuleContextDefService -> ContextLinksModuleContextDefService`.
+
+Expected result:
+- Query constructor should again receive the QW weaving and QL BM scope extension path.
+- BSL build should still avoid the cached-scope replacement that overloaded EDT.
+
+Result:
+- User confirmed that the query constructor works again.
+- External processing BSL module is still red: linked extension BSL methods are not visible in the external processing scope.
+- Live log after manual activation shows the container hook works:
+  - active project `Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР°`;
+  - linked project `cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`;
+  - visible containers include `cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`;
+  - no `module.context.*` calls were logged.
+
+Next patch:
+- Add back only `IScopeProvider -> ContextLinksBslScopeProvider`.
+- Keep `BslCachedScopeProvider -> ContextLinksCachedScopeProvider` disabled.
+- This should route BSL method/property scope creation through our `IBslModuleContextDefService` without replacing EDT's cached scope provider.
+
+Follow-up:
+- Installed `1.1.1.v202606151350` with `IScopeProvider` binding and without cached-scope binding.
+- Manual activation still logged only container composition for `Р’РЅРµС€РЅСЏСЏРћР±СЂР°Р±РѕС‚РєР° -> cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`.
+- `module.context.*` did not fire after activation, so the opened BSL editor was not forced through the method/property scope path.
+
+Patch:
+- After activation and `resource.touch(...)`, call `XtextEditor.forceReconcile()` on the active editor only.
+- This still avoids `project.build(...)`, donor refresh, and donor scope preheating.
+
+Result:
+- Installed `1.1.1.v202606151354`.
+- Activation log shows:
+  - `touch=done`;
+  - `reconcile=done editor=com._1c.g5.v8.dt.form.ui.editor.FormEditor`;
+  - container composition still adds `cf.РњР°РіРЅРёС‚РњР°СЂРєРµС‚`.
+- `module.context.*` still did not fire.
+
+Next diagnostic:
+- Add session-only throttled logging in `ContextLinksBslScopeProvider.getScope(...)` for the active consumer project.
+- Goal: see which BSL references EDT actually resolves after reconcile and whether our `IScopeProvider` binding is in the live path.
+
+Follow-up:
+- Installed `1.1.1.v202606151356`.
+- User-confirmed query constructor path works again.
+- External processing module still stayed red.
+- Live log after `Ctrl+Alt+L` showed:
+  - activation resolved consumer project `ExternalDataProcessor` project;
+  - linked project container was added;
+  - `ContextLinksBslScopeProvider.getScope(...)` was called for the form module;
+  - no `module.context.*` calls were observed.
+
+Conclusion:
+- Container visibility and generic BSL scope provider binding work.
+- The missing part is the release cached-scope layer that carries already built common-module method/property scopes.
+- Earlier build overload was caused by active cached-scope composition/mirroring during full builds, not by query-constructor code.
+
+Patch:
+- Re-enabled `BslCachedScopeProvider -> ContextLinksCachedScopeProvider`.
+- Kept the provider inactive by default.
+- `addTypeItemScope(...)` and `addPropertyScope(...)` now pass through to EDT and passively remember stable project scopes for all projects.
+- Manual activation no longer clears passive stable project scopes; it only clears session/module/log caches.
+- Linked project scopes are composed only when the consumer project is manually active.
+- Added active-session info logs:
+  - `cache.linked.type-item`;
+  - `cache.linked.property`;
+  - `cache.stable`.
+
+Build/deploy:
+- Maven build succeeded.
+- Installed `1.1.1.v202606151406` into EDT UH.
+- `javap` confirms `bindBslCachedScopeProvider()`.
+- EDT restarted for workspace `C:\Users\USER\AppData\Local\1C\1cedtstart\projects\EDT UH`.
+- Startup CPU check with the plugin inactive was calm: about 0.6 CPU seconds over 5 seconds.
+
+Next check:
+- Open the external processing form module, press `Ctrl+Alt+L`, and inspect log for `cache.linked.*` / `cache.stable`.
+- If linked scopes are non-null but methods stay red, inspect the specific reference path next.
+- If linked scopes are null, the donor extension scope has not been captured yet and the next fix must refresh/capture donor scopes without rebuilding donor modules.
+
+## 2026-06-15 - Key build blocker checkpoint
+
+Important confirmed point:
+- The heavy-project build overload is tied to the global BSL cached-scope binding:
+  `BslCachedScopeProvider -> ContextLinksCachedScopeProvider`.
+- This is the strongest confirmed isolation point so far.
+
+Evidence:
+- With the whole `com._1c.g5.v8.dt.bsl.bslRuntimeModuleExtension` removed, the heavy build progressed normally.
+- With the runtime module restored but reduced to only `BslCachedScopeProvider -> ContextLinksCachedScopeProvider`, the overload/hang reproduced even when the plugin session was not manually activated.
+- Thread dumps during the overload did not show hot `ru.xelgo` / `ContextLinks` frames.
+- Hot threads were EDT/Xtext BSL builder threads such as `LCBuilderState-*`, `BslResource`, `BslResourceDescription`, `ExportMethodProvider`, and DD/resource-description computation.
+
+Conclusion:
+- The problem is not a specific metadata object, common module, or single long-running plugin method.
+- The dangerous part is replacing EDT's native `BslCachedScopeProvider` globally during normal/full builds.
+- Even an inactive/delegating subclass can put EDT's BSL build/cache pipeline onto a bad path in a large workspace.
+
+Guideline for the next architecture attempt:
+- Do not keep `BslCachedScopeProvider -> ContextLinksCachedScopeProvider` globally active during ordinary project builds.
+- Either remove this binding and recover linked BSL context through a different extension point, or make any cached-scope bridge available only after explicit manual activation and outside full-build participation.
+
+## 2026-06-15 - Can the release architecture work without cached scope provider?
+
+Question:
+- We are returning to the published release behavior as the reference point.
+- Can we simply remove `ContextLinksCachedScopeProvider` / `BslCachedScopeProvider -> ContextLinksCachedScopeProvider` and keep the linked BSL context alive?
+
+Confirmed answer:
+- In the release `v1.1.1` architecture, no.
+- `ContextLinksCachedScopeProvider` is not just an optimization. It is the layer that composes the current project's BSL property/type scopes with the selected linked extension projects.
+
+Evidence:
+- `BslScopeProvider` in EDT directly uses `BslCachedScopeProvider` for:
+  - project type-item scope;
+  - project property scope;
+  - delegate lazy method/property scopes;
+  - context method/property scopes;
+  - implicit variable scopes.
+- Diagnostic builds without the cached-scope binding restored the query-constructor path, but the external processing BSL module still stayed red.
+- In that state logs showed:
+  - linked BSL containers were added;
+  - `ContextLinksBslScopeProvider.getScope(...)` was called for the external form module;
+  - `module.context.*` did not fire;
+  - linked common-module methods were still missing.
+
+Conclusion:
+- Removing `ContextLinksCachedScopeProvider` without another replacement breaks the release BSL-context feature.
+- `IContainer.Manager` and the generic `IScopeProvider` hook alone are not enough to reproduce the release behavior.
+
+Possible future replacement:
+- It may be possible to avoid the global cached-scope binding with a new, narrower implementation:
+  - keep EDT's native `BslCachedScopeProvider`;
+  - intercept only active/manual consumer BSL scopes through `IScopeProvider`;
+  - synthesize or attach linked common-module `Property` objects for the consumer module;
+  - give each property a correct `Type -> ContextDef` so expressions such as `CommonModule.Method()` resolve methods, not only module names.
+- This is a new architecture, not a simple removal of the cached provider from the release build.
