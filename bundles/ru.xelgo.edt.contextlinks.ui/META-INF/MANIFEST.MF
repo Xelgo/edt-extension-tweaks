@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: %pluginName
 Bundle-Vendor: %providerName
-Bundle-Version: 1.1.4.qualifier
+Bundle-Version: 1.1.5.qualifier
 Bundle-SymbolicName: ru.xelgo.edt.contextlinks.ui;singleton:=true
 Bundle-Activator: ru.xelgo.edt.contextlinks.core.ContextLinksPlugin
 Bundle-ActivationPolicy: lazy
@@ -15,9 +15,14 @@ Require-Bundle: org.eclipse.ui;bundle-version="[3.201.0,4.0.0)",
  org.eclipse.core.runtime;bundle-version="[3.26.0,4.0.0)",
  org.eclipse.emf.ecore;bundle-version="[2.33.0,3.0.0)",
  org.eclipse.xtext;bundle-version="[2.33.0,3.0.0)",
+ org.eclipse.xtext.ui;bundle-version="[2.33.0,3.0.0)",
+ org.eclipse.text;bundle-version="[3.13.0,4.0.0)",
+ org.eclipse.compare;bundle-version="[3.9.0,4.0.0)",
  com._1c.g5.modeling.xtext;bundle-version="[7.0.0,8.0.0)",
- com._1c.g5.v8.dt.bsl;bundle-version="[28.0.0,29.0.0)",
+ com._1c.g5.v8.dt.bsl;bundle-version="[27.0.0,29.0.0)",
  com._1c.g5.v8.dt.bsl.model;bundle-version="[12.0.0,13.0.0)",
+ com._1c.g5.v8.dt.bsl.ui;bundle-version="[22.0.0,24.0.0)",
+ com._1c.g5.v8.dt.compare.ui;bundle-version="[23.0.0,24.0.0)",
  com.e1c.g5.v8.dt.formatter.bsl;bundle-version="[1.1.0,2.0.0)",
  com._1c.g5.v8.dt.metadata;bundle-version="[18.0.0,20.0.0)",
  com._1c.g5.v8.dt.mcore;bundle-version="[8.6.0,9.0.0)",
@@ -26,10 +31,8 @@ Require-Bundle: org.eclipse.ui;bundle-version="[3.201.0,4.0.0)",
  org.objectweb.asm;bundle-version="[9.6.0,10.0.0)",
  org.objectweb.asm.tree;bundle-version="[9.6.0,10.0.0)"
 Import-Package: com._1c.g5.v8.dt.core.platform;version="[12.0.0,13.0.0)",
- com._1c.g5.v8.dt.core.resource.extension;version="[1.0.0,2.0.0)",
  com._1c.g5.v8.dt.platform.services.core.infobases.sync;version="[10.0.0,22.0.0)",
  com._1c.g5.v8.dt.platform.services.model;version="[6.0.0,7.0.0)",
- com._1c.g5.v8.dt.validation.legacy;version="[1.0.0,2.0.0)",
  com._1c.g5.wiring;version="[2.4.0,3.0.0)",
  com.e1c.g5.dt.applications;version="[6.0.0,8.0.0)",
  com.e1c.g5.dt.applications.infobases;version="[2.0.0,3.0.0)",

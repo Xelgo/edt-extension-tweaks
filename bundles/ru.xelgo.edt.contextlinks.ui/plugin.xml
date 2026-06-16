@@ -139,4 +139,11 @@
       </bslUiModuleExtension>
    </extension>
 
+   <extension
+         point="com._1c.g5.v8.dt.bsl.ui.externalQuickfixProvider">
+      <externalQuickfixProvider
+            class="ru.xelgo.edt.contextlinks.core.ChangeAndValidateMergeQuickfixProvider">
+      </externalQuickfixProvider>
+   </extension>
+
 </plugin>

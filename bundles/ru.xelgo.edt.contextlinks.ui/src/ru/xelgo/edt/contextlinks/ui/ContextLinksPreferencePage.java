@@ -39,7 +39,5 @@ public class ContextLinksPreferencePage
             Messages.ContextLinksPreferencePage_QueryWizardEnabled, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_INSERT_FORMATTING_ENABLED,
             Messages.ContextLinksPreferencePage_InsertFormattingEnabled, getFieldEditorParent()));
-        addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_DIRTY_PREPROCESSOR_ENABLED,
-            Messages.ContextLinksPreferencePage_DirtyPreprocessorEnabled, getFieldEditorParent()));
     }
 }

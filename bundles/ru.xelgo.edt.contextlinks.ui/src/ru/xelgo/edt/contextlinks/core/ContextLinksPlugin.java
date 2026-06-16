@@ -30,7 +30,6 @@ public final class ContextLinksPlugin
         {
             ContextLinks.logDebug("EDT Extension Tweaks Query Wizard weaving service disabled by preferences"); //$NON-NLS-1$
         }
-        ContextLinksBslResourceExtensionRegistrar.ensureRegistered();
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
         ContextLinksInfobaseSynchronizationManagerRegistrar.ensureRegistered();
     }
