@@ -30,6 +30,12 @@ public final class ContextLinksV8GlobalScopeProviderRegistrar
         if (registration != null)
             return;
 
+        if (!ContextLinksPreferences.isQueryWizardEnabled())
+        {
+            logRegistrationState("EDT Extension Tweaks QL BM global scope wrapper disabled by preferences"); //$NON-NLS-1$
+            return;
+        }
+
         if (Boolean.getBoolean(DISABLE_PROPERTY))
         {
             logRegistrationState("EDT Extension Tweaks QL BM global scope wrapper disabled by system property"); //$NON-NLS-1$

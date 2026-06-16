@@ -36,10 +36,17 @@ final class ContextLinksQueryWizardWeavingServiceFactory
     public IWeavingService createWeavingService(ClassLoader classLoader, Bundle bundle, BundleRevision bundleRevision,
         ISupplementerRegistry supplementerRegistry)
     {
-        if (bundle == null || !QUERY_WIZARD_UI_BUNDLE.equals(bundle.getSymbolicName()))
+        if (!ContextLinksPreferences.isQueryWizardEnabled())
             return null;
 
-        ContextLinks.logDebug("EDT Extension Tweaks Query Wizard weaving active for " + bundle.getSymbolicName()); //$NON-NLS-1$
+        if (bundle == null)
+            return null;
+
+        String symbolicName = bundle.getSymbolicName();
+        if (!QUERY_WIZARD_UI_BUNDLE.equals(symbolicName))
+            return null;
+
+        ContextLinks.logDebug("EDT Extension Tweaks weaving active for " + symbolicName); //$NON-NLS-1$
         return new QueryWizardWeavingService();
     }
 
@@ -74,6 +81,9 @@ final class ContextLinksQueryWizardWeavingServiceFactory
         public byte[] preProcess(String className, byte[] bytes, ClassLoader classLoader)
             throws IOException
         {
+            if (!ContextLinksPreferences.isQueryWizardEnabled())
+                return null;
+
             String internalClassName = className != null ? className.replace('.', '/') : null;
             if (SOURCES_EDIT_PROVIDER.equals(internalClassName))
                 return patchSourcesEditProvider(bytes);

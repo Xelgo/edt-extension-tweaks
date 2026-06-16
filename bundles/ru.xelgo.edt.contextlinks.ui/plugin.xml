@@ -9,6 +9,22 @@
    </extension>
 
    <extension
+         point="org.eclipse.core.runtime.preferences">
+      <initializer
+            class="ru.xelgo.edt.contextlinks.core.ContextLinksPreferenceInitializer">
+      </initializer>
+   </extension>
+
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="ru.xelgo.edt.contextlinks.ui.ContextLinksPreferencePage"
+            id="ru.xelgo.edt.contextlinks.ui.preferencePage"
+            name="%pluginName">
+      </page>
+   </extension>
+
+   <extension
          point="org.eclipse.ui.commands">
       <category
             id="ru.xelgo.edt.contextlinks.ui.category"

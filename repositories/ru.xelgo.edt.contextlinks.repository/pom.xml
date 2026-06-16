@@ -16,7 +16,7 @@
   <parent>
     <groupId>ru.xelgo.edt.contextlinks</groupId>
     <artifactId>repositories</artifactId>
-    <version>1.1.3-SNAPSHOT</version>
+    <version>1.1.4-SNAPSHOT</version>
   </parent>
 
   <artifactId>ru.xelgo.edt.contextlinks.repository</artifactId>

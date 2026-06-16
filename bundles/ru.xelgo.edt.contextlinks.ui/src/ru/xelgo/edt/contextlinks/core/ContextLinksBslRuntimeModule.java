@@ -1,12 +1,14 @@
 package ru.xelgo.edt.contextlinks.core;
 
 import org.eclipse.xtext.formatting2.IFormatter2;
+import org.eclipse.xtext.parser.IParser;
 import org.eclipse.xtext.resource.IContainer;
 import org.eclipse.xtext.scoping.IScopeProvider;
 import org.eclipse.xtext.service.AbstractGenericModule;
 
 import com._1c.g5.v8.dt.bsl.contextdef.IBslModuleContextDefService;
 import com._1c.g5.v8.dt.bsl.scoping.BslCachedScopeProvider;
+import com._1c.g5.v8.dt.bsl.validation.BslJavaValidator;
 
 /**
  * Adds project context links to standard BSL scope services.
@@ -16,6 +18,7 @@ public class ContextLinksBslRuntimeModule
 {
     public ContextLinksBslRuntimeModule()
     {
+        ContextLinksBslResourceExtensionRegistrar.ensureRegistered();
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
     }
 
@@ -42,5 +45,15 @@ public class ContextLinksBslRuntimeModule
     public Class<? extends IFormatter2> bindIFormatter2()
     {
         return ContextLinksBslFormatter.class;
+    }
+
+    public Class<? extends IParser> bindIParser()
+    {
+        return ContextLinksBslParser.class;
+    }
+
+    public Class<? extends BslJavaValidator> bindBslJavaValidator()
+    {
+        return ContextLinksBslJavaValidator.class;
     }
 }

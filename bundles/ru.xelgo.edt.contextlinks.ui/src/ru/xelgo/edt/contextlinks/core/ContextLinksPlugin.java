@@ -19,10 +19,18 @@ public final class ContextLinksPlugin
         throws Exception
     {
         super.start(context);
-        queryWizardWeavingRegistration =
-            context.registerService(IWeavingServiceFactory.class, new ContextLinksQueryWizardWeavingServiceFactory(),
-                null);
-        ContextLinks.logDebug("EDT Extension Tweaks Query Wizard weaving service registered"); //$NON-NLS-1$
+        if (ContextLinksPreferences.isQueryWizardEnabled())
+        {
+            queryWizardWeavingRegistration =
+                context.registerService(IWeavingServiceFactory.class, new ContextLinksQueryWizardWeavingServiceFactory(),
+                    null);
+            ContextLinks.logDebug("EDT Extension Tweaks Query Wizard weaving service registered"); //$NON-NLS-1$
+        }
+        else
+        {
+            ContextLinks.logDebug("EDT Extension Tweaks Query Wizard weaving service disabled by preferences"); //$NON-NLS-1$
+        }
+        ContextLinksBslResourceExtensionRegistrar.ensureRegistered();
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
         ContextLinksInfobaseSynchronizationManagerRegistrar.ensureRegistered();
     }

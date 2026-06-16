@@ -229,7 +229,8 @@ final class ContextLinksV8GlobalScopeProviderProxy
 
     private boolean shouldExtendQlScope(Resource resource, IProject project)
     {
-        return isQlResource(resource) && ContextLinks.isContextConfigurableProject(project)
+        return ContextLinksPreferences.isQueryWizardEnabled()
+            && isQlResource(resource) && ContextLinks.isContextConfigurableProject(project)
             && !ContextLinks.shouldSkipContextExtensionDuringBuild("ql-bm-scope") //$NON-NLS-1$
             && !ContextLinks.getContextProjectNames(project).isEmpty();
     }
@@ -1153,8 +1154,9 @@ final class ContextLinksV8GlobalScopeProviderProxy
 
     private static boolean shouldExposeCurrentProjectMdObject()
     {
-        return isQueryWizardProjectMembershipCheck() || isQueryWizardMetadataProjectionStack()
-            || isExtensionAdoptionDecisionStack();
+        return ContextLinksPreferences.isQueryWizardEnabled()
+            && (isQueryWizardProjectMembershipCheck() || isQueryWizardMetadataProjectionStack()
+            || isExtensionAdoptionDecisionStack());
     }
 
     private static boolean isQueryWizardMetadataProjectionStack()

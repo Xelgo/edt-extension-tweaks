@@ -30,6 +30,12 @@ public class ContextLinksBslFormatter
     @Override
     protected void formatMethod(Method method, IFormattableDocument document)
     {
+        if (!ContextLinksPreferences.isInsertFormattingEnabled())
+        {
+            super.formatMethod(method, document);
+            return;
+        }
+
         if (!hasChangeAndValidatePragma(method))
         {
             super.formatMethod(method, document);

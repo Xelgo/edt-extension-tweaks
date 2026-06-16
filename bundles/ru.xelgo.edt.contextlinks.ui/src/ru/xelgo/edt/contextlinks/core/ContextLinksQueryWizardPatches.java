@@ -26,6 +26,9 @@ public final class ContextLinksQueryWizardPatches
 
     public static boolean equalsDbViewFromQueryNamesOrLogical(DbViewElement left, DbViewElement right)
     {
+        if (!ContextLinksPreferences.isQueryWizardEnabled())
+            return equalsDbViewFromQueryNames(left, right);
+
         if (equalsDbViewFromQueryNames(left, right))
             return true;
 
@@ -39,6 +42,9 @@ public final class ContextLinksQueryWizardPatches
 
     public static Set<EObject> filterObjectsToAdopt(Set<EObject> objects, Object adoptSupport)
     {
+        if (!ContextLinksPreferences.isQueryWizardEnabled())
+            return objects;
+
         if (objects == null || objects.isEmpty() || adoptSupport == null)
             return objects;
 

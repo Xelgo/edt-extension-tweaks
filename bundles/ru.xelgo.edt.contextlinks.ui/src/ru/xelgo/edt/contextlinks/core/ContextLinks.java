@@ -34,21 +34,15 @@ public final class ContextLinks
     private static final String V8_EXTERNAL_OBJECTS_NATURE = "com._1c.g5.v8.dt.core.V8ExternalObjectsNature"; //$NON-NLS-1$
     private static final boolean DEBUG_LOG_ENABLED = Boolean.getBoolean(PLUGIN_ID + ".debug"); //$NON-NLS-1$
     private static final boolean DISABLE_CONTEXT_DURING_BUILD = Boolean.parseBoolean(
-        System.getProperty(PLUGIN_ID + ".disableDuringBuild", "true")); //$NON-NLS-1$ //$NON-NLS-2$
+        System.getProperty(PLUGIN_ID + ".disableDuringBuild", "false")); //$NON-NLS-1$ //$NON-NLS-2$
 
     private static final QualifiedName CONTEXT_PROJECTS =
         new QualifiedName(PLUGIN_ID, "contextProjects"); //$NON-NLS-1$
     private static final QualifiedName DISABLED_APPLICATION_UPDATE_PROJECTS =
         new QualifiedName(PLUGIN_ID, "disabledApplicationUpdateProjects"); //$NON-NLS-1$
     private static final ConcurrentHashMap<String, Set<String>> contextProjectNamesCache = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, Long> recentBslAssistProjects = new ConcurrentHashMap<>();
     private static final Set<String> loggedBuildSkipKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedInfoKeys = ConcurrentHashMap.newKeySet();
-    private static final long BSL_ASSIST_WINDOW_MILLIS = 15_000L;
-    private static final long BUILD_QUIET_WINDOW_MILLIS = Long.getLong(
-        PLUGIN_ID + ".buildQuietWindowMillis", 60_000L); //$NON-NLS-1$
-    private static volatile long recentBslAssistTimestamp;
-    private static volatile long recentBuildContextTimestamp;
 
     private ContextLinks()
     {
@@ -209,109 +203,17 @@ public final class ContextLinks
 
     public static boolean shouldSkipBslContextExtension(String feature, IProject project)
     {
-        if (shouldSkipBslContextExtensionDuringBuild(feature))
-            return true;
-
-        if (isRecentBuildContextActivity())
+        if (!ContextLinksPreferences.isBslContextLinksEnabled())
         {
-            logBuildSkip(feature, new BuildStackMatch(Thread.currentThread().getName(), "recent-build-activity")); //$NON-NLS-1$
+            logBuildSkip(feature, new BuildStackMatch(Thread.currentThread().getName(), "preference-disabled")); //$NON-NLS-1$
             return true;
         }
 
-        if (isInteractiveBslAssistRequest())
-        {
-            rememberBslAssistProject(project);
-            return false;
-        }
-
-        if (allowsRecentBslAssistContinuation(feature) && isRecentBslAssistContinuation(project))
-            return false;
-
-        if (shouldSkipContextExtensionDuringBuild(feature))
-            return true;
-
-        Thread thread = Thread.currentThread();
-        logBuildSkip(feature, new BuildStackMatch(thread.getName(), "non-interactive-bsl")); //$NON-NLS-1$
-        return true;
-    }
-
-    private static boolean shouldSkipBslContextExtensionDuringBuild(String feature)
-    {
-        if (!DISABLE_CONTEXT_DURING_BUILD)
-            return false;
-
-        Thread thread = Thread.currentThread();
-        String threadName = thread.getName();
-        if (isBslHardBuildThreadName(threadName))
-        {
-            logBuildSkip(feature, new BuildStackMatch(threadName, "hard-build-thread")); //$NON-NLS-1$
-            return true;
-        }
-
-        BuildStackMatch match = findBuildStackMatch();
-        if (match == null)
-            return false;
-
-        logBuildSkip(feature, match);
-        return true;
-    }
-
-    private static boolean allowsRecentBslAssistContinuation(String feature)
-    {
-        return feature == null || !feature.startsWith("module-context-"); //$NON-NLS-1$
-    }
-
-    private static void rememberBslAssistProject(IProject project)
-    {
-        recentBslAssistTimestamp = System.currentTimeMillis();
-        if (project != null && project.isAccessible())
-            recentBslAssistProjects.put(project.getName(), recentBslAssistTimestamp);
-    }
-
-    private static boolean isRecentBslAssistContinuation(IProject project)
-    {
-        String threadName = Thread.currentThread().getName();
-        if (!isAssistContinuationThread(threadName))
-            return false;
-
-        if (project == null || !project.isAccessible())
-            return isRecentGlobalBslAssistContinuation();
-
-        Long timestamp = recentBslAssistProjects.get(project.getName());
-        if (timestamp == null)
-            return isRecentGlobalBslAssistContinuation();
-
-        long age = System.currentTimeMillis() - timestamp.longValue();
-        if (age >= 0 && age <= BSL_ASSIST_WINDOW_MILLIS)
-            return true;
-
-        recentBslAssistProjects.remove(project.getName(), timestamp);
-        return isRecentGlobalBslAssistContinuation();
-    }
-
-    private static boolean isRecentGlobalBslAssistContinuation()
-    {
-        long timestamp = recentBslAssistTimestamp;
-        if (timestamp == 0)
-            return false;
-
-        long age = System.currentTimeMillis() - timestamp;
-        return age >= 0 && age <= BSL_ASSIST_WINDOW_MILLIS;
-    }
-
-    private static boolean isAssistContinuationThread(String threadName)
-    {
-        if (threadName == null)
-            return false;
-
-        return threadName.startsWith("ForkJoinPool-") //$NON-NLS-1$
-            || threadName.startsWith("ForkJoinPool.commonPool-"); //$NON-NLS-1$
+        return false;
     }
 
     private static void logBuildSkip(String feature, BuildStackMatch match)
     {
-        if (isBuildActivityFrame(match.frame))
-            recentBuildContextTimestamp = System.currentTimeMillis();
         String key = feature + "|" + match.frame; //$NON-NLS-1$
         if (loggedBuildSkipKeys.add(key))
         {
@@ -319,22 +221,6 @@ public final class ContextLinks
                 + " thread=" + match.threadName + " frame=" + match.frame //$NON-NLS-1$ //$NON-NLS-2$
                 + " memory=" + memorySummary()); //$NON-NLS-1$
         }
-    }
-
-    private static boolean isRecentBuildContextActivity()
-    {
-        long timestamp = recentBuildContextTimestamp;
-        if (timestamp == 0)
-            return false;
-
-        long age = System.currentTimeMillis() - timestamp;
-        return age >= 0 && age <= BUILD_QUIET_WINDOW_MILLIS;
-    }
-
-    private static boolean isBuildActivityFrame(String frame)
-    {
-        return frame != null && !"recent-build-activity".equals(frame) //$NON-NLS-1$
-            && !"non-interactive-bsl".equals(frame); //$NON-NLS-1$
     }
 
     public static void logScopeExtension(String feature, IProject project, Object details)
@@ -386,18 +272,6 @@ public final class ContextLinks
             || threadName.contains("build"); //$NON-NLS-1$
     }
 
-    private static boolean isBslHardBuildThreadName(String threadName)
-    {
-        if (threadName == null)
-            return false;
-
-        return threadName.startsWith("LCBuilderState") //$NON-NLS-1$
-            || threadName.startsWith("derived_data_executor_") //$NON-NLS-1$
-            || threadName.contains("Xtext") //$NON-NLS-1$
-            || threadName.contains("Проверка Xтекст") //$NON-NLS-1$
-            || threadName.startsWith("AEF 2.0 Thread-"); //$NON-NLS-1$
-    }
-
     private static boolean isBackgroundThreadName(String threadName)
     {
         if (threadName == null)
@@ -415,32 +289,6 @@ public final class ContextLinks
     private static boolean isBslBuildSensitiveFeature(String feature)
     {
         return feature != null && (feature.startsWith("bsl-") || feature.startsWith("module-context-")); //$NON-NLS-1$ //$NON-NLS-2$
-    }
-
-    private static boolean isInteractiveBslAssistRequest()
-    {
-        String threadName = Thread.currentThread().getName();
-        if (containsAssistMarker(threadName))
-            return true;
-
-        for (StackTraceElement element : Thread.currentThread().getStackTrace())
-        {
-            String className = element.getClassName();
-            if (containsAssistMarker(className))
-                return true;
-        }
-        return false;
-    }
-
-    private static boolean containsAssistMarker(String value)
-    {
-        if (value == null)
-            return false;
-
-        String lowerValue = value.toLowerCase();
-        return lowerValue.contains("contentassist") //$NON-NLS-1$
-            || lowerValue.contains("proposal") //$NON-NLS-1$
-            || lowerValue.contains("completion"); //$NON-NLS-1$
     }
 
     private static boolean isBuildStackClass(String className)

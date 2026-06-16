@@ -3,6 +3,7 @@ package ru.xelgo.edt.contextlinks.ui;
 import org.eclipse.ui.IStartup;
 
 import ru.xelgo.edt.contextlinks.core.ContextLinks;
+import ru.xelgo.edt.contextlinks.core.ContextLinksBslResourceExtensionRegistrar;
 import ru.xelgo.edt.contextlinks.core.ContextLinksV8GlobalScopeProviderRegistrar;
 
 /**
@@ -14,6 +15,7 @@ public class ContextLinksStartup
     @Override
     public void earlyStartup()
     {
+        ContextLinksBslResourceExtensionRegistrar.ensureRegistered();
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
         ContextLinks.logDebug("EDT Extension Tweaks startup warm-up builds are disabled"); //$NON-NLS-1$
     }

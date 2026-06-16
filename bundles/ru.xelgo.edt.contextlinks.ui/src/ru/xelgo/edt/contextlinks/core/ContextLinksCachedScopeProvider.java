@@ -395,6 +395,9 @@ public class ContextLinksCachedScopeProvider
 
         private List<IScope> getLinkedScopes()
         {
+            if (!ContextLinksPreferences.isBslContextLinksEnabled())
+                return List.of();
+
             List<IScope> scopes = new ArrayList<>();
             for (String linkedProjectName : linkedProjectNames)
             {

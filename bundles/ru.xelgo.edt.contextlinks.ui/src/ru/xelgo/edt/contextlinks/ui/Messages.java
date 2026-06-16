@@ -20,6 +20,11 @@ public final class Messages
     public static String ConfigureApplicationUpdateProjectsHandler_NoApplication;
     public static String ConfigureApplicationUpdateProjectsHandler_NoCandidates;
     public static String ConfigureApplicationUpdateProjectsHandler_Title;
+    public static String ContextLinksPreferencePage_BslContextLinksEnabled;
+    public static String ContextLinksPreferencePage_DirtyPreprocessorEnabled;
+    public static String ContextLinksPreferencePage_Description;
+    public static String ContextLinksPreferencePage_InsertFormattingEnabled;
+    public static String ContextLinksPreferencePage_QueryWizardEnabled;
 
     static
     {
