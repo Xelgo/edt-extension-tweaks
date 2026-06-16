@@ -22,10 +22,12 @@ import com._1c.g5.v8.dt.mcore.Parameter;
 import com._1c.g5.v8.dt.mcore.util.Environments;
 import com._1c.g5.v8.dt.metadata.mdclass.CommonModule;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
 /**
  * Mirrors EDT's module context definition service and logs the common-module path.
  */
+@Singleton
 public class ContextLinksModuleContextDefService
     implements IBslModuleContextDefService
 {

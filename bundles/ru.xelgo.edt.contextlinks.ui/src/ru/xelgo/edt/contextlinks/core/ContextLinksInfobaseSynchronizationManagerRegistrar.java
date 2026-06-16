@@ -112,12 +112,12 @@ public final class ContextLinksInfobaseSynchronizationManagerRegistrar
         properties.put(Constants.SERVICE_RANKING, Integer.valueOf(1000));
         properties.put(WRAPPER_MARKER_PROPERTY, Boolean.TRUE.toString());
         registration = context.registerService(IInfobaseSynchronizationManager.class, proxy, properties);
-        ContextLinks.logWarning("EDT Extension Tweaks infobase update skip wrapper registered"); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks infobase update skip wrapper registered"); //$NON-NLS-1$
     }
 
     private static void logRegistrationState(String message)
     {
         if (loggedRegistrationStates.add(message))
-            ContextLinks.logWarning(message);
+            ContextLinks.logDebug(message);
     }
 }

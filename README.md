@@ -7,6 +7,11 @@
 обработки или отчеты. Он помогает этим проектам видеть общий контекст без ручного копирования метаданных между
 расширениями.
 
+## Поддерживаемые версии EDT
+
+- 1C:EDT 2025.2.6
+- 1C:EDT 2026.1
+
 ## Возможности
 
 - Добавляет команду **Настроить контекст EDT** для проектов расширений, внешних обработок, внешних отчетов и других
@@ -21,7 +26,8 @@
   расширению.
 - Добавляет команду **Настроить обновляемые проекты** во вкладку приложений EDT: можно исключать тяжелую основную
   конфигурацию или отдельные расширения из цепочки обновления ИБ.
-- Сохраняет отладочные диагностические логи для сложных сценариев синхронизации EDT и работы конструктора запросов.
+- Форматирует код внутри блоков `#Вставка` / `#КонецВставки` в методах `&ИзменениеИКонтроль` по `Ctrl+Shift+F`, не
+  меняя оригинальный код метода за пределами вставки.
 
 ## Короткое описание для GitHub
 
@@ -64,10 +70,14 @@ $env:JAVA_HOME='C:\Program Files\1C\1CE\components\axiom-jdk-full-17.0.16+12-x86
 repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlinks.repository.zip
 ```
 
-## Журнал отладки
+## Журналы отладки
 
-См. [DEBUG_LOG.md](DEBUG_LOG.md): там собраны выводы из логов EDT, неудачные гипотезы, диагностические коммиты и
-результаты runtime-отладки.
+- [DEBUG_EXTENSION_CONTEXT_LINKING.md](DEBUG_EXTENSION_CONTEXT_LINKING.md) - контекст расширений и внешних обработок.
+- [DEBUG_QUERY_CONSTRUCTOR_CONTEXT.md](DEBUG_QUERY_CONSTRUCTOR_CONTEXT.md) - конструктор запросов и метаданные
+  связанных расширений.
+- [DEBUG_BUILD_FREEZE_SINGLETON.md](DEBUG_BUILD_FREEZE_SINGLETON.md) - зависания сборки и singleton-фикс BSL-сервисов.
+- [DEBUG_AST_AND_PROCEDURE_FORMATTING.md](DEBUG_AST_AND_PROCEDURE_FORMATTING.md) - форматирование вставок в
+  `&ИзменениеИКонтроль`.
 
 ## Диагностика зависаний EDT
 
@@ -89,4 +99,5 @@ thread dumps, heap info и попробует записать JFR. Резуль
   доработки обновления ИБ.
 - `features/ru.xelgo.edt.contextlinks.feature` - устанавливаемая feature.
 - `repositories/ru.xelgo.edt.contextlinks.repository` - p2 update site.
-- `targets/default/default.target` - target platform для EDT 2025.2.
+- `targets/default/default.target` - target platform для EDT 2025.2.6; диапазоны зависимостей в bundle-манифесте
+  оставлены совместимыми с веткой EDT 2026.1.

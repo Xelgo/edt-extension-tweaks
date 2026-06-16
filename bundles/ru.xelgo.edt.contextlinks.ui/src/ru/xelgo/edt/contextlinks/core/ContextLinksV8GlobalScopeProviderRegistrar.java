@@ -56,12 +56,12 @@ public final class ContextLinksV8GlobalScopeProviderRegistrar
         }
 
         registration = context.registerService(ContextLinksV8GlobalScopeProviderProxy.SERVICE_CLASS_NAME, proxy, properties);
-        ContextLinks.logWarning("EDT Extension Tweaks QL BM global scope wrapper registered"); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks QL BM global scope wrapper registered"); //$NON-NLS-1$
     }
 
     private static void logRegistrationState(String message)
     {
         if (loggedRegistrationStates.add(message))
-            ContextLinks.logWarning(message);
+            ContextLinks.logDebug(message);
     }
 }

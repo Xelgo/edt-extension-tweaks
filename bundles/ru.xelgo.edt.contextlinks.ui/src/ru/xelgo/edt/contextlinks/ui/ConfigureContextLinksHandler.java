@@ -101,7 +101,7 @@ public class ConfigureContextLinksHandler
         try
         {
             ContextLinks.setContextProjectNames(project, names);
-            ContextLinks.logWarning("EDT Extension Tweaks configure command saved project=" + project.getName() //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks configure command saved project=" + project.getName() //$NON-NLS-1$
                 + ", names=" + names + ", allSettings=" + ContextLinks.describeWorkspaceSettings()); //$NON-NLS-1$ //$NON-NLS-2$
         }
         catch (CoreException e)

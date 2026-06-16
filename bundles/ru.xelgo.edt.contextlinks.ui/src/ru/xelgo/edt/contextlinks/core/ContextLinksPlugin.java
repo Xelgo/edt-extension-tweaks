@@ -22,7 +22,7 @@ public final class ContextLinksPlugin
         queryWizardWeavingRegistration =
             context.registerService(IWeavingServiceFactory.class, new ContextLinksQueryWizardWeavingServiceFactory(),
                 null);
-        ContextLinks.logWarning("EDT Extension Tweaks Query Wizard weaving service registered"); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks Query Wizard weaving service registered"); //$NON-NLS-1$
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
         ContextLinksInfobaseSynchronizationManagerRegistrar.ensureRegistered();
     }

@@ -315,7 +315,7 @@ public final class ContextLinks
         String key = feature + "|" + match.frame; //$NON-NLS-1$
         if (loggedBuildSkipKeys.add(key))
         {
-            logInfo("EDT Extension Tweaks [build.skip] feature=" + feature //$NON-NLS-1$
+            logDebug("EDT Extension Tweaks [build.skip] feature=" + feature //$NON-NLS-1$
                 + " thread=" + match.threadName + " frame=" + match.frame //$NON-NLS-1$ //$NON-NLS-2$
                 + " memory=" + memorySummary()); //$NON-NLS-1$
         }
@@ -342,11 +342,14 @@ public final class ContextLinks
         String projectName = project != null ? project.getName() : "NULL"; //$NON-NLS-1$
         String threadName = Thread.currentThread().getName();
         String key = "scope.extend|" + feature + "|" + projectName + "|" + threadName; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-        logInfoOnce(key, "EDT Extension Tweaks [scope.extend] feature=" + feature //$NON-NLS-1$
+        if (loggedInfoKeys.add(key))
+        {
+            logDebug("EDT Extension Tweaks [scope.extend] feature=" + feature //$NON-NLS-1$
             + " project=" + projectName //$NON-NLS-1$
             + " thread=" + threadName //$NON-NLS-1$
             + " details=" + details //$NON-NLS-1$
             + " memory=" + memorySummary()); //$NON-NLS-1$
+        }
     }
 
     public static String describeWorkspaceSettings()
@@ -655,7 +658,7 @@ public final class ContextLinks
 
     public static void logInfoOnce(String key, String message)
     {
-        if (loggedInfoKeys.add(key))
+        if (DEBUG_LOG_ENABLED && loggedInfoKeys.add(key))
             logInfo(message);
     }
 

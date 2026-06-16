@@ -26,10 +26,12 @@ import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.modeling.xtext.scoping.ISliceFilter;
 import com._1c.g5.modeling.xtext.scoping.ISlicedScope;
 import com._1c.g5.wiring.ServiceAccess;
+import com.google.inject.Singleton;
 
 /**
  * Adds explicitly linked project scopes without owning or delaying EDT's cache lifecycle.
  */
+@Singleton
 public class ContextLinksCachedScopeProvider
     extends BslCachedScopeProvider
 {

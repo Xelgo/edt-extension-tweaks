@@ -15,6 +15,6 @@ public class ContextLinksStartup
     public void earlyStartup()
     {
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
-        ContextLinks.logInfo("EDT Extension Tweaks startup warm-up builds are disabled"); //$NON-NLS-1$
+        ContextLinks.logDebug("EDT Extension Tweaks startup warm-up builds are disabled"); //$NON-NLS-1$
     }
 }

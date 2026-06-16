@@ -14,10 +14,12 @@ import org.eclipse.xtext.scoping.IScope;
 
 import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.scoping.BslScopeProvider;
+import com.google.inject.Singleton;
 
 /**
  * Logs the actual BSL scopes requested from common module files.
  */
+@Singleton
 public class ContextLinksBslScopeProvider
     extends BslScopeProvider
 {
