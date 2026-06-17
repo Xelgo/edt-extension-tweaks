@@ -38,6 +38,8 @@ public class ContextLinksCachedScopeProvider
     private static final Set<String> loggedTypeScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedPropertyScopeKeys = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedScopeDetails = ConcurrentHashMap.newKeySet();
+    private static final ConcurrentHashMap<String, IScope> lastKnownTypeItemScopes = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, IScope> lastKnownPropertyScopes = new ConcurrentHashMap<>();
 
     public ContextLinksCachedScopeProvider()
     {
@@ -68,6 +70,7 @@ public class ContextLinksCachedScopeProvider
             ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.addTypeItem] project=" + describeProject(project) //$NON-NLS-1$
                 + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
         }
+        rememberLastKnownScope(ScopeKind.TYPE_ITEM, project, scope);
         super.addTypeItemScope(project, scope);
     }
 
@@ -79,6 +82,7 @@ public class ContextLinksCachedScopeProvider
             ContextLinks.logDebug("EDT Extension Tweaks DEBUG [cache.addProperty] project=" + describeProject(project) //$NON-NLS-1$
                 + " scope=" + describeScope(scope) + " elements=" + countElements(scope)); //$NON-NLS-1$ //$NON-NLS-2$
         }
+        rememberLastKnownScope(ScopeKind.PROPERTY, project, scope);
         super.addPropertyScope(project, scope);
     }
 
@@ -233,6 +237,27 @@ public class ContextLinksCachedScopeProvider
         return scope.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(scope)); //$NON-NLS-1$
     }
 
+    private void rememberLastKnownScope(ScopeKind kind, IProject project, IScope scope)
+    {
+        if (project == null || scope == null)
+            return;
+
+        lastKnownScopes(kind).put(project.getName(), scope);
+    }
+
+    private IScope getLastKnownScope(ScopeKind kind, IProject project)
+    {
+        if (project == null)
+            return null;
+
+        return lastKnownScopes(kind).get(project.getName());
+    }
+
+    private ConcurrentHashMap<String, IScope> lastKnownScopes(ScopeKind kind)
+    {
+        return kind == ScopeKind.TYPE_ITEM ? lastKnownTypeItemScopes : lastKnownPropertyScopes;
+    }
+
     private enum ScopeKind
     {
         TYPE_ITEM("type-item") //$NON-NLS-1$
@@ -264,12 +289,16 @@ public class ContextLinksCachedScopeProvider
 
     private IScope getDirectTypeItemScope(IProject project)
     {
-        return super.getTypeItemScope(project);
+        IScope scope = super.getTypeItemScope(project);
+        rememberLastKnownScope(ScopeKind.TYPE_ITEM, project, scope);
+        return scope;
     }
 
     private IScope getDirectPropertyScope(IProject project)
     {
-        return super.getPropertyScope(project);
+        IScope scope = super.getPropertyScope(project);
+        rememberLastKnownScope(ScopeKind.PROPERTY, project, scope);
+        return scope;
     }
 
     private static final class ContextLinksProjectScope
@@ -406,6 +435,9 @@ public class ContextLinksCachedScopeProvider
                     continue;
 
                 IScope linkedScope = kind.get(provider, linkedProject);
+                if (linkedScope == null)
+                    linkedScope = provider.getLastKnownScope(kind, linkedProject);
+
                 if (linkedScope != null)
                     scopes.add(linkedScope);
             }
