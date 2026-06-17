@@ -12,6 +12,7 @@ public final class ContextLinksPreferences
     public static final String KEY_BSL_CONTEXT_LINKS_ENABLED = "bslContextLinks.enabled"; //$NON-NLS-1$
     public static final String KEY_QUERY_WIZARD_ENABLED = "queryWizard.enabled"; //$NON-NLS-1$
     public static final String KEY_INSERT_FORMATTING_ENABLED = "insertFormatting.enabled"; //$NON-NLS-1$
+    public static final String KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED = "workbenchViewActivation.enabled"; //$NON-NLS-1$
 
     private static final boolean DEFAULT_ENABLED = true;
 
@@ -26,6 +27,7 @@ public final class ContextLinksPreferences
         preferences.putBoolean(KEY_BSL_CONTEXT_LINKS_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_QUERY_WIZARD_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_INSERT_FORMATTING_ENABLED, DEFAULT_ENABLED);
+        preferences.putBoolean(KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED, DEFAULT_ENABLED);
     }
 
     public static boolean isBslContextLinksEnabled()
@@ -41,6 +43,11 @@ public final class ContextLinksPreferences
     public static boolean isInsertFormattingEnabled()
     {
         return getBoolean(KEY_INSERT_FORMATTING_ENABLED);
+    }
+
+    public static boolean isWorkbenchViewActivationEnabled()
+    {
+        return getBoolean(KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED);
     }
 
     private static boolean getBoolean(String key)

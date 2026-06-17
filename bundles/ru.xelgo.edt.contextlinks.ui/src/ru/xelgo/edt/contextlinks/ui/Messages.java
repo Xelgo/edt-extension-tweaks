@@ -24,6 +24,7 @@ public final class Messages
     public static String ContextLinksPreferencePage_Description;
     public static String ContextLinksPreferencePage_InsertFormattingEnabled;
     public static String ContextLinksPreferencePage_QueryWizardEnabled;
+    public static String ContextLinksPreferencePage_WorkbenchViewActivationEnabled;
     public static String ChangeAndValidateMergeQuickfix_AncestorLabel;
     public static String ChangeAndValidateMergeQuickfix_Description;
     public static String ChangeAndValidateMergeQuickfix_InvalidMethodRange;
