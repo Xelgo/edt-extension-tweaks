@@ -8,6 +8,24 @@
 внешние обработки или внешние отчеты. Он помогает этим проектам видеть общий контекст без
 ручного копирования метаданных между расширениями.
 
+## Установка и обновление из EDT
+
+В EDT откройте **Справка -> Установить новое ПО...** и добавьте update site:
+
+```text
+jar:https://github.com/Xelgo/edt-extension-tweaks/releases/latest/download/edt-extension-tweaks-update-site.zip!/
+```
+
+После добавления выберите **EDT Extension Tweaks** и завершите установку. Для обновления можно
+использовать тот же update site: ссылка `latest` всегда указывает на последний опубликованный
+релиз.
+
+Прямая ссылка на архив update site последнего релиза:
+
+```text
+https://github.com/Xelgo/edt-extension-tweaks/releases/latest/download/edt-extension-tweaks-update-site.zip
+```
+
 ## Поддерживаемые версии EDT
 
 - 1C:EDT 2025.2.6
@@ -83,24 +101,6 @@
 
 Изменения применяются сразу там, где это возможно. Для уже загруженных классов EDT, weaving-патчей
 и некоторых сервисов может потребоваться перезапуск EDT.
-
-## Установка и обновление из EDT
-
-В EDT откройте **Справка -> Установить новое ПО...** и добавьте update site:
-
-```text
-jar:https://github.com/Xelgo/edt-extension-tweaks/releases/latest/download/edt-extension-tweaks-update-site.zip!/
-```
-
-После добавления выберите **EDT Extension Tweaks** и завершите установку. Для обновления можно
-использовать тот же update site: ссылка `latest` всегда указывает на последний опубликованный
-релиз.
-
-Прямая ссылка на архив update site последнего релиза:
-
-```text
-https://github.com/Xelgo/edt-extension-tweaks/releases/latest/download/edt-extension-tweaks-update-site.zip
-```
 
 ## Сборка
 
