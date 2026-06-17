@@ -3,6 +3,9 @@ package ru.xelgo.edt.contextlinks.core;
 import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.eclipse.jface.resource.StringConverter;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.RGB;
 
 /**
  * Global feature flags for EDT Extension Tweaks.
@@ -13,8 +16,17 @@ public final class ContextLinksPreferences
     public static final String KEY_QUERY_WIZARD_ENABLED = "queryWizard.enabled"; //$NON-NLS-1$
     public static final String KEY_INSERT_FORMATTING_ENABLED = "insertFormatting.enabled"; //$NON-NLS-1$
     public static final String KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED = "workbenchViewActivation.enabled"; //$NON-NLS-1$
+    public static final String KEY_SERVER_CALL_HIGHLIGHTING_ENABLED = "serverCallHighlighting.enabled"; //$NON-NLS-1$
+    public static final String KEY_SERVER_CALL_HIGHLIGHTING_COLOR = "serverCallHighlighting.color"; //$NON-NLS-1$
+    public static final String KEY_SERVER_CALL_HIGHLIGHTING_STYLE = "serverCallHighlighting.style"; //$NON-NLS-1$
 
     private static final boolean DEFAULT_ENABLED = true;
+    private static final int DEFAULT_SERVER_CALL_HIGHLIGHTING_STYLE = SWT.BOLD;
+    private static final RGB DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR = new RGB(176, 89, 0);
+    private static final String DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR_VALUE =
+        StringConverter.asString(DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR);
+    private static final String DEFAULT_SERVER_CALL_HIGHLIGHTING_STYLE_VALUE =
+        Integer.toString(DEFAULT_SERVER_CALL_HIGHLIGHTING_STYLE);
 
     private ContextLinksPreferences()
     {
@@ -28,6 +40,9 @@ public final class ContextLinksPreferences
         preferences.putBoolean(KEY_QUERY_WIZARD_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_INSERT_FORMATTING_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED, DEFAULT_ENABLED);
+        preferences.putBoolean(KEY_SERVER_CALL_HIGHLIGHTING_ENABLED, DEFAULT_ENABLED);
+        preferences.put(KEY_SERVER_CALL_HIGHLIGHTING_COLOR, DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR_VALUE);
+        preferences.put(KEY_SERVER_CALL_HIGHLIGHTING_STYLE, DEFAULT_SERVER_CALL_HIGHLIGHTING_STYLE_VALUE);
     }
 
     public static boolean isBslContextLinksEnabled()
@@ -48,6 +63,32 @@ public final class ContextLinksPreferences
     public static boolean isWorkbenchViewActivationEnabled()
     {
         return getBoolean(KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED);
+    }
+
+    public static boolean isServerCallHighlightingEnabled()
+    {
+        return getBoolean(KEY_SERVER_CALL_HIGHLIGHTING_ENABLED);
+    }
+
+    public static RGB getServerCallHighlightingColor()
+    {
+        String value = InstanceScope.INSTANCE.getNode(ContextLinks.PLUGIN_ID)
+            .get(KEY_SERVER_CALL_HIGHLIGHTING_COLOR, DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR_VALUE);
+        return StringConverter.asRGB(value, DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR);
+    }
+
+    public static int getServerCallHighlightingStyle()
+    {
+        String value = InstanceScope.INSTANCE.getNode(ContextLinks.PLUGIN_ID)
+            .get(KEY_SERVER_CALL_HIGHLIGHTING_STYLE, DEFAULT_SERVER_CALL_HIGHLIGHTING_STYLE_VALUE);
+        try
+        {
+            return Integer.parseInt(value);
+        }
+        catch (NumberFormatException e)
+        {
+            return DEFAULT_SERVER_CALL_HIGHLIGHTING_STYLE;
+        }
     }
 
     private static boolean getBoolean(String key)

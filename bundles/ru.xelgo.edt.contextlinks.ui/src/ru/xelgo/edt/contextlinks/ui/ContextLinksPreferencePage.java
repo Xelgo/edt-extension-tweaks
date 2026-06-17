@@ -2,7 +2,10 @@ package ru.xelgo.edt.contextlinks.ui;
 
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.BooleanFieldEditor;
+import org.eclipse.jface.preference.ColorFieldEditor;
+import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
+import org.eclipse.swt.SWT;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
@@ -41,5 +44,22 @@ public class ContextLinksPreferencePage
             Messages.ContextLinksPreferencePage_InsertFormattingEnabled, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED,
             Messages.ContextLinksPreferencePage_WorkbenchViewActivationEnabled, getFieldEditorParent()));
+        addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_SERVER_CALL_HIGHLIGHTING_ENABLED,
+            Messages.ContextLinksPreferencePage_ServerCallHighlightingEnabled, getFieldEditorParent()));
+        addField(new ColorFieldEditor(ContextLinksPreferences.KEY_SERVER_CALL_HIGHLIGHTING_COLOR,
+            Messages.ContextLinksPreferencePage_ServerCallHighlightingColor, getFieldEditorParent()));
+        addField(new ComboFieldEditor(ContextLinksPreferences.KEY_SERVER_CALL_HIGHLIGHTING_STYLE,
+            Messages.ContextLinksPreferencePage_ServerCallHighlightingStyle, serverCallHighlightingStyleValues(),
+            getFieldEditorParent()));
+    }
+
+    private String[][] serverCallHighlightingStyleValues()
+    {
+        return new String[][] {
+            { Messages.ContextLinksPreferencePage_ServerCallHighlightingStyleNormal, Integer.toString(SWT.NORMAL) },
+            { Messages.ContextLinksPreferencePage_ServerCallHighlightingStyleBold, Integer.toString(SWT.BOLD) },
+            { Messages.ContextLinksPreferencePage_ServerCallHighlightingStyleItalic, Integer.toString(SWT.ITALIC) },
+            { Messages.ContextLinksPreferencePage_ServerCallHighlightingStyleBoldItalic,
+                Integer.toString(SWT.BOLD | SWT.ITALIC) } };
     }
 }

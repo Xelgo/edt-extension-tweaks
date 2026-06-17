@@ -24,6 +24,13 @@ public final class Messages
     public static String ContextLinksPreferencePage_Description;
     public static String ContextLinksPreferencePage_InsertFormattingEnabled;
     public static String ContextLinksPreferencePage_QueryWizardEnabled;
+    public static String ContextLinksPreferencePage_ServerCallHighlightingColor;
+    public static String ContextLinksPreferencePage_ServerCallHighlightingEnabled;
+    public static String ContextLinksPreferencePage_ServerCallHighlightingStyle;
+    public static String ContextLinksPreferencePage_ServerCallHighlightingStyleBold;
+    public static String ContextLinksPreferencePage_ServerCallHighlightingStyleBoldItalic;
+    public static String ContextLinksPreferencePage_ServerCallHighlightingStyleItalic;
+    public static String ContextLinksPreferencePage_ServerCallHighlightingStyleNormal;
     public static String ContextLinksPreferencePage_WorkbenchViewActivationEnabled;
     public static String ChangeAndValidateMergeQuickfix_AncestorLabel;
     public static String ChangeAndValidateMergeQuickfix_Description;
