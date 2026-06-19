@@ -14,6 +14,8 @@ public final class ContextLinksPreferences
 {
     public static final String KEY_BSL_CONTEXT_LINKS_ENABLED = "bslContextLinks.enabled"; //$NON-NLS-1$
     public static final String KEY_QUERY_WIZARD_ENABLED = "queryWizard.enabled"; //$NON-NLS-1$
+    public static final String KEY_QUERY_WIZARD_NESTED_TEMP_TABLES_ENABLED =
+        "queryWizard.nestedTempTables.enabled"; //$NON-NLS-1$
     public static final String KEY_INSERT_FORMATTING_ENABLED = "insertFormatting.enabled"; //$NON-NLS-1$
     public static final String KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED = "workbenchViewActivation.enabled"; //$NON-NLS-1$
     public static final String KEY_SERVER_CALL_HIGHLIGHTING_ENABLED = "serverCallHighlighting.enabled"; //$NON-NLS-1$
@@ -38,6 +40,7 @@ public final class ContextLinksPreferences
         IEclipsePreferences preferences = DefaultScope.INSTANCE.getNode(ContextLinks.PLUGIN_ID);
         preferences.putBoolean(KEY_BSL_CONTEXT_LINKS_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_QUERY_WIZARD_ENABLED, DEFAULT_ENABLED);
+        preferences.putBoolean(KEY_QUERY_WIZARD_NESTED_TEMP_TABLES_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_INSERT_FORMATTING_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_SERVER_CALL_HIGHLIGHTING_ENABLED, DEFAULT_ENABLED);
@@ -53,6 +56,11 @@ public final class ContextLinksPreferences
     public static boolean isQueryWizardEnabled()
     {
         return getBoolean(KEY_QUERY_WIZARD_ENABLED);
+    }
+
+    public static boolean isQueryWizardNestedTempTablesEnabled()
+    {
+        return isQueryWizardEnabled() && getBoolean(KEY_QUERY_WIZARD_NESTED_TEMP_TABLES_ENABLED);
     }
 
     public static boolean isInsertFormattingEnabled()

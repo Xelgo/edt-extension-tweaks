@@ -24,6 +24,7 @@ public final class Messages
     public static String ContextLinksPreferencePage_Description;
     public static String ContextLinksPreferencePage_InsertFormattingEnabled;
     public static String ContextLinksPreferencePage_QueryWizardEnabled;
+    public static String ContextLinksPreferencePage_QueryWizardNestedTempTablesEnabled;
     public static String ContextLinksPreferencePage_ServerCallHighlightingColor;
     public static String ContextLinksPreferencePage_ServerCallHighlightingEnabled;
     public static String ContextLinksPreferencePage_ServerCallHighlightingStyle;

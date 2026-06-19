@@ -1,7 +1,10 @@
 ﻿package ru.xelgo.edt.contextlinks.core;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -19,6 +22,11 @@ import com._1c.g5.v8.dt.metadata.dbview.ExtendedDbViewTableDef;
  */
 public final class ContextLinksQueryWizardPatches
 {
+    private static final int AVAILABLE_TABLE_TEMP_TABLES_TYPE = 0;
+    private static final long RECENT_NESTED_TEMP_TABLES_TTL_MS = 120_000L;
+    private static volatile List<DbViewElement> recentNestedTempTables = List.of();
+    private static volatile long recentNestedTempTablesTimestamp;
+
     private ContextLinksQueryWizardPatches()
     {
         // Utility class.
@@ -71,6 +79,47 @@ public final class ContextLinksQueryWizardPatches
         return objects;
     }
 
+    public static void rememberQlEditorQuerySource(Object qlEditor, Object queryWizardSource)
+    {
+        if (!ContextLinksPreferences.isQueryWizardNestedTempTablesEnabled())
+            return;
+
+        if (qlEditor == null || queryWizardSource == null)
+            return;
+
+        List<DbViewElement> tempTables = extractTempTables(queryWizardSource);
+        if (tempTables.isEmpty())
+        {
+            clearRecentNestedTempTables();
+            return;
+        }
+
+        recentNestedTempTables = List.copyOf(tempTables);
+        recentNestedTempTablesTimestamp = System.currentTimeMillis();
+    }
+
+    public static void applyPendingNestedTempTables(Object queryWizardControl)
+    {
+        List<DbViewElement> tempTables = consumeRecentNestedTempTables();
+        if (!ContextLinksPreferences.isQueryWizardNestedTempTablesEnabled() || queryWizardControl == null
+            || tempTables.isEmpty())
+        {
+            return;
+        }
+
+        try
+        {
+            Method method = queryWizardControl.getClass().getDeclaredMethod("addTempTablesForNestedQuery", List.class); //$NON-NLS-1$
+            method.setAccessible(true);
+            method.invoke(queryWizardControl, new ArrayList<>(tempTables));
+        }
+        catch (ReflectiveOperationException | RuntimeException e)
+        {
+            ContextLinks.logDebug("EDT Extension Tweaks failed to apply nested Query Wizard temp tables: " //$NON-NLS-1$
+                + e.getMessage());
+        }
+    }
+
     private static DbViewElement normalizeExtendedDbView(DbViewElement dbView)
     {
         if (dbView instanceof ExtendedDbViewTableDef extended && extended.getSource() != null)
@@ -119,6 +168,116 @@ public final class ContextLinksQueryWizardPatches
     private static boolean hasClassName(Object object, String className)
     {
         return object != null && className.equals(object.getClass().getName());
+    }
+
+    private static List<DbViewElement> extractTempTables(Object queryWizardSource)
+    {
+        Object availableTables = invoke(queryWizardSource, "getAvailableTables"); //$NON-NLS-1$
+        if (!(availableTables instanceof Iterable<?> iterable))
+            return List.of();
+
+        List<DbViewElement> tempTables = new ArrayList<>();
+        for (Object availableTable : iterable)
+        {
+            Object type = invoke(availableTable, "getType"); //$NON-NLS-1$
+            if (!(type instanceof Integer) || ((Integer)type).intValue() != AVAILABLE_TABLE_TEMP_TABLES_TYPE)
+                continue;
+
+            Object dbViews = invokeCompatible(availableTable, "getDbViews", //$NON-NLS-1$
+                queryWizardSource);
+            if (!(dbViews instanceof Iterable<?> dbViewIterable))
+                return List.of();
+
+            for (Object dbView : dbViewIterable)
+            {
+                if (dbView instanceof DbViewElement dbViewElement)
+                    tempTables.add(dbViewElement);
+            }
+            return tempTables;
+        }
+
+        return List.of();
+    }
+
+    private static Object invoke(Object target, String name)
+    {
+        return invoke(target, name, new Class<?>[0]);
+    }
+
+    private static Object invoke(Object target, String name, Class<?>[] parameterTypes, Object... arguments)
+    {
+        if (target == null)
+            return null;
+
+        try
+        {
+            Method method = target.getClass().getMethod(name, parameterTypes);
+            method.setAccessible(true);
+            return method.invoke(target, arguments);
+        }
+        catch (ReflectiveOperationException | RuntimeException e)
+        {
+            return null;
+        }
+    }
+
+    private static Object invokeCompatible(Object target, String name, Object... arguments)
+    {
+        if (target == null)
+            return null;
+
+        try
+        {
+            for (Method method : target.getClass().getMethods())
+            {
+                if (!name.equals(method.getName()) || method.getParameterCount() != arguments.length)
+                    continue;
+
+                Class<?>[] parameterTypes = method.getParameterTypes();
+                boolean compatible = true;
+                for (int i = 0; i < parameterTypes.length; i++)
+                {
+                    if (arguments[i] != null && !parameterTypes[i].isInstance(arguments[i]))
+                    {
+                        compatible = false;
+                        break;
+                    }
+                }
+                if (!compatible)
+                    continue;
+
+                method.setAccessible(true);
+                return method.invoke(target, arguments);
+            }
+        }
+        catch (ReflectiveOperationException | RuntimeException e)
+        {
+            return null;
+        }
+        return null;
+    }
+
+    private static List<DbViewElement> consumeRecentNestedTempTables()
+    {
+        if (recentNestedTempTables == null || recentNestedTempTables.isEmpty())
+            return List.of();
+
+        long timestamp = recentNestedTempTablesTimestamp;
+        if (timestamp <= 0L || System.currentTimeMillis() - timestamp > RECENT_NESTED_TEMP_TABLES_TTL_MS)
+        {
+            clearRecentNestedTempTables();
+            return List.of();
+        }
+
+        List<DbViewElement> tempTables = recentNestedTempTables;
+        clearRecentNestedTempTables();
+        return tempTables;
+    }
+
+    private static void clearRecentNestedTempTables()
+    {
+        recentNestedTempTables = List.of();
+        recentNestedTempTablesTimestamp = 0L;
     }
 
     private static <T> T field(Object target, String name, Class<T> type)

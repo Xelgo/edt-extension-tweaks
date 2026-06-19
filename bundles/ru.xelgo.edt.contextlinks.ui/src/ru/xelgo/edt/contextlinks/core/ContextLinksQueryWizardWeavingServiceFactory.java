@@ -11,6 +11,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
@@ -30,6 +31,10 @@ final class ContextLinksQueryWizardWeavingServiceFactory
         "com/_1c/g5/v8/dt/qw/ui/editproviders/SourcesEditProvider"; //$NON-NLS-1$
     private static final String QUERY_WIZARD_ADOPT_SUPPORT =
         "com/_1c/g5/v8/dt/internal/qw/ui/QueryWizardAdoptSupport"; //$NON-NLS-1$
+    private static final String QL_EDITOR = "com/_1c/g5/v8/dt/qw/ui/ql/QlEditor"; //$NON-NLS-1$
+    private static final String QUERY_WIZARD_CONTROL =
+        "com/_1c/g5/v8/dt/qw/ui/controls/QueryWizardControl"; //$NON-NLS-1$
+    private static final String QUERY_WIZARD_SOURCE = "com/_1c/g5/v8/dt/qw/ui/utils/QueryWizardSource"; //$NON-NLS-1$
     private static final String PATCHES = "ru/xelgo/edt/contextlinks/core/ContextLinksQueryWizardPatches"; //$NON-NLS-1$
 
     @Override
@@ -47,12 +52,19 @@ final class ContextLinksQueryWizardWeavingServiceFactory
             return null;
 
         ContextLinks.logDebug("EDT Extension Tweaks weaving active for " + symbolicName); //$NON-NLS-1$
-        return new QueryWizardWeavingService();
+        return new QueryWizardWeavingService(symbolicName);
     }
 
     private static final class QueryWizardWeavingService
         implements IWeavingService
     {
+        private final String bundleSymbolicName;
+
+        QueryWizardWeavingService(String bundleSymbolicName)
+        {
+            this.bundleSymbolicName = bundleSymbolicName;
+        }
+
         @Override
         public void flushGeneratedClasses(ClassLoader classLoader)
         {
@@ -85,10 +97,17 @@ final class ContextLinksQueryWizardWeavingServiceFactory
                 return null;
 
             String internalClassName = className != null ? className.replace('.', '/') : null;
-            if (SOURCES_EDIT_PROVIDER.equals(internalClassName))
-                return patchSourcesEditProvider(bytes);
-            if (QUERY_WIZARD_ADOPT_SUPPORT.equals(internalClassName))
-                return patchQueryWizardAdoptSupport(bytes);
+            if (QUERY_WIZARD_UI_BUNDLE.equals(bundleSymbolicName))
+            {
+                if (SOURCES_EDIT_PROVIDER.equals(internalClassName))
+                    return patchSourcesEditProvider(bytes);
+                if (QUERY_WIZARD_ADOPT_SUPPORT.equals(internalClassName))
+                    return patchQueryWizardAdoptSupport(bytes);
+                if (QL_EDITOR.equals(internalClassName))
+                    return patchQlEditor(bytes);
+                if (QUERY_WIZARD_CONTROL.equals(internalClassName))
+                    return patchQueryWizardControl(bytes);
+            }
             return null;
         }
 
@@ -150,6 +169,88 @@ final class ContextLinksQueryWizardWeavingServiceFactory
             if (patched)
             {
                 ContextLinks.logDebug("EDT Extension Tweaks patched Query Wizard adoption filter"); //$NON-NLS-1$
+                return write(classNode);
+            }
+            return null;
+        }
+
+        private byte[] patchQlEditor(byte[] bytes)
+        {
+            ClassNode classNode = read(bytes);
+            boolean patched = false;
+            for (MethodNode method : classNode.methods)
+            {
+                if (!"setEditableExpression".equals(method.name) //$NON-NLS-1$
+                    || !method.desc.endsWith("Lcom/_1c/g5/v8/dt/qw/ui/utils/QueryWizardSource;)V")) //$NON-NLS-1$
+                {
+                    continue;
+                }
+
+                for (AbstractInsnNode instruction = method.instructions.getFirst(); instruction != null;
+                    instruction = instruction.getNext())
+                {
+                    if (instruction.getOpcode() != Opcodes.RETURN)
+                        continue;
+
+                    InsnList remember = new InsnList();
+                    remember.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                    remember.add(new VarInsnNode(Opcodes.ALOAD, 4));
+                    remember.add(new MethodInsnNode(Opcodes.INVOKESTATIC, PATCHES, "rememberQlEditorQuerySource", //$NON-NLS-1$
+                        "(Ljava/lang/Object;Ljava/lang/Object;)V", false)); //$NON-NLS-1$
+                    method.instructions.insertBefore(instruction, remember);
+                    patched = true;
+                }
+                method.maxStack = Math.max(method.maxStack, 2);
+            }
+
+            if (patched)
+            {
+                ContextLinks.logDebug("EDT Extension Tweaks patched QL editor nested temp-table capture"); //$NON-NLS-1$
+                return write(classNode);
+            }
+            return null;
+        }
+
+        private byte[] patchQueryWizardControl(byte[] bytes)
+        {
+            ClassNode classNode = read(bytes);
+            boolean patched = false;
+            for (MethodNode method : classNode.methods)
+            {
+                if (!"setQueryText".equals(method.name) || !"(Ljava/lang/String;)V".equals(method.desc)) //$NON-NLS-1$ //$NON-NLS-2$
+                    continue;
+
+                for (AbstractInsnNode instruction = method.instructions.getFirst(); instruction != null;
+                    instruction = instruction.getNext())
+                {
+                    if (!(instruction instanceof MethodInsnNode methodInsn)
+                        || instruction.getOpcode() != Opcodes.INVOKEVIRTUAL
+                        || !QUERY_WIZARD_SOURCE.equals(methodInsn.owner)
+                        || !"addObserver".equals(methodInsn.name)) //$NON-NLS-1$
+                    {
+                        continue;
+                    }
+
+                    AbstractInsnNode observerLoad = instruction.getPrevious();
+                    AbstractInsnNode sourceField = observerLoad != null ? observerLoad.getPrevious() : null;
+                    AbstractInsnNode sourceOwnerLoad = sourceField != null ? sourceField.getPrevious() : null;
+                    if (!(sourceField instanceof FieldInsnNode) || sourceOwnerLoad == null)
+                        continue;
+
+                    InsnList apply = new InsnList();
+                    apply.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                    apply.add(new MethodInsnNode(Opcodes.INVOKESTATIC, PATCHES, "applyPendingNestedTempTables", //$NON-NLS-1$
+                        "(Ljava/lang/Object;)V", false)); //$NON-NLS-1$
+                    method.instructions.insertBefore(sourceOwnerLoad, apply);
+                    patched = true;
+                    break;
+                }
+                method.maxStack = Math.max(method.maxStack, 2);
+            }
+
+            if (patched)
+            {
+                ContextLinks.logDebug("EDT Extension Tweaks patched Query Wizard nested temp-table apply"); //$NON-NLS-1$
                 return write(classNode);
             }
             return null;

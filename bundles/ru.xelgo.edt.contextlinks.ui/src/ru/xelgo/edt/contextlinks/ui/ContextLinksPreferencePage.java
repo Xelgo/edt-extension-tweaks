@@ -40,6 +40,8 @@ public class ContextLinksPreferencePage
             Messages.ContextLinksPreferencePage_BslContextLinksEnabled, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_QUERY_WIZARD_ENABLED,
             Messages.ContextLinksPreferencePage_QueryWizardEnabled, getFieldEditorParent()));
+        addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_QUERY_WIZARD_NESTED_TEMP_TABLES_ENABLED,
+            Messages.ContextLinksPreferencePage_QueryWizardNestedTempTablesEnabled, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_INSERT_FORMATTING_ENABLED,
             Messages.ContextLinksPreferencePage_InsertFormattingEnabled, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED,
