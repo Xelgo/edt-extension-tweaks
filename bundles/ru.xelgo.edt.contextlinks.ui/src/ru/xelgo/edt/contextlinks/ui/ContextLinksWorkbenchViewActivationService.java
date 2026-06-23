@@ -36,6 +36,8 @@ public final class ContextLinksWorkbenchViewActivationService
     private static final String OUTLINE_VIEW_ID = "org.eclipse.ui.views.ContentOutline"; //$NON-NLS-1$
     private static final String PROPERTY_SHEET_VIEW_ID = "org.eclipse.ui.views.PropertySheet"; //$NON-NLS-1$
     private static final String FORM_EDITOR_PAGE_CLASS = "com._1c.g5.v8.dt.form.ui.editor.FormEditorPage"; //$NON-NLS-1$
+    private static final String ADOPTED_FORM_EDITOR_PAGE_CLASS =
+        "com._1c.g5.v8.dt.internal.form.ui.extension.editor.AdoptedFormEditorPage"; //$NON-NLS-1$
     private static final String FORM_EDITOR_MODULE_PAGE_CLASS =
         "com._1c.g5.v8.dt.form.ui.editor.FormEditorModulePage"; //$NON-NLS-1$
 
@@ -265,7 +267,7 @@ public final class ContextLinksWorkbenchViewActivationService
         if (FORM_EDITOR_MODULE_PAGE_CLASS.equals(pageClassName))
             return OUTLINE_VIEW_ID;
 
-        if (FORM_EDITOR_PAGE_CLASS.equals(pageClassName))
+        if (FORM_EDITOR_PAGE_CLASS.equals(pageClassName) || ADOPTED_FORM_EDITOR_PAGE_CLASS.equals(pageClassName))
             return PROPERTY_SHEET_VIEW_ID;
 
         return null;

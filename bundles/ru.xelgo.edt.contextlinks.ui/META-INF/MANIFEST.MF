@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: %pluginName
 Bundle-Vendor: %providerName
-Bundle-Version: 1.1.9.qualifier
+Bundle-Version: 1.1.10.qualifier
 Bundle-SymbolicName: ru.xelgo.edt.contextlinks.ui;singleton:=true
 Bundle-Activator: ru.xelgo.edt.contextlinks.core.ContextLinksPlugin
 Bundle-ActivationPolicy: lazy
