@@ -21,8 +21,14 @@ public final class ContextLinksPreferences
     public static final String KEY_SERVER_CALL_HIGHLIGHTING_ENABLED = "serverCallHighlighting.enabled"; //$NON-NLS-1$
     public static final String KEY_SERVER_CALL_HIGHLIGHTING_COLOR = "serverCallHighlighting.color"; //$NON-NLS-1$
     public static final String KEY_SERVER_CALL_HIGHLIGHTING_STYLE = "serverCallHighlighting.style"; //$NON-NLS-1$
+    public static final String KEY_VARIABLE_SNAPSHOTS_ENABLED = "variableSnapshots.enabled"; //$NON-NLS-1$
+    public static final String KEY_VARIABLE_SNAPSHOTS_MAX_DEPTH = "variableSnapshots.maxDepth"; //$NON-NLS-1$
+    public static final String KEY_VARIABLE_SNAPSHOTS_COLLECTION_LIMIT =
+        "variableSnapshots.collectionLimit"; //$NON-NLS-1$
 
     private static final boolean DEFAULT_ENABLED = true;
+    private static final int DEFAULT_VARIABLE_SNAPSHOTS_MAX_DEPTH = 5;
+    private static final int DEFAULT_VARIABLE_SNAPSHOTS_COLLECTION_LIMIT = 300;
     private static final int DEFAULT_SERVER_CALL_HIGHLIGHTING_STYLE = SWT.BOLD;
     private static final RGB DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR = new RGB(176, 89, 0);
     private static final String DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR_VALUE =
@@ -44,6 +50,9 @@ public final class ContextLinksPreferences
         preferences.putBoolean(KEY_INSERT_FORMATTING_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_SERVER_CALL_HIGHLIGHTING_ENABLED, DEFAULT_ENABLED);
+        preferences.putBoolean(KEY_VARIABLE_SNAPSHOTS_ENABLED, DEFAULT_ENABLED);
+        preferences.putInt(KEY_VARIABLE_SNAPSHOTS_MAX_DEPTH, DEFAULT_VARIABLE_SNAPSHOTS_MAX_DEPTH);
+        preferences.putInt(KEY_VARIABLE_SNAPSHOTS_COLLECTION_LIMIT, DEFAULT_VARIABLE_SNAPSHOTS_COLLECTION_LIMIT);
         preferences.put(KEY_SERVER_CALL_HIGHLIGHTING_COLOR, DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR_VALUE);
         preferences.put(KEY_SERVER_CALL_HIGHLIGHTING_STYLE, DEFAULT_SERVER_CALL_HIGHLIGHTING_STYLE_VALUE);
     }
@@ -78,6 +87,21 @@ public final class ContextLinksPreferences
         return getBoolean(KEY_SERVER_CALL_HIGHLIGHTING_ENABLED);
     }
 
+    public static boolean isVariableSnapshotsEnabled()
+    {
+        return getBoolean(KEY_VARIABLE_SNAPSHOTS_ENABLED);
+    }
+
+    public static int getVariableSnapshotsMaxDepth()
+    {
+        return getInt(KEY_VARIABLE_SNAPSHOTS_MAX_DEPTH, DEFAULT_VARIABLE_SNAPSHOTS_MAX_DEPTH, 1, 20);
+    }
+
+    public static int getVariableSnapshotsCollectionLimit()
+    {
+        return getInt(KEY_VARIABLE_SNAPSHOTS_COLLECTION_LIMIT, DEFAULT_VARIABLE_SNAPSHOTS_COLLECTION_LIMIT, 1, 5000);
+    }
+
     public static RGB getServerCallHighlightingColor()
     {
         String value = InstanceScope.INSTANCE.getNode(ContextLinks.PLUGIN_ID)
@@ -102,5 +126,11 @@ public final class ContextLinksPreferences
     private static boolean getBoolean(String key)
     {
         return InstanceScope.INSTANCE.getNode(ContextLinks.PLUGIN_ID).getBoolean(key, DEFAULT_ENABLED);
+    }
+
+    private static int getInt(String key, int defaultValue, int minValue, int maxValue)
+    {
+        int value = InstanceScope.INSTANCE.getNode(ContextLinks.PLUGIN_ID).getInt(key, defaultValue);
+        return Math.max(minValue, Math.min(maxValue, value));
     }
 }

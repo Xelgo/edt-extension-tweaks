@@ -16,13 +16,13 @@
   <parent>
     <groupId>ru.xelgo.edt.contextlinks</groupId>
     <artifactId>bom</artifactId>
-    <version>1.1.10-SNAPSHOT</version>
+    <version>1.1.11-SNAPSHOT</version>
     <relativePath>./bom/pom.xml</relativePath>
   </parent>
 
   <groupId>ru.xelgo.edt.contextlinks</groupId>
   <artifactId>parent</artifactId>
-  <version>1.1.10-SNAPSHOT</version>
+  <version>1.1.11-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>EDT Extension Tweaks</name>
@@ -39,7 +39,7 @@
       <plugins>
         <plugin>
           <groupId>org.eclipse.tycho</groupId>
-          <artifactId>tycho-p2-repository-plugin</artifactId>          
+          <artifactId>tycho-p2-repository-plugin</artifactId>
           <configuration>
             <repositoryName>${project.name} Repository</repositoryName>
           </configuration>

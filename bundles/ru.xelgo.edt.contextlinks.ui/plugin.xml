@@ -25,6 +25,19 @@
    </extension>
 
    <extension
+         point="org.eclipse.ui.views">
+      <view
+            allowMultiple="false"
+            category="org.eclipse.debug.ui"
+            class="ru.xelgo.edt.contextlinks.ui.VariableSnapshotsView"
+            icon="platform:/plugin/org.eclipse.debug.ui/icons/full/eview16/watchlist_view.png"
+            id="ru.xelgo.edt.contextlinks.ui.views.variableSnapshots"
+            name="%variableSnapshots.view.name"
+            restorable="true">
+      </view>
+   </extension>
+
+   <extension
          point="org.eclipse.ui.commands">
       <category
             id="ru.xelgo.edt.contextlinks.ui.category"
@@ -123,6 +136,22 @@
       <startup
             class="ru.xelgo.edt.contextlinks.ui.ContextLinksStartup">
       </startup>
+   </extension>
+
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="org.eclipse.debug.ui.DebugPerspective">
+         <view
+               id="ru.xelgo.edt.contextlinks.ui.views.variableSnapshots"
+               relationship="stack"
+               relative="com._1c.g5.v8.dt.debug.ui.variables.BslExpressionsView"
+               visible="true">
+         </view>
+         <viewShortcut
+               id="ru.xelgo.edt.contextlinks.ui.views.variableSnapshots">
+         </viewShortcut>
+      </perspectiveExtension>
    </extension>
 
    <extension

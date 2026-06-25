@@ -5,6 +5,7 @@ import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ColorFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
+import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.swt.SWT;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
@@ -48,6 +49,17 @@ public class ContextLinksPreferencePage
             Messages.ContextLinksPreferencePage_WorkbenchViewActivationEnabled, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_SERVER_CALL_HIGHLIGHTING_ENABLED,
             Messages.ContextLinksPreferencePage_ServerCallHighlightingEnabled, getFieldEditorParent()));
+        addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_VARIABLE_SNAPSHOTS_ENABLED,
+            Messages.ContextLinksPreferencePage_VariableSnapshotsEnabled, getFieldEditorParent()));
+        IntegerFieldEditor maxDepth = new IntegerFieldEditor(ContextLinksPreferences.KEY_VARIABLE_SNAPSHOTS_MAX_DEPTH,
+            Messages.ContextLinksPreferencePage_VariableSnapshotsMaxDepth, getFieldEditorParent());
+        maxDepth.setValidRange(1, 20);
+        addField(maxDepth);
+        IntegerFieldEditor collectionLimit = new IntegerFieldEditor(
+            ContextLinksPreferences.KEY_VARIABLE_SNAPSHOTS_COLLECTION_LIMIT,
+            Messages.ContextLinksPreferencePage_VariableSnapshotsCollectionLimit, getFieldEditorParent());
+        collectionLimit.setValidRange(1, 5000);
+        addField(collectionLimit);
         addField(new ColorFieldEditor(ContextLinksPreferences.KEY_SERVER_CALL_HIGHLIGHTING_COLOR,
             Messages.ContextLinksPreferencePage_ServerCallHighlightingColor, getFieldEditorParent()));
         addField(new ComboFieldEditor(ContextLinksPreferences.KEY_SERVER_CALL_HIGHLIGHTING_STYLE,

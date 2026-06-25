@@ -15,12 +15,12 @@
   <parent>
     <groupId>ru.xelgo.edt.contextlinks</groupId>
     <artifactId>features</artifactId>
-    <version>1.1.10-SNAPSHOT</version>
+    <version>1.1.11-SNAPSHOT</version>
   </parent>
 
   <artifactId>ru.xelgo.edt.contextlinks.feature</artifactId>
   <packaging>eclipse-feature</packaging>
-  
+
   <build>
     <plugins>
       <plugin>

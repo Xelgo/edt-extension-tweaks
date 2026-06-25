@@ -32,6 +32,9 @@ public final class Messages
     public static String ContextLinksPreferencePage_ServerCallHighlightingStyleBoldItalic;
     public static String ContextLinksPreferencePage_ServerCallHighlightingStyleItalic;
     public static String ContextLinksPreferencePage_ServerCallHighlightingStyleNormal;
+    public static String ContextLinksPreferencePage_VariableSnapshotsCollectionLimit;
+    public static String ContextLinksPreferencePage_VariableSnapshotsEnabled;
+    public static String ContextLinksPreferencePage_VariableSnapshotsMaxDepth;
     public static String ContextLinksPreferencePage_WorkbenchViewActivationEnabled;
     public static String ChangeAndValidateMergeQuickfix_AncestorLabel;
     public static String ChangeAndValidateMergeQuickfix_Description;

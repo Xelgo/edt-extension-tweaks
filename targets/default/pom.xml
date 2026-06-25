@@ -16,13 +16,13 @@
   <parent>
     <groupId>ru.xelgo.edt.contextlinks</groupId>
     <artifactId>targets</artifactId>
-    <version>1.1.10-SNAPSHOT</version>
+    <version>1.1.11-SNAPSHOT</version>
   </parent>
 
   <groupId>ru.xelgo.edt.contextlinks</groupId>
   <artifactId>default</artifactId>
-  <version>1.1.10-SNAPSHOT</version>
-  
+  <version>1.1.11-SNAPSHOT</version>
+
   <packaging>eclipse-target-definition</packaging>
 
   <name>Target Platform</name>
