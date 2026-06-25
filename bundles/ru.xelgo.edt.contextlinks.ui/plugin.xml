@@ -175,4 +175,17 @@
       </externalQuickfixProvider>
    </extension>
 
+   <extension
+         point="com.e1c.g5.v8.dt.check.fixes">
+      <fix
+            class="ru.xelgo.edt.contextlinks.core.ChangeAndValidateMergeBslCheckQuickfix">
+      </fix>
+      <fix
+            class="ru.xelgo.edt.contextlinks.core.ChangeAndValidateMergeMdExtensionCheckQuickfix">
+      </fix>
+      <fix
+            class="ru.xelgo.edt.contextlinks.core.ChangeAndValidateMergeLegacyBslCheckQuickfix">
+      </fix>
+   </extension>
+
 </plugin>

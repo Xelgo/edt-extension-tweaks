@@ -31,6 +31,9 @@ import org.eclipse.xtext.ui.editor.model.edit.IModificationContext;
 import org.eclipse.xtext.ui.editor.quickfix.Fix;
 import org.eclipse.xtext.ui.editor.quickfix.IssueResolutionAcceptor;
 import org.eclipse.xtext.validation.Issue;
+import org.eclipse.text.edits.MultiTextEdit;
+import org.eclipse.text.edits.ReplaceEdit;
+import org.eclipse.text.edits.TextEdit;
 
 import com._1c.g5.v8.dt.bsl.common.IModuleExtensionService;
 import com._1c.g5.v8.dt.bsl.common.IModuleExtensionServiceProvider;
@@ -109,13 +112,19 @@ public final class ChangeAndValidateMergeQuickfixProvider
         throws Exception
     {
         IXtextDocument document = context.getXtextDocument();
-        String documentText = document.get();
-        MergeData mergeData = document.readOnly(resource -> createMergeData(resource, documentText, issue));
+        TextEdit edit = document.readOnly(resource -> createMergeTextEdit(resource, document.get(), issue));
+        edit.apply(document);
+    }
+
+    static TextEdit createMergeTextEdit(XtextResource resource, String documentText, Issue issue)
+        throws CoreException
+    {
+        MergeData mergeData = createMergeData(resource, documentText, issue);
         String mergedText = openMergeDialog(mergeData);
         if (mergedText == null)
-            return;
+            return new MultiTextEdit();
 
-        document.replace(mergeData.methodOffset, mergeData.methodLength,
+        return new ReplaceEdit(mergeData.methodOffset, mergeData.methodLength,
             normalizeLineSeparators(mergedText, mergeData.extensionMethodText));
     }
 
