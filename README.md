@@ -143,3 +143,9 @@ repositories/ru.xelgo.edt.contextlinks.repository/target/ru.xelgo.edt.contextlin
 - `features/ru.xelgo.edt.contextlinks.feature` - устанавливаемая feature.
 - `repositories/ru.xelgo.edt.contextlinks.repository` - p2 update site.
 - `targets/default/default.target` - target platform для EDT 2025.2.6.
+
+## Публикация на Infostart
+
+[![Infostart](https://infostart.ru/bitrix/templates/sandbox_empty/assets/tpl/abo/img/logo.svg)](https://infostart.ru/1c/articles/2724058/)
+
+- Статья: [EDT Extension Tweaks: плагины, контекст расширений и гибкая доработка 1C:EDT](https://infostart.ru/1c/articles/2724058/)
