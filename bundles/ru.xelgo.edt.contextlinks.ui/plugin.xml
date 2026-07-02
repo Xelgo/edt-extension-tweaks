@@ -54,6 +54,11 @@
             id="ru.xelgo.edt.contextlinks.ui.commands.configureApplicationUpdateProjects"
             name="%applicationUpdate.command.name">
       </command>
+      <command
+            categoryId="ru.xelgo.edt.contextlinks.ui.category"
+            id="ru.xelgo.edt.contextlinks.ui.commands.forceUpdateApplicationExtension"
+            name="%forceExtensionUpdate.command.name">
+      </command>
    </extension>
 
    <extension
@@ -86,16 +91,25 @@
                name="ru.xelgo.edt.contextlinks.ui.applicationUpdate.separator"
                visible="true">
          </separator>
-         <command
-               commandId="ru.xelgo.edt.contextlinks.ui.commands.configureApplicationUpdateProjects"
-               label="%applicationUpdate.command.name"
-               style="push"
-               tooltip="%applicationUpdate.command.tooltip">
-            <visibleWhen
-                  checkEnabled="true">
-            </visibleWhen>
-         </command>
-      </menuContribution>
+          <command
+                commandId="ru.xelgo.edt.contextlinks.ui.commands.configureApplicationUpdateProjects"
+                label="%applicationUpdate.command.name"
+                style="push"
+                tooltip="%applicationUpdate.command.tooltip">
+             <visibleWhen
+                   checkEnabled="true">
+             </visibleWhen>
+          </command>
+          <command
+                commandId="ru.xelgo.edt.contextlinks.ui.commands.forceUpdateApplicationExtension"
+                label="%forceExtensionUpdate.command.name"
+                style="push"
+                tooltip="%forceExtensionUpdate.command.tooltip">
+             <visibleWhen
+                   checkEnabled="true">
+             </visibleWhen>
+          </command>
+       </menuContribution>
    </extension>
 
    <extension
@@ -113,6 +127,24 @@
                      ifEmpty="false">
                   <instanceof
                         value="com.e1c.g5.dt.applications.IApplication">
+                  </instanceof>
+               </iterate>
+            </with>
+         </enabledWhen>
+      </handler>
+      <handler
+            class="ru.xelgo.edt.contextlinks.ui.ForceUpdateApplicationExtensionHandler"
+            commandId="ru.xelgo.edt.contextlinks.ui.commands.forceUpdateApplicationExtension">
+         <enabledWhen>
+            <with
+                  variable="selection">
+               <count
+                     value="1">
+               </count>
+               <iterate
+                     ifEmpty="false">
+                  <instanceof
+                        value="com.e1c.g5.dt.applications.infobases.IInfobaseApplication">
                   </instanceof>
                </iterate>
             </with>

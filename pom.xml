@@ -16,13 +16,13 @@
   <parent>
     <groupId>ru.xelgo.edt.contextlinks</groupId>
     <artifactId>bom</artifactId>
-    <version>1.1.13-SNAPSHOT</version>
+    <version>1.1.14-SNAPSHOT</version>
     <relativePath>./bom/pom.xml</relativePath>
   </parent>
 
   <groupId>ru.xelgo.edt.contextlinks</groupId>
   <artifactId>parent</artifactId>
-  <version>1.1.13-SNAPSHOT</version>
+  <version>1.1.14-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>EDT Extension Tweaks</name>

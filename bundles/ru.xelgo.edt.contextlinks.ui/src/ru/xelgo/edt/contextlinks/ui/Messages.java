@@ -20,6 +20,14 @@ public final class Messages
     public static String ConfigureApplicationUpdateProjectsHandler_NoApplication;
     public static String ConfigureApplicationUpdateProjectsHandler_NoCandidates;
     public static String ConfigureApplicationUpdateProjectsHandler_Title;
+    public static String ForceUpdateApplicationExtensionHandler_JobName;
+    public static String ForceUpdateApplicationExtensionHandler_Message;
+    public static String ForceUpdateApplicationExtensionHandler_NoApplication;
+    public static String ForceUpdateApplicationExtensionHandler_NoCallback;
+    public static String ForceUpdateApplicationExtensionHandler_NoExtensions;
+    public static String ForceUpdateApplicationExtensionHandler_NoSynchronizationManager;
+    public static String ForceUpdateApplicationExtensionHandler_Title;
+    public static String ForceUpdateApplicationExtensionHandler_UpdateFailed;
     public static String ContextLinksPreferencePage_BslContextLinksEnabled;
     public static String ContextLinksPreferencePage_Description;
     public static String ContextLinksPreferencePage_InsertFormattingEnabled;
@@ -67,5 +75,10 @@ public final class Messages
     static void showInfo(Shell shell, String title, String message)
     {
         MessageDialog.openInformation(shell, title, message);
+    }
+
+    static void showError(Shell shell, String title, String message)
+    {
+        MessageDialog.openError(shell, title, message);
     }
 }
