@@ -67,6 +67,16 @@
    </extension>
 
    <extension
+         point="org.eclipse.ui.bindings">
+      <key
+            commandId="ru.xelgo.edt.contextlinks.ui.commands.generateQueryResultComment"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+S">
+      </key>
+   </extension>
+
+   <extension
          point="org.eclipse.ui.menus">
       <menuContribution
             locationURI="popup:com._1c.g5.v8.dt.navigator.ui.navigator.popup?endof=group.open">

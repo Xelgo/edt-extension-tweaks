@@ -3,6 +3,8 @@ package ru.xelgo.edt.contextlinks.ui;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
@@ -45,6 +47,18 @@ public class GenerateQueryResultCommentHandler
     private static final String BSL_QUERY_WIZARD_UTILS =
         "com._1c.g5.v8.dt.bsl.qw.utils.BslQueryWizardUtils"; //$NON-NLS-1$
     private static final int QUERY_WIZARD_MODE_QUERY_BUILDER = 1;
+    private static final String BSL_IDENTIFIER = "[\\p{L}_][\\p{L}\\p{N}_]*"; //$NON-NLS-1$
+    private static final int QUERY_CONTEXT_LOOKBEHIND = 1500;
+    private static final Pattern DIRECT_QUERY_VARIABLE_PATTERN = Pattern.compile(
+        "(" + BSL_IDENTIFIER + ")\\s*=\\s*\\u041d\\u043e\\u0432\\u044b\\u0439\\s+" //$NON-NLS-1$ //$NON-NLS-2$
+            + "\\u0417\\u0430\\u043f\\u0440\\u043e\\u0441\\s*\\(", //$NON-NLS-1$
+        Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern QUERY_TEXT_PROPERTY_PATTERN = Pattern.compile(
+        "(" + BSL_IDENTIFIER + ")\\s*\\.\\s*\\u0422\\u0435\\u043a\\u0441\\u0442\\s*=\\s*$", //$NON-NLS-1$ //$NON-NLS-2$
+        Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern TEXT_VARIABLE_PATTERN = Pattern.compile(
+        "(" + BSL_IDENTIFIER + ")\\s*=\\s*$", //$NON-NLS-1$ //$NON-NLS-2$
+        Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     @Override
     public Object execute(ExecutionEvent event)
@@ -54,14 +68,15 @@ public class GenerateQueryResultCommentHandler
         try
         {
             QueryContext queryContext = resolveQueryContext(event, shell);
-            if (queryContext == null)
+            if (queryContext == null || queryContext.queryText == null || queryContext.queryText.isBlank())
             {
                 Messages.showError(shell, Messages.GenerateQueryResultCommentHandler_Title,
                     Messages.GenerateQueryResultCommentHandler_NoQueryEditor);
                 return null;
             }
 
-            String comment = QueryResultSchemaCommentGenerator.generate(queryContext.queryText, queryContext.project);
+            String comment = QueryResultSchemaCommentGenerator.generate(queryContext.queryText, queryContext.project,
+                queryContext.queryVariable, queryContext.regionSuffix);
             copyToClipboard(shell, comment);
             Messages.showInfo(shell, Messages.GenerateQueryResultCommentHandler_Title,
                 Messages.GenerateQueryResultCommentHandler_Copied);
@@ -83,7 +98,7 @@ public class GenerateQueryResultCommentHandler
         {
             IProject project = (IProject)invoke(qlEditor, "getContextProject"); //$NON-NLS-1$
             String queryText = (String)invoke(qlEditor, "getSelectedQueryText"); //$NON-NLS-1$
-            return new QueryContext(project, queryText);
+            return new QueryContext(project, queryText, null, null);
         }
 
         return resolveBslQueryContext(event);
@@ -132,11 +147,23 @@ public class GenerateQueryResultCommentHandler
         if (project == null || selection == null)
             return null;
 
-        String queryText = bslQueryText(editor.getDocument(), selection.getOffset());
+        IXtextDocument document = editor.getDocument();
+        String moduleText = document.get();
+        BslQueryText queryTextInfo = bslQueryText(document, selection.getOffset());
+        String queryText = queryTextInfo != null ? queryTextInfo.text : null;
+        QueryVariableNames queryVariableNames = queryTextInfo != null
+            ? inferQueryVariableNames(moduleText, queryTextInfo.offset, queryTextInfo.endOffset)
+            : null;
         if ((queryText == null || queryText.isBlank()) && selection.getLength() > 0)
+        {
             queryText = selection.getText();
+            queryVariableNames = inferQueryVariableNames(moduleText, selection.getOffset(),
+                selection.getOffset() + selection.getLength());
+        }
 
-        return new QueryContext(project, queryText);
+        return new QueryContext(project, queryText,
+            queryVariableNames != null ? queryVariableNames.queryVariable : null,
+            queryVariableNames != null ? queryVariableNames.regionSuffix : null);
     }
 
     private XtextEditor extractXtextEditor(IWorkbenchPart part)
@@ -173,7 +200,7 @@ public class GenerateQueryResultCommentHandler
         return selection instanceof ITextSelection ? (ITextSelection)selection : null;
     }
 
-    private String bslQueryText(IXtextDocument document, int offset)
+    private BslQueryText bslQueryText(IXtextDocument document, int offset)
         throws ReflectiveOperationException
     {
         Class<?> paramsClass = loadClass(QW_UI_BUNDLE, RESULT_PROCESSING_PARAMS);
@@ -185,7 +212,130 @@ public class GenerateQueryResultCommentHandler
         Object queryTextInfo = method.invoke(null, document, Integer.valueOf(offset),
             Integer.valueOf(QUERY_WIZARD_MODE_QUERY_BUILDER), params);
         Object text = queryTextInfo != null ? invoke(queryTextInfo, "getText") : null; //$NON-NLS-1$
-        return text instanceof String ? (String)text : null;
+        if (!(text instanceof String queryText))
+            return null;
+
+        int queryOffset = intValue(invoke(queryTextInfo, "getOffset"), offset); //$NON-NLS-1$
+        int queryEndOffset = intValue(invoke(queryTextInfo, "getEndOffset"), queryOffset); //$NON-NLS-1$
+        return new BslQueryText(queryText, queryOffset, queryEndOffset);
+    }
+
+    private QueryVariableNames inferQueryVariableNames(String moduleText, int queryTextOffset,
+        int queryTextEndOffset)
+    {
+        if (moduleText == null || moduleText.isBlank())
+            return null;
+
+        int safeOffset = Math.max(0, Math.min(queryTextOffset, moduleText.length()));
+        int safeEndOffset = Math.max(safeOffset, Math.min(queryTextEndOffset, moduleText.length()));
+        String prefix = moduleText.substring(Math.max(0, safeOffset - QUERY_CONTEXT_LOOKBEHIND), safeOffset);
+
+        String queryVariable = findDirectQueryVariable(prefix);
+        if (queryVariable != null)
+            return new QueryVariableNames(queryVariable, queryVariable);
+
+        queryVariable = findQueryTextPropertyVariable(prefix);
+        if (queryVariable != null)
+            return new QueryVariableNames(queryVariable, queryVariable);
+
+        String textVariable = findTextVariable(prefix);
+        if (textVariable == null)
+            return null;
+
+        queryVariable = findQueryVariableByTextVariable(moduleText, textVariable, safeEndOffset);
+        return new QueryVariableNames(queryVariable, textVariable);
+    }
+
+    private String findDirectQueryVariable(String prefix)
+    {
+        Matcher matcher = DIRECT_QUERY_VARIABLE_PATTERN.matcher(prefix);
+        String result = null;
+        while (matcher.find())
+        {
+            if (isOnlyQueryTextOpening(prefix.substring(matcher.end())))
+                result = matcher.group(1);
+        }
+        return result;
+    }
+
+    private String findQueryTextPropertyVariable(String prefix)
+    {
+        Matcher matcher = QUERY_TEXT_PROPERTY_PATTERN.matcher(prefix);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private String findTextVariable(String prefix)
+    {
+        Matcher matcher = TEXT_VARIABLE_PATTERN.matcher(prefix);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private String findQueryVariableByTextVariable(String moduleText, String textVariable, int originOffset)
+    {
+        String variable = Pattern.quote(textVariable);
+        Pattern constructorPattern = Pattern.compile(
+            "(" + BSL_IDENTIFIER + ")\\s*=\\s*\\u041d\\u043e\\u0432\\u044b\\u0439\\s+" //$NON-NLS-1$ //$NON-NLS-2$
+                + "\\u0417\\u0430\\u043f\\u0440\\u043e\\u0441\\s*\\(\\s*" + variable + "\\s*\\)", //$NON-NLS-1$ //$NON-NLS-2$
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+        Pattern propertyPattern = Pattern.compile(
+            "(" + BSL_IDENTIFIER + ")\\s*\\.\\s*\\u0422\\u0435\\u043a\\u0441\\u0442\\s*=\\s*" //$NON-NLS-1$ //$NON-NLS-2$
+                + variable + "\\b", //$NON-NLS-1$
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+        String constructorVariable = nearestVariable(moduleText, constructorPattern, originOffset);
+        String propertyVariable = nearestVariable(moduleText, propertyPattern, originOffset);
+        if (constructorVariable == null)
+            return propertyVariable;
+        if (propertyVariable == null)
+            return constructorVariable;
+
+        int constructorDistance = nearestDistance(moduleText, constructorPattern, originOffset);
+        int propertyDistance = nearestDistance(moduleText, propertyPattern, originOffset);
+        return constructorDistance <= propertyDistance ? constructorVariable : propertyVariable;
+    }
+
+    private String nearestVariable(String text, Pattern pattern, int originOffset)
+    {
+        Matcher matcher = pattern.matcher(text);
+        String result = null;
+        int bestDistance = Integer.MAX_VALUE;
+        while (matcher.find())
+        {
+            int distance = Math.abs(matcher.start() - originOffset);
+            if (distance < bestDistance)
+            {
+                result = matcher.group(1);
+                bestDistance = distance;
+            }
+        }
+        return result;
+    }
+
+    private int nearestDistance(String text, Pattern pattern, int originOffset)
+    {
+        Matcher matcher = pattern.matcher(text);
+        int bestDistance = Integer.MAX_VALUE;
+        while (matcher.find())
+            bestDistance = Math.min(bestDistance, Math.abs(matcher.start() - originOffset));
+        return bestDistance;
+    }
+
+    private static boolean isOnlyQueryTextOpening(String value)
+    {
+        if (value == null)
+            return true;
+        for (int i = 0; i < value.length(); i++)
+        {
+            char ch = value.charAt(i);
+            if (!Character.isWhitespace(ch) && ch != '"' && ch != '|')
+                return false;
+        }
+        return true;
+    }
+
+    private static int intValue(Object value, int fallback)
+    {
+        return value instanceof Number number ? number.intValue() : fallback;
     }
 
     private Object activeQlEditor(Class<?> queryWizardClass)
@@ -266,11 +416,41 @@ public class GenerateQueryResultCommentHandler
     {
         private final IProject project;
         private final String queryText;
+        private final String queryVariable;
+        private final String regionSuffix;
 
-        QueryContext(IProject project, String queryText)
+        QueryContext(IProject project, String queryText, String queryVariable, String regionSuffix)
         {
             this.project = project;
             this.queryText = queryText;
+            this.queryVariable = queryVariable;
+            this.regionSuffix = regionSuffix;
+        }
+    }
+
+    private static final class BslQueryText
+    {
+        private final String text;
+        private final int offset;
+        private final int endOffset;
+
+        BslQueryText(String text, int offset, int endOffset)
+        {
+            this.text = text;
+            this.offset = offset;
+            this.endOffset = endOffset;
+        }
+    }
+
+    private static final class QueryVariableNames
+    {
+        private final String queryVariable;
+        private final String regionSuffix;
+
+        QueryVariableNames(String queryVariable, String regionSuffix)
+        {
+            this.queryVariable = queryVariable;
+            this.regionSuffix = regionSuffix;
         }
     }
 }

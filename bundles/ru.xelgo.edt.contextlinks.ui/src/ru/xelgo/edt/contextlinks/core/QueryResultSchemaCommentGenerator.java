@@ -37,8 +37,9 @@ public final class QueryResultSchemaCommentGenerator
     private static final String DB_VIEW_FIELD_DEF =
         "com._1c.g5.v8.dt.metadata.dbview.DbViewFieldDef"; //$NON-NLS-1$
     private static final String TYPE_SEPARATOR = "|"; //$NON-NLS-1$
-    private static final String REGION_NAME = "edt_tweaks_query_result_1"; //$NON-NLS-1$
-    private static final String QUERY_VARIABLE = "\u0417\u0430\u043f\u0440\u043e\u0441"; //$NON-NLS-1$
+    private static final String REGION_PREFIX = "edt_tweaks_query_result_"; //$NON-NLS-1$
+    private static final String DEFAULT_REGION_SUFFIX = "1"; //$NON-NLS-1$
+    private static final String DEFAULT_QUERY_VARIABLE = "\u0417\u0430\u043f\u0440\u043e\u0441"; //$NON-NLS-1$
     private static final String RESULT_VARIABLE =
         "\u0420\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u0417\u0430\u043f\u0440\u043e\u0441\u0430"; //$NON-NLS-1$
     private static final String SELECTION_VARIABLE =
@@ -54,6 +55,13 @@ public final class QueryResultSchemaCommentGenerator
     }
 
     public static String generate(String queryText, IProject project)
+        throws QueryResultSchemaCommentException
+    {
+        return generate(queryText, project, null, null);
+    }
+
+    public static String generate(String queryText, IProject project, String queryVariable,
+        String regionSuffix)
         throws QueryResultSchemaCommentException
     {
         if (queryText == null || queryText.isBlank())
@@ -73,7 +81,10 @@ public final class QueryResultSchemaCommentGenerator
         if (results.isEmpty())
             throw new QueryResultSchemaCommentException("Query has no result fields"); //$NON-NLS-1$
 
-        return renderComment(results, ContextLinksPreferences.getQueryResultContextModel());
+        String actualQueryVariable = normalizeBslIdentifier(queryVariable, DEFAULT_QUERY_VARIABLE);
+        String actualRegionSuffix = normalizeBslIdentifier(regionSuffix, DEFAULT_REGION_SUFFIX);
+        return renderComment(results, ContextLinksPreferences.getQueryResultContextModel(),
+            actualQueryVariable, REGION_PREFIX + actualRegionSuffix);
     }
 
     private static Object createQuerySchemaBuilder(IProject project)
@@ -325,19 +336,19 @@ public final class QueryResultSchemaCommentGenerator
     }
 
     private static String renderComment(List<ResultTable> results,
-        ContextLinksPreferences.QueryResultContextModel model)
+        ContextLinksPreferences.QueryResultContextModel model, String queryVariable, String regionName)
     {
         String lineSeparator = System.lineSeparator();
         StringBuilder builder = new StringBuilder();
         builder.append("#\u041e\u0431\u043b\u0430\u0441\u0442\u044c ") //$NON-NLS-1$
-            .append(REGION_NAME)
+            .append(regionName)
             .append(lineSeparator)
             .append(lineSeparator);
 
         if (results.size() == 1 && results.get(0).queryIndex == 0)
-            renderSingleResult(builder, results.get(0), model, lineSeparator);
+            renderSingleResult(builder, results.get(0), model, queryVariable, lineSeparator);
         else
-            renderPackageResults(builder, results, model, lineSeparator);
+            renderPackageResults(builder, results, model, queryVariable, lineSeparator);
 
         builder.append(lineSeparator)
             .append("#\u041a\u043e\u043d\u0435\u0446\u041e\u0431\u043b\u0430\u0441\u0442\u0438"); //$NON-NLS-1$
@@ -345,7 +356,7 @@ public final class QueryResultSchemaCommentGenerator
     }
 
     private static void renderSingleResult(StringBuilder builder, ResultTable result,
-        ContextLinksPreferences.QueryResultContextModel model, String lineSeparator)
+        ContextLinksPreferences.QueryResultContextModel model, String queryVariable, String lineSeparator)
     {
         String variableName = model == ContextLinksPreferences.QueryResultContextModel.SELECTION
             ? SELECTION_VARIABLE : RESULT_VARIABLE;
@@ -354,7 +365,7 @@ public final class QueryResultSchemaCommentGenerator
         builder.append('\t')
             .append(variableName)
             .append(" = ") //$NON-NLS-1$
-            .append(QUERY_VARIABLE)
+            .append(queryVariable)
             .append(".\u0412\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u044c().") //$NON-NLS-1$
             .append(methodName)
             .append("();") //$NON-NLS-1$
@@ -363,14 +374,14 @@ public final class QueryResultSchemaCommentGenerator
     }
 
     private static void renderPackageResults(StringBuilder builder, List<ResultTable> results,
-        ContextLinksPreferences.QueryResultContextModel model, String lineSeparator)
+        ContextLinksPreferences.QueryResultContextModel model, String queryVariable, String lineSeparator)
     {
         String methodName = model == ContextLinksPreferences.QueryResultContextModel.SELECTION
             ? "\u0412\u044b\u0431\u0440\u0430\u0442\u044c" : "\u0412\u044b\u0433\u0440\u0443\u0437\u0438\u0442\u044c"; //$NON-NLS-1$ //$NON-NLS-2$
         builder.append('\t')
             .append(PACKAGE_RESULTS_VARIABLE)
             .append(" = ") //$NON-NLS-1$
-            .append(QUERY_VARIABLE)
+            .append(queryVariable)
             .append(".\u0412\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u044c\u041f\u0430\u043a\u0435\u0442();") //$NON-NLS-1$
             .append(lineSeparator);
 
@@ -416,6 +427,30 @@ public final class QueryResultSchemaCommentGenerator
     private static String commentText(String value)
     {
         return value.replace('\r', ' ').replace('\n', ' ').trim();
+    }
+
+    private static String normalizeBslIdentifier(String value, String fallback)
+    {
+        if (value == null)
+            return fallback;
+
+        String trimmed = value.trim();
+        if (trimmed.isEmpty())
+            return fallback;
+
+        StringBuilder result = new StringBuilder(trimmed.length());
+        for (int i = 0; i < trimmed.length(); i++)
+        {
+            char ch = trimmed.charAt(i);
+            if (Character.isLetterOrDigit(ch) || ch == '_')
+                result.append(ch);
+            else
+                result.append('_');
+        }
+
+        if (result.length() == 0 || (!Character.isLetter(result.charAt(0)) && result.charAt(0) != '_'))
+            return fallback;
+        return result.toString();
     }
 
     private static Object invoke(Object target, String methodName)
