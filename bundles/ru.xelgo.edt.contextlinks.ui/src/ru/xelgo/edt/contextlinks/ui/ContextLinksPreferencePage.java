@@ -43,6 +43,9 @@ public class ContextLinksPreferencePage
             Messages.ContextLinksPreferencePage_QueryWizardEnabled, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_QUERY_WIZARD_NESTED_TEMP_TABLES_ENABLED,
             Messages.ContextLinksPreferencePage_QueryWizardNestedTempTablesEnabled, getFieldEditorParent()));
+        addField(new ComboFieldEditor(ContextLinksPreferences.KEY_QUERY_RESULT_CONTEXT_MODEL,
+            Messages.ContextLinksPreferencePage_QueryResultContextModel, queryResultContextModelValues(),
+            getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_INSERT_FORMATTING_ENABLED,
             Messages.ContextLinksPreferencePage_InsertFormattingEnabled, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED,
@@ -75,5 +78,14 @@ public class ContextLinksPreferencePage
             { Messages.ContextLinksPreferencePage_ServerCallHighlightingStyleItalic, Integer.toString(SWT.ITALIC) },
             { Messages.ContextLinksPreferencePage_ServerCallHighlightingStyleBoldItalic,
                 Integer.toString(SWT.BOLD | SWT.ITALIC) } };
+    }
+
+    private String[][] queryResultContextModelValues()
+    {
+        return new String[][] {
+            { Messages.ContextLinksPreferencePage_QueryResultContextModelValueTable,
+                ContextLinksPreferences.QueryResultContextModel.VALUE_TABLE.getId() },
+            { Messages.ContextLinksPreferencePage_QueryResultContextModelSelection,
+                ContextLinksPreferences.QueryResultContextModel.SELECTION.getId() } };
     }
 }

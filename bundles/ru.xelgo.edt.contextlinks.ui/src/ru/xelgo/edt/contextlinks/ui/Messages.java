@@ -16,6 +16,10 @@ public final class Messages
     public static String ConfigureContextLinksHandler_NoProject;
     public static String ConfigureContextLinksHandler_NotExtensionProject;
     public static String ConfigureContextLinksHandler_Title;
+    public static String GenerateQueryResultCommentHandler_Copied;
+    public static String GenerateQueryResultCommentHandler_Failed;
+    public static String GenerateQueryResultCommentHandler_NoQueryEditor;
+    public static String GenerateQueryResultCommentHandler_Title;
     public static String ConfigureApplicationUpdateProjectsHandler_Message;
     public static String ConfigureApplicationUpdateProjectsHandler_NoApplication;
     public static String ConfigureApplicationUpdateProjectsHandler_NoCandidates;
@@ -33,6 +37,9 @@ public final class Messages
     public static String ContextLinksPreferencePage_InsertFormattingEnabled;
     public static String ContextLinksPreferencePage_QueryWizardEnabled;
     public static String ContextLinksPreferencePage_QueryWizardNestedTempTablesEnabled;
+    public static String ContextLinksPreferencePage_QueryResultContextModel;
+    public static String ContextLinksPreferencePage_QueryResultContextModelSelection;
+    public static String ContextLinksPreferencePage_QueryResultContextModelValueTable;
     public static String ContextLinksPreferencePage_ServerCallHighlightingColor;
     public static String ContextLinksPreferencePage_ServerCallHighlightingEnabled;
     public static String ContextLinksPreferencePage_ServerCallHighlightingStyle;

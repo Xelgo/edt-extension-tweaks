@@ -51,6 +51,11 @@
       </command>
       <command
             categoryId="ru.xelgo.edt.contextlinks.ui.category"
+            id="ru.xelgo.edt.contextlinks.ui.commands.generateQueryResultComment"
+            name="%queryResultComment.command.name">
+      </command>
+      <command
+            categoryId="ru.xelgo.edt.contextlinks.ui.category"
             id="ru.xelgo.edt.contextlinks.ui.commands.configureApplicationUpdateProjects"
             name="%applicationUpdate.command.name">
       </command>
@@ -86,6 +91,50 @@
       </menuContribution>
       <menuContribution
             allPopups="false"
+            locationURI="popup:xtext.embedded.editor">
+         <command
+               commandId="ru.xelgo.edt.contextlinks.ui.commands.generateQueryResultComment"
+               icon="platform:/plugin/com._1c.g5.v8.dt.qw.ui/icons/etool16/query_editor.png"
+               label="%queryResultComment.command.name"
+               style="push"
+               tooltip="%queryResultComment.command.tooltip">
+            <visibleWhen
+                  checkEnabled="false">
+               <or>
+                  <reference
+                        definitionId="com._1c.g5.v8.dt.ql.Ql.EmbeddedEditor.opened">
+                  </reference>
+                  <reference
+                        definitionId="com._1c.g5.v8.dt.ql.dcs.QlDcs.EmbeddedEditor.opened">
+                  </reference>
+               </or>
+            </visibleWhen>
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:#BslEditorContext?after=group.constructors">
+         <command
+               commandId="ru.xelgo.edt.contextlinks.ui.commands.generateQueryResultComment"
+               icon="platform:/plugin/com._1c.g5.v8.dt.bsl.qw/icons/obj16/query_wizard_with_result.png"
+               label="%queryResultComment.command.name"
+               style="push"
+               tooltip="%queryResultComment.command.tooltip">
+            <visibleWhen
+                  checkEnabled="false">
+               <and>
+                  <reference
+                        definitionId="com._1c.g5.v8.dt.bsl.Bsl.Editor.editable">
+                  </reference>
+                  <reference
+                        definitionId="com._1c.g5.v8.dt.bsl.ui.editor.isFileInput">
+                  </reference>
+               </and>
+            </visibleWhen>
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
             locationURI="popup:com.e1c.g5.dt.applications.ui.view?after=additions">
          <separator
                name="ru.xelgo.edt.contextlinks.ui.applicationUpdate.separator"
@@ -114,6 +163,23 @@
 
    <extension
          point="org.eclipse.ui.handlers">
+      <handler
+            class="ru.xelgo.edt.contextlinks.ui.GenerateQueryResultCommentHandler"
+            commandId="ru.xelgo.edt.contextlinks.ui.commands.generateQueryResultComment">
+         <activeWhen>
+            <or>
+               <reference
+                     definitionId="com._1c.g5.v8.dt.ql.Ql.EmbeddedEditor.opened">
+               </reference>
+               <reference
+                     definitionId="com._1c.g5.v8.dt.ql.dcs.QlDcs.EmbeddedEditor.opened">
+               </reference>
+               <reference
+                     definitionId="com._1c.g5.v8.dt.bsl.Bsl.Editor.opened">
+               </reference>
+            </or>
+         </activeWhen>
+      </handler>
       <handler
             class="ru.xelgo.edt.contextlinks.ui.ConfigureApplicationUpdateProjectsHandler"
             commandId="ru.xelgo.edt.contextlinks.ui.commands.configureApplicationUpdateProjects">

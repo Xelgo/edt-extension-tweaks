@@ -16,6 +16,8 @@ public final class ContextLinksPreferences
     public static final String KEY_QUERY_WIZARD_ENABLED = "queryWizard.enabled"; //$NON-NLS-1$
     public static final String KEY_QUERY_WIZARD_NESTED_TEMP_TABLES_ENABLED =
         "queryWizard.nestedTempTables.enabled"; //$NON-NLS-1$
+    public static final String KEY_QUERY_RESULT_CONTEXT_MODEL =
+        "queryResult.contextModel"; //$NON-NLS-1$
     public static final String KEY_INSERT_FORMATTING_ENABLED = "insertFormatting.enabled"; //$NON-NLS-1$
     public static final String KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED = "workbenchViewActivation.enabled"; //$NON-NLS-1$
     public static final String KEY_SERVER_CALL_HIGHLIGHTING_ENABLED = "serverCallHighlighting.enabled"; //$NON-NLS-1$
@@ -30,6 +32,7 @@ public final class ContextLinksPreferences
     private static final int DEFAULT_VARIABLE_SNAPSHOTS_MAX_DEPTH = 5;
     private static final int DEFAULT_VARIABLE_SNAPSHOTS_COLLECTION_LIMIT = 300;
     private static final int DEFAULT_SERVER_CALL_HIGHLIGHTING_STYLE = SWT.BOLD;
+    private static final String DEFAULT_QUERY_RESULT_CONTEXT_MODEL = QueryResultContextModel.VALUE_TABLE.id;
     private static final RGB DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR = new RGB(176, 89, 0);
     private static final String DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR_VALUE =
         StringConverter.asString(DEFAULT_SERVER_CALL_HIGHLIGHTING_COLOR);
@@ -47,6 +50,7 @@ public final class ContextLinksPreferences
         preferences.putBoolean(KEY_BSL_CONTEXT_LINKS_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_QUERY_WIZARD_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_QUERY_WIZARD_NESTED_TEMP_TABLES_ENABLED, DEFAULT_ENABLED);
+        preferences.put(KEY_QUERY_RESULT_CONTEXT_MODEL, DEFAULT_QUERY_RESULT_CONTEXT_MODEL);
         preferences.putBoolean(KEY_INSERT_FORMATTING_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_SERVER_CALL_HIGHLIGHTING_ENABLED, DEFAULT_ENABLED);
@@ -70,6 +74,13 @@ public final class ContextLinksPreferences
     public static boolean isQueryWizardNestedTempTablesEnabled()
     {
         return isQueryWizardEnabled() && getBoolean(KEY_QUERY_WIZARD_NESTED_TEMP_TABLES_ENABLED);
+    }
+
+    public static QueryResultContextModel getQueryResultContextModel()
+    {
+        String value = InstanceScope.INSTANCE.getNode(ContextLinks.PLUGIN_ID)
+            .get(KEY_QUERY_RESULT_CONTEXT_MODEL, DEFAULT_QUERY_RESULT_CONTEXT_MODEL);
+        return QueryResultContextModel.fromId(value);
     }
 
     public static boolean isInsertFormattingEnabled()
@@ -132,5 +143,33 @@ public final class ContextLinksPreferences
     {
         int value = InstanceScope.INSTANCE.getNode(ContextLinks.PLUGIN_ID).getInt(key, defaultValue);
         return Math.max(minValue, Math.min(maxValue, value));
+    }
+
+    public enum QueryResultContextModel
+    {
+        VALUE_TABLE("valueTable"), //$NON-NLS-1$
+        SELECTION("selection"); //$NON-NLS-1$
+
+        private final String id;
+
+        QueryResultContextModel(String id)
+        {
+            this.id = id;
+        }
+
+        public String getId()
+        {
+            return id;
+        }
+
+        static QueryResultContextModel fromId(String id)
+        {
+            for (QueryResultContextModel model : values())
+            {
+                if (model.id.equals(id))
+                    return model;
+            }
+            return VALUE_TABLE;
+        }
     }
 }

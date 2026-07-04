@@ -204,19 +204,9 @@ function Sync-ContextLinksBundleInfo {
         return
     }
 
-    $lines = @(Get-Content -LiteralPath $bundlesInfo)
-    $updated = $false
-    for ($i = 0; $i -lt $lines.Count; $i++) {
-        if ($lines[$i] -like "ru.xelgo.edt.contextlinks.ui,*") {
-            $lines[$i] = $line
-            $updated = $true
-            break
-        }
-    }
-
-    if (-not $updated) {
-        $lines += $line
-    }
+    $lines = @(Get-Content -LiteralPath $bundlesInfo |
+        Where-Object { $_ -notlike "ru.xelgo.edt.contextlinks.ui,*" })
+    $lines += $line
 
     $utf8NoBom = New-Object System.Text.UTF8Encoding $false
     [System.IO.File]::WriteAllLines($bundlesInfo, $lines, $utf8NoBom)
