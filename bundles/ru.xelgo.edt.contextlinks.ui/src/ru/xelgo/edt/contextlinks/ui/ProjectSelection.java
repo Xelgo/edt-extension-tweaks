@@ -46,6 +46,27 @@ final class ProjectSelection
         return modelResource != null ? modelResource.getProject() : null;
     }
 
+    static IResource getResource(Object selected)
+    {
+        IResource resource = adapt(selected, IResource.class);
+        if (resource != null)
+            return resource;
+
+        EObject modelObject = getModelObject(selected);
+        if (modelObject == null)
+            return null;
+
+        IResourceLookup resourceLookup = ServiceAccess.get(IResourceLookup.class);
+        if (resourceLookup == null)
+            return null;
+
+        IResource modelResource = resourceLookup.getPlatformResource(modelObject);
+        if (modelResource != null)
+            return modelResource;
+
+        return resourceLookup.getProject(modelObject);
+    }
+
     static boolean isExtensionProject(Object selected)
     {
         IProject project = getProject(selected);
@@ -66,7 +87,7 @@ final class ProjectSelection
         return result;
     }
 
-    private static EObject getModelObject(Object selected)
+    static EObject getModelObject(Object selected)
     {
         EObject modelObject = adapt(selected, EObject.class);
         if (modelObject != null)
@@ -79,10 +100,14 @@ final class ProjectSelection
             if (value instanceof EObject)
                 return (EObject)value;
         }
+
+        Object value = invokeBooleanArg(selected, "getModel", false); //$NON-NLS-1$
+        if (value instanceof EObject)
+            return (EObject)value;
         return null;
     }
 
-    private static Object invokeNoArg(Object target, String methodName)
+    static Object invokeNoArg(Object target, String methodName)
     {
         if (target == null)
             return null;
@@ -92,6 +117,24 @@ final class ProjectSelection
             Method method = target.getClass().getMethod(methodName);
             if (method.getParameterCount() == 0)
                 return method.invoke(target);
+        }
+        catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException e)
+        {
+            return null;
+        }
+        return null;
+    }
+
+    static Object invokeBooleanArg(Object target, String methodName, boolean argument)
+    {
+        if (target == null)
+            return null;
+
+        try
+        {
+            Method method = target.getClass().getMethod(methodName, boolean.class);
+            if (method.getParameterCount() == 1)
+                return method.invoke(target, Boolean.valueOf(argument));
         }
         catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException e)
         {

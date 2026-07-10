@@ -64,6 +64,15 @@
             id="ru.xelgo.edt.contextlinks.ui.commands.forceUpdateApplicationExtension"
             name="%forceExtensionUpdate.command.name">
       </command>
+      <command
+            categoryId="ru.xelgo.edt.contextlinks.ui.category"
+            id="ru.xelgo.edt.contextlinks.ui.commands.toggleGitChangedNavigatorFilter"
+            name="%gitChangedFilter.command.name">
+         <state
+               class="org.eclipse.ui.handlers.RegistryToggleState:false"
+               id="org.eclipse.ui.commands.toggleState">
+         </state>
+      </command>
    </extension>
 
    <extension
@@ -78,6 +87,16 @@
 
    <extension
          point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="toolbar:com._1c.g5.v8.dt.ui2.navigator?after=com._1c.g5.v8.dt.navigator.ui.filterBySubsystems">
+         <command
+               commandId="ru.xelgo.edt.contextlinks.ui.commands.toggleGitChangedNavigatorFilter"
+               icon="platform:/plugin/org.eclipse.egit.ui/icons/elcl16/filter_resource_funnel.png"
+               label="%gitChangedFilter.command.name"
+               style="toggle"
+               tooltip="%gitChangedFilter.command.tooltip">
+         </command>
+      </menuContribution>
       <menuContribution
             locationURI="popup:com._1c.g5.v8.dt.navigator.ui.navigator.popup?endof=group.open">
          <command
@@ -225,6 +244,10 @@
                </iterate>
             </with>
          </enabledWhen>
+      </handler>
+      <handler
+            class="ru.xelgo.edt.contextlinks.ui.ContextLinksGitChangedFilterHandler"
+            commandId="ru.xelgo.edt.contextlinks.ui.commands.toggleGitChangedNavigatorFilter">
       </handler>
    </extension>
 
