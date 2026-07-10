@@ -66,6 +66,11 @@
       </command>
       <command
             categoryId="ru.xelgo.edt.contextlinks.ui.category"
+            id="ru.xelgo.edt.contextlinks.ui.commands.changeAndValidateBatchMerge"
+            name="%batchMerge.command.name">
+      </command>
+      <command
+            categoryId="ru.xelgo.edt.contextlinks.ui.category"
             id="ru.xelgo.edt.contextlinks.ui.commands.toggleGitChangedNavigatorFilter"
             name="%gitChangedFilter.command.name">
          <state
@@ -188,10 +193,57 @@
              </visibleWhen>
           </command>
        </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:com._1c.g5.v8.dt.ui.problemView?after=additions">
+         <command
+               commandId="ru.xelgo.edt.contextlinks.ui.commands.changeAndValidateBatchMerge"
+               icon="platform:/plugin/com._1c.g5.v8.dt.compare.ui/icons/etool16/compare_with.png"
+               label="%batchMerge.command.name"
+               style="push"
+               tooltip="%batchMerge.command.tooltip">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="toolbar:com._1c.g5.v8.dt.ui.problemView">
+         <command
+               commandId="ru.xelgo.edt.contextlinks.ui.commands.changeAndValidateBatchMerge"
+               icon="platform:/plugin/com._1c.g5.v8.dt.compare.ui/icons/etool16/compare_with.png"
+               style="push"
+               tooltip="%batchMerge.command.name">
+         </command>
+      </menuContribution>
+      <menuContribution
+            locationURI="popup:com._1c.g5.v8.dt.navigator.ui.navigator.popup?endof=group.open">
+         <command
+               commandId="ru.xelgo.edt.contextlinks.ui.commands.changeAndValidateBatchMerge"
+               label="%batchMerge.command.name"
+               style="push"
+               tooltip="%batchMerge.command.tooltip">
+            <visibleWhen
+                  checkEnabled="false">
+               <with
+                     variable="selection">
+                  <iterate
+                        ifEmpty="false"
+                        operator="and">
+                     <test
+                           property="ru.xelgo.edt.contextlinks.ui.isExtensionProject">
+                     </test>
+                  </iterate>
+               </with>
+            </visibleWhen>
+         </command>
+      </menuContribution>
    </extension>
 
    <extension
          point="org.eclipse.ui.handlers">
+      <handler
+            class="ru.xelgo.edt.contextlinks.ui.ChangeAndValidateBatchMergeHandler"
+            commandId="ru.xelgo.edt.contextlinks.ui.commands.changeAndValidateBatchMerge">
+      </handler>
       <handler
             class="ru.xelgo.edt.contextlinks.ui.GenerateQueryResultCommentHandler"
             commandId="ru.xelgo.edt.contextlinks.ui.commands.generateQueryResultComment">

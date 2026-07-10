@@ -18,11 +18,20 @@ final class ChangeAndValidateExtensionMergeBuilder
 
     static MergeTexts build(String sourceText, String extensionText)
     {
+        if (extensionText == null)
+            return new MergeTexts("", sourceText == null ? "" : sourceText); //$NON-NLS-1$ //$NON-NLS-2$
+
         MarkedText markedExtension = parseMarkedText(extensionText);
         String ancestorText = join(markedExtension.ancestorLines);
+
+        // With no base text there is nothing to apply the operations to. Return the extension method
+        // as is, otherwise the suggested text would silently drop every inserted block.
+        if (sourceText == null || sourceText.isBlank())
+            return new MergeTexts(ancestorText, extensionText);
+
         String extensionBaseText = buildExtensionBase(sourceText, extensionText);
         String suggestedText = applyOperations(markedExtension, extensionBaseText);
-        return new MergeTexts(ancestorText, suggestedText);
+        return new MergeTexts(ancestorText, suggestedText == null ? extensionText : suggestedText);
     }
 
     private static String buildExtensionBase(String sourceText, String extensionText)

@@ -59,7 +59,6 @@ public final class ChangeAndValidateMergeQuickfixProvider
     private static final String METHOD_TEXT_DIFF_CODE = "method-text-has-differences-base-method"; //$NON-NLS-1$
     private static final String LEGACY_MODULE_EXTENSION_CODE = "bsl-legacy-check-module-extension"; //$NON-NLS-1$
     private static final String CHANGE_AND_VALIDATE_TEXT_DIFF_CODE = "SU310"; //$NON-NLS-1$
-    private static final String BSL_TYPE = "bsl"; //$NON-NLS-1$
 
     @Fix(WRONG_EXTENSION_SIGNATURE_CODE)
     public void compareAndApplyChangeAndValidateMethodSignature(Issue issue, IssueResolutionAcceptor acceptor)
@@ -125,7 +124,7 @@ public final class ChangeAndValidateMergeQuickfixProvider
             return new MultiTextEdit();
 
         return new ReplaceEdit(mergeData.methodOffset, mergeData.methodLength,
-            normalizeLineSeparators(mergedText, mergeData.extensionMethodText));
+            ChangeAndValidateMergeTexts.normalizeLineSeparators(mergedText, mergeData.extensionMethodText));
     }
 
     private static MergeData createMergeData(XtextResource resource, String documentText, Issue issue)
@@ -300,18 +299,15 @@ public final class ChangeAndValidateMergeQuickfixProvider
     private static String openMergeDialogOnUiThread(MergeData mergeData)
         throws CoreException
     {
-        CompareConfiguration configuration = new CompareConfiguration();
-        configuration.setLeftLabel(Messages.ChangeAndValidateMergeQuickfix_LeftLabel);
-        configuration.setRightLabel(Messages.ChangeAndValidateMergeQuickfix_RightLabel);
-        configuration.setAncestorLabel(Messages.ChangeAndValidateMergeQuickfix_AncestorLabel);
+        CompareConfiguration configuration = ChangeAndValidateMergeTexts.newCompareConfiguration();
 
-        StringBasedTypedElement left = typedElement(Messages.ChangeAndValidateMergeQuickfix_LeftLabel,
+        StringBasedTypedElement left = ChangeAndValidateMergeTexts.typedElement(Messages.ChangeAndValidateMergeQuickfix_LeftLabel,
             mergeData.sourceMethodText, false);
-        StringBasedTypedElement right = typedElement(Messages.ChangeAndValidateMergeQuickfix_RightLabel,
+        StringBasedTypedElement right = ChangeAndValidateMergeTexts.typedElement(Messages.ChangeAndValidateMergeQuickfix_RightLabel,
             mergeData.extensionMethodText, false);
-        StringBasedTypedElement ancestor = typedElement(Messages.ChangeAndValidateMergeQuickfix_AncestorLabel,
+        StringBasedTypedElement ancestor = ChangeAndValidateMergeTexts.typedElement(Messages.ChangeAndValidateMergeQuickfix_AncestorLabel,
             mergeData.ancestorMethodText, false);
-        StringBasedTypedElement result = typedElement(Messages.ChangeAndValidateMergeQuickfix_ResultLabel,
+        StringBasedTypedElement result = ChangeAndValidateMergeTexts.typedElement(Messages.ChangeAndValidateMergeQuickfix_ResultLabel,
             mergeData.suggestedMethodText, true);
 
         ThreeSideTextMergeInput mergeInput = new ThreeSideTextMergeInput(left, right, ancestor, result,
@@ -329,12 +325,6 @@ public final class ChangeAndValidateMergeQuickfixProvider
         return readTypedElement(mergeInput.getMergeResult());
     }
 
-    private static StringBasedTypedElement typedElement(String name, String content, boolean editable)
-    {
-        StringBasedTypedElement element = new StringBasedTypedElement(name, content, editable);
-        element.setType(BSL_TYPE);
-        return element;
-    }
 
     private static String dialogTitle(MergeData mergeData)
     {
@@ -388,11 +378,6 @@ public final class ChangeAndValidateMergeQuickfixProvider
         return window != null ? window : workbench;
     }
 
-    private static String normalizeLineSeparators(String text, String reference)
-    {
-        String separator = reference != null && reference.contains("\r\n") ? "\r\n" : "\n"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-        return text.replace("\r\n", "\n").replace('\r', '\n').replace("\n", separator); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-    }
 
     private static final class SavingThreeSideTextMergeDialog
         extends ThreeSideTextMergeDialog

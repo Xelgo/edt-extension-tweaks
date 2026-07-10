@@ -72,6 +72,28 @@ public final class Messages
     public static String ChangeAndValidateMergeQuickfix_Title;
     public static String ChangeAndValidateMergeQuickfix_UnknownMethod;
 
+    public static String ChangeAndValidateBatch_DialogTitle;
+    public static String ChangeAndValidateBatch_Counter;
+    public static String ChangeAndValidateBatch_CounterWarnings;
+    public static String ChangeAndValidateBatch_ApplyButton;
+    public static String ChangeAndValidateBatch_ConfirmDiscard;
+    public static String ChangeAndValidateBatch_NothingFound;
+    public static String ChangeAndValidateBatch_NoSuitableMarkers;
+    public static String ChangeAndValidateBatch_CollectTask;
+    public static String ChangeAndValidateBatch_CollectFailed;
+    public static String ChangeAndValidateBatch_ApplyTask;
+    public static String ChangeAndValidateBatch_ReportApplied;
+    public static String ChangeAndValidateBatch_ReportSkipped;
+    public static String ChangeAndValidateBatch_WarnUnbalancedDirectives;
+    public static String ChangeAndValidateBatch_WarnEmptyResult;
+    public static String ChangeAndValidateBatch_WarnNoBaseProject;
+    public static String ChangeAndValidateBatch_WarnNoBaseModule;
+    public static String ChangeAndValidateBatch_WarnNoBaseMethod;
+    public static String ChangeAndValidateBatch_SkipFileMissing;
+    public static String ChangeAndValidateBatch_SkipReadOnly;
+    public static String ChangeAndValidateBatch_SkipNoBuffer;
+    public static String ChangeAndValidateBatch_SkipModuleChanged;
+
     static
     {
         NLS.initializeMessages(BUNDLE_NAME, Messages.class);
