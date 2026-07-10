@@ -35,6 +35,9 @@ public final class Messages
     public static String ContextLinksPreferencePage_BslContextLinksEnabled;
     public static String ContextLinksPreferencePage_Description;
     public static String ContextLinksPreferencePage_InsertFormattingEnabled;
+    public static String ContextLinksPreferencePage_MethodParameterInfoAutoShow;
+    public static String ContextLinksPreferencePage_MethodParameterInfoShowDescription;
+    public static String ContextLinksPreferencePage_MethodCompletionCaretToFirstParameter;
     public static String ContextLinksPreferencePage_QueryWizardEnabled;
     public static String ContextLinksPreferencePage_QueryWizardNestedTempTablesEnabled;
     public static String ContextLinksPreferencePage_QueryResultContextModel;

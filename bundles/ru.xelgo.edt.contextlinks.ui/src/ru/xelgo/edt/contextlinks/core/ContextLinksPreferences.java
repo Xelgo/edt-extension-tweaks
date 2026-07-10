@@ -19,6 +19,12 @@ public final class ContextLinksPreferences
     public static final String KEY_QUERY_RESULT_CONTEXT_MODEL =
         "queryResult.contextModel"; //$NON-NLS-1$
     public static final String KEY_INSERT_FORMATTING_ENABLED = "insertFormatting.enabled"; //$NON-NLS-1$
+    public static final String KEY_METHOD_PARAMETER_INFO_AUTO_SHOW =
+        "methodParameterInfo.autoShow"; //$NON-NLS-1$
+    public static final String KEY_METHOD_PARAMETER_INFO_SHOW_DESCRIPTION =
+        "methodParameterInfo.showDescription"; //$NON-NLS-1$
+    public static final String KEY_METHOD_COMPLETION_CARET_TO_FIRST_PARAMETER =
+        "methodCompletion.caretToFirstParameter"; //$NON-NLS-1$
     public static final String KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED = "workbenchViewActivation.enabled"; //$NON-NLS-1$
     public static final String KEY_SERVER_CALL_HIGHLIGHTING_ENABLED = "serverCallHighlighting.enabled"; //$NON-NLS-1$
     public static final String KEY_SERVER_CALL_HIGHLIGHTING_COLOR = "serverCallHighlighting.color"; //$NON-NLS-1$
@@ -52,6 +58,9 @@ public final class ContextLinksPreferences
         preferences.putBoolean(KEY_QUERY_WIZARD_NESTED_TEMP_TABLES_ENABLED, DEFAULT_ENABLED);
         preferences.put(KEY_QUERY_RESULT_CONTEXT_MODEL, DEFAULT_QUERY_RESULT_CONTEXT_MODEL);
         preferences.putBoolean(KEY_INSERT_FORMATTING_ENABLED, DEFAULT_ENABLED);
+        preferences.putBoolean(KEY_METHOD_PARAMETER_INFO_AUTO_SHOW, DEFAULT_ENABLED);
+        preferences.putBoolean(KEY_METHOD_PARAMETER_INFO_SHOW_DESCRIPTION, DEFAULT_ENABLED);
+        preferences.putBoolean(KEY_METHOD_COMPLETION_CARET_TO_FIRST_PARAMETER, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_SERVER_CALL_HIGHLIGHTING_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_VARIABLE_SNAPSHOTS_ENABLED, DEFAULT_ENABLED);
@@ -86,6 +95,21 @@ public final class ContextLinksPreferences
     public static boolean isInsertFormattingEnabled()
     {
         return getBoolean(KEY_INSERT_FORMATTING_ENABLED);
+    }
+
+    public static boolean isMethodParameterInfoAutoShowEnabled()
+    {
+        return getBoolean(KEY_METHOD_PARAMETER_INFO_AUTO_SHOW);
+    }
+
+    public static boolean isMethodParameterInfoDescriptionVisible()
+    {
+        return getBoolean(KEY_METHOD_PARAMETER_INFO_SHOW_DESCRIPTION);
+    }
+
+    public static boolean isMethodCompletionCaretToFirstParameterEnabled()
+    {
+        return getBoolean(KEY_METHOD_COMPLETION_CARET_TO_FIRST_PARAMETER);
     }
 
     public static boolean isWorkbenchViewActivationEnabled()

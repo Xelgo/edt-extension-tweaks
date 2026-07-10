@@ -48,6 +48,12 @@ public class ContextLinksPreferencePage
             getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_INSERT_FORMATTING_ENABLED,
             Messages.ContextLinksPreferencePage_InsertFormattingEnabled, getFieldEditorParent()));
+        addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_METHOD_PARAMETER_INFO_AUTO_SHOW,
+            Messages.ContextLinksPreferencePage_MethodParameterInfoAutoShow, getFieldEditorParent()));
+        addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_METHOD_PARAMETER_INFO_SHOW_DESCRIPTION,
+            Messages.ContextLinksPreferencePage_MethodParameterInfoShowDescription, getFieldEditorParent()));
+        addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_METHOD_COMPLETION_CARET_TO_FIRST_PARAMETER,
+            Messages.ContextLinksPreferencePage_MethodCompletionCaretToFirstParameter, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED,
             Messages.ContextLinksPreferencePage_WorkbenchViewActivationEnabled, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_SERVER_CALL_HIGHLIGHTING_ENABLED,

@@ -3,6 +3,8 @@ package ru.xelgo.edt.contextlinks.ui;
 import org.eclipse.ui.IStartup;
 
 import ru.xelgo.edt.contextlinks.core.ContextLinks;
+import ru.xelgo.edt.contextlinks.core.ContextLinksInvocationParameterInfoAutoActivation;
+import ru.xelgo.edt.contextlinks.core.ContextLinksMethodCompletionCaretRelocator;
 import ru.xelgo.edt.contextlinks.core.ContextLinksV8GlobalScopeProviderRegistrar;
 
 /**
@@ -15,6 +17,8 @@ public class ContextLinksStartup
     public void earlyStartup()
     {
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
+        ContextLinksInvocationParameterInfoAutoActivation.start();
+        ContextLinksMethodCompletionCaretRelocator.start();
         ContextLinksWorkbenchViewActivationService.start();
         ContextLinks.logDebug("EDT Extension Tweaks startup warm-up builds are disabled"); //$NON-NLS-1$
     }

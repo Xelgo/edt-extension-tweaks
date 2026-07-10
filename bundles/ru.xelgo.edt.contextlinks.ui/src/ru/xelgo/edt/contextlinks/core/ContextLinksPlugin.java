@@ -12,6 +12,7 @@ import org.eclipse.equinox.service.weaving.IWeavingServiceFactory;
 public final class ContextLinksPlugin
     extends Plugin
 {
+    private ServiceRegistration<IWeavingServiceFactory> bslUiWeavingRegistration;
     private ServiceRegistration<IWeavingServiceFactory> queryWizardWeavingRegistration;
 
     @Override
@@ -19,6 +20,9 @@ public final class ContextLinksPlugin
         throws Exception
     {
         super.start(context);
+        bslUiWeavingRegistration =
+            context.registerService(IWeavingServiceFactory.class, new ContextLinksBslUiWeavingServiceFactory(), null);
+
         if (ContextLinksPreferences.isQueryWizardEnabled())
         {
             queryWizardWeavingRegistration =
@@ -43,6 +47,11 @@ public final class ContextLinksPlugin
         {
             queryWizardWeavingRegistration.unregister();
             queryWizardWeavingRegistration = null;
+        }
+        if (bslUiWeavingRegistration != null)
+        {
+            bslUiWeavingRegistration.unregister();
+            bslUiWeavingRegistration = null;
         }
         super.stop(context);
     }

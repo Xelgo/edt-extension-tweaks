@@ -197,7 +197,7 @@ function Sync-ContextLinksBundleInfo {
 
     $version = $Matches[1]
     $pluginUri = "file:/$($latestPlugin.FullName.Replace('\', '/'))"
-    $line = "ru.xelgo.edt.contextlinks.ui,$version,$pluginUri,4,false"
+    $line = "ru.xelgo.edt.contextlinks.ui,$version,$pluginUri,4,true"
 
     Write-Step "Syncing bundles.info to $($latestPlugin.Name)"
     if ($DryRun) {
