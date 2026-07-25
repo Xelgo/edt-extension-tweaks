@@ -201,10 +201,10 @@ public class ChangeAndValidateBatchMergeHandler
         for (Object element : selection.toList())
         {
             Marker marker = adapt(element, Marker.class);
-            if (marker != null && ChangeAndValidateBatchCollector.CHECK_ID.equals(marker.getCheckId()))
+            if (marker != null)
                 markers.add(marker);
         }
-        return markers;
+        return ChangeAndValidateBatchCollector.filterSupported(markers);
     }
 
     private static List<IProject> projectsOf(IStructuredSelection selection)
