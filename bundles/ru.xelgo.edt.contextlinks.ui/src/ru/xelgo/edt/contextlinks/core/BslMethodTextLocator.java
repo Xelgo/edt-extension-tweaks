@@ -10,9 +10,9 @@ import ru.xelgo.edt.contextlinks.ui.Messages;
 /**
  * Locates method boundaries in BSL module text without loading the Xtext model.
  *
- * <p>EDT markers for {@code SU232} carry only a module URI and a problem offset; the object handed
- * out by {@code Marker.provideObject} is detached from any resource, so the node model is not
- * reachable. Everything below therefore works on plain module text.
+ * <p>Markers of this check carry only a module URI and a problem offset; the object handed out by
+ * {@code Marker.provideObject} is detached from any resource, so the node model is not reachable.
+ * Everything below therefore works on plain module text.
  */
 final class BslMethodTextLocator
 {
@@ -40,6 +40,11 @@ final class BslMethodTextLocator
         "^\\s*&\\s*(?:ИзменениеИКонтроль|ChangeAndValidate)\\s*\\(\\s*\"([^\"]*)\"\\s*\\)", //$NON-NLS-1$
         Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
+    /** The directive itself, with or without the base method name, is what makes a method ours. */
+    private static final Pattern CHANGE_AND_VALIDATE_MARK = Pattern.compile(
+        "^\\s*&\\s*(?:ИзменениеИКонтроль|ChangeAndValidate)\\b", //$NON-NLS-1$
+        Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
     private static final Pattern ANNOTATION = Pattern.compile("^\\s*&"); //$NON-NLS-1$
     private static final Pattern COMMENT = Pattern.compile("^\\s*//"); //$NON-NLS-1$
 
@@ -56,14 +61,18 @@ final class BslMethodTextLocator
         final int length;
         final String methodName;
         final String sourceMethodName;
+        /** True when the method carries the ChangeAndValidate directive. */
+        final boolean changeAndValidate;
 
-        MethodText(String text, int offset, int length, String methodName, String sourceMethodName)
+        MethodText(String text, int offset, int length, String methodName, String sourceMethodName,
+            boolean changeAndValidate)
         {
             this.text = text;
             this.offset = offset;
             this.length = length;
             this.methodName = methodName;
             this.sourceMethodName = sourceMethodName;
+            this.changeAndValidate = changeAndValidate;
         }
     }
 
@@ -98,7 +107,8 @@ final class BslMethodTextLocator
 
         String methodName = methodName(lineText(moduleText, lines, signatureLine));
         String sourceName = sourceMethodName(moduleText, lines, startLine, signatureLine);
-        return new MethodText(text, start, end - start, methodName, sourceName);
+        boolean changeAndValidate = hasChangeAndValidate(moduleText, lines, startLine, signatureLine);
+        return new MethodText(text, start, end - start, methodName, sourceName, changeAndValidate);
     }
 
     /** Finds a method by name (used to locate the base method in the parent configuration). */
@@ -122,7 +132,8 @@ final class BslMethodTextLocator
             int startLine = expandToAnnotations(moduleText, lines, index);
             int start = lines.get(startLine)[0];
             int end = lines.get(endLine)[1];
-            return new MethodText(moduleText.substring(start, end), start, end - start, matcher.group(2), null);
+            return new MethodText(moduleText.substring(start, end), start, end - start, matcher.group(2), null,
+                hasChangeAndValidate(moduleText, lines, startLine, index));
         }
         return null;
     }
@@ -203,6 +214,16 @@ final class BslMethodTextLocator
                 return matcher.group(1);
         }
         return null;
+    }
+
+    private static boolean hasChangeAndValidate(String text, List<int[]> lines, int startLine, int signatureLine)
+    {
+        for (int index = startLine; index <= signatureLine; index++)
+        {
+            if (CHANGE_AND_VALIDATE_MARK.matcher(lineText(text, lines, index)).find())
+                return true;
+        }
+        return false;
     }
 
     private static String methodName(String signatureLine)
