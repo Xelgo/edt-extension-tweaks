@@ -32,6 +32,7 @@ public final class Messages
     public static String ForceUpdateApplicationExtensionHandler_NoSynchronizationManager;
     public static String ForceUpdateApplicationExtensionHandler_Title;
     public static String ForceUpdateApplicationExtensionHandler_UpdateFailed;
+    public static String ContextLinksPreferencePage_ActiveTabBoldFontEnabled;
     public static String ContextLinksPreferencePage_BslContextLinksEnabled;
     public static String ContextLinksPreferencePage_Description;
     public static String ContextLinksPreferencePage_InsertFormattingEnabled;

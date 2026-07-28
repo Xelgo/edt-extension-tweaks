@@ -56,6 +56,8 @@ public class ContextLinksPreferencePage
             Messages.ContextLinksPreferencePage_MethodCompletionCaretToFirstParameter, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED,
             Messages.ContextLinksPreferencePage_WorkbenchViewActivationEnabled, getFieldEditorParent()));
+        addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_ACTIVE_TAB_BOLD_FONT_ENABLED,
+            Messages.ContextLinksPreferencePage_ActiveTabBoldFontEnabled, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_SERVER_CALL_HIGHLIGHTING_ENABLED,
             Messages.ContextLinksPreferencePage_ServerCallHighlightingEnabled, getFieldEditorParent()));
         addField(new BooleanFieldEditor(ContextLinksPreferences.KEY_VARIABLE_SNAPSHOTS_ENABLED,

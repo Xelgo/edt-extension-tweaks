@@ -19,6 +19,7 @@ public class ContextLinksStartup
         ContextLinksV8GlobalScopeProviderRegistrar.ensureRegistered();
         ContextLinksInvocationParameterInfoAutoActivation.start();
         ContextLinksMethodCompletionCaretRelocator.start();
+        ContextLinksActiveTabBoldFontService.start();
         ContextLinksWorkbenchViewActivationService.start();
         ContextLinks.logDebug("EDT Extension Tweaks startup warm-up builds are disabled"); //$NON-NLS-1$
     }

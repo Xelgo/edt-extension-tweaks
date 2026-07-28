@@ -26,6 +26,7 @@ public final class ContextLinksPreferences
     public static final String KEY_METHOD_COMPLETION_CARET_TO_FIRST_PARAMETER =
         "methodCompletion.caretToFirstParameter"; //$NON-NLS-1$
     public static final String KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED = "workbenchViewActivation.enabled"; //$NON-NLS-1$
+    public static final String KEY_ACTIVE_TAB_BOLD_FONT_ENABLED = "activeTab.boldFont.enabled"; //$NON-NLS-1$
     public static final String KEY_SERVER_CALL_HIGHLIGHTING_ENABLED = "serverCallHighlighting.enabled"; //$NON-NLS-1$
     public static final String KEY_SERVER_CALL_HIGHLIGHTING_COLOR = "serverCallHighlighting.color"; //$NON-NLS-1$
     public static final String KEY_SERVER_CALL_HIGHLIGHTING_STYLE = "serverCallHighlighting.style"; //$NON-NLS-1$
@@ -62,6 +63,7 @@ public final class ContextLinksPreferences
         preferences.putBoolean(KEY_METHOD_PARAMETER_INFO_SHOW_DESCRIPTION, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_METHOD_COMPLETION_CARET_TO_FIRST_PARAMETER, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED, DEFAULT_ENABLED);
+        preferences.putBoolean(KEY_ACTIVE_TAB_BOLD_FONT_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_SERVER_CALL_HIGHLIGHTING_ENABLED, DEFAULT_ENABLED);
         preferences.putBoolean(KEY_VARIABLE_SNAPSHOTS_ENABLED, DEFAULT_ENABLED);
         preferences.putInt(KEY_VARIABLE_SNAPSHOTS_MAX_DEPTH, DEFAULT_VARIABLE_SNAPSHOTS_MAX_DEPTH);
@@ -115,6 +117,11 @@ public final class ContextLinksPreferences
     public static boolean isWorkbenchViewActivationEnabled()
     {
         return getBoolean(KEY_WORKBENCH_VIEW_ACTIVATION_ENABLED);
+    }
+
+    public static boolean isActiveTabBoldFontEnabled()
+    {
+        return getBoolean(KEY_ACTIVE_TAB_BOLD_FONT_ENABLED);
     }
 
     public static boolean isServerCallHighlightingEnabled()
