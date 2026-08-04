@@ -30,6 +30,7 @@ https://github.com/Xelgo/edt-extension-tweaks/releases/latest/download/edt-exten
 
 - 1C:EDT 2025.2.6
 - 1C:EDT 2026.1.1
+- 1C:EDT 2026.2.0
 
 ## Возможности
 
@@ -210,7 +211,7 @@ https://github.com/Xelgo/edt-extension-tweaks/releases/latest/download/edt-exten
 Собрать p2 update site:
 
 ```powershell
-$env:JAVA_HOME='C:\Program Files\1C\1CE\components\axiom-jdk-full-17.0.16+12-x86_64'
+$env:JAVA_HOME='C:\Program Files\1C\1CE\components\azul-jdk-full-17.0.13+11-x86_64'
 & 'C:\Users\USER\Documents\EDT Plugins\.tools\apache-maven-3.9.9\bin\mvn.cmd' package -DskipTests
 ```
 

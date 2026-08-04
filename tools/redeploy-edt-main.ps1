@@ -1,16 +1,16 @@
 param(
     [string]$ProjectRoot = (Resolve-Path "$PSScriptRoot\..").Path,
     [string]$Workspace = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\projects\EDT UH"),
-    [string]$EdtHome = (Join-Path $env:LOCALAPPDATA "1C\1cedtstart\installations\1C_EDT (Lite) 2025.2\1cedt"),
-    [string]$JavaHome = "C:\Program Files\1C\1CE\components\axiom-jdk-full-17.0.16+12-x86_64",
-    [string]$LauncherVm = "C:\Program Files\1C\1CE\components\axiom-jdk-full-17.0.16+12-x86_64\bin\javaw.exe",
+    [string]$EdtHome = "C:\Program Files\1C\1CE\components\1c-edt-2026.2.0+289-x86_64",
+    [string]$JavaHome = "C:\Program Files\1C\1CE\components\azul-jdk-full-17.0.13+11-x86_64",
+    [string]$LauncherVm = "C:\Program Files\1C\1CE\components\axiom-jdk-full-25.0.2+12-x86_64\bin\javaw.exe",
     [string]$Maven = (Join-Path (Resolve-Path "$PSScriptRoot\..\..").Path ".tools\apache-maven-3.9.9\bin\mvn.cmd"),
     [string]$Profile = "",
     [string]$InstallIU = "ru.xelgo.edt.contextlinks.feature.feature.group",
     [string]$UninstallIU = "ru.xelgo.edt.contextlinks.feature.feature.group",
     [string[]]$DependencyRepositories = @(
-        "https://edt.1c.ru/downloads/releases/ruby/2025.2/",
-        "https://download.eclipse.org/releases/2023-12/",
+        "https://edt.1c.ru/downloads/releases/ruby/2026.2/",
+        "https://download.eclipse.org/releases/2025-12/",
         "http://download.eclipse.org/cbi/updates/license/2.0.2.v20181016-2210"
     ),
     [switch]$SkipBuild,
