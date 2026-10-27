@@ -1,19 +1,26 @@
 package ru.xelgo.edt.contextlinks.ui;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.egit.core.project.RepositoryMapping;
+import org.eclipse.egit.core.project.GitProjectData;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -28,20 +35,14 @@ final class ContextLinksGitChangedResources
 {
     static final String FILTER_ID = "ru.xelgo.edt.contextlinks.ui.filters.gitChanged"; //$NON-NLS-1$
 
-    private static final long CACHE_TTL_MILLIS = 1500L;
-    private static volatile Snapshot cachedSnapshot = Snapshot.expired();
+    private final Snapshot snapshot;
 
-    private ContextLinksGitChangedResources()
+    ContextLinksGitChangedResources(Snapshot snapshot)
     {
-        // Utility class.
+        this.snapshot = snapshot;
     }
 
-    static void invalidate()
-    {
-        cachedSnapshot = Snapshot.expired();
-    }
-
-    static boolean isChangedElement(Object parentElement, Object element)
+    boolean isChangedElement(Object parentElement, Object element)
     {
         if (element instanceof IProject)
             return isChangedResource((IProject)element);
@@ -61,12 +62,12 @@ final class ContextLinksGitChangedResources
         return true;
     }
 
-    static boolean isChangedElement(Object element)
+    boolean isChangedElement(Object element)
     {
         return isChangedElement(null, element);
     }
 
-    private static boolean isChangedMetadataResource(IResource resource)
+    private boolean isChangedMetadataResource(IResource resource)
     {
         if (isChangedResource(resource))
             return true;
@@ -80,7 +81,7 @@ final class ContextLinksGitChangedResources
         return false;
     }
 
-    private static Boolean isChangedNavigatorCollection(Object parentElement, Object element)
+    private Boolean isChangedNavigatorCollection(Object parentElement, Object element)
     {
         if (element == null)
             return null;
@@ -122,7 +123,7 @@ final class ContextLinksGitChangedResources
         return Boolean.FALSE;
     }
 
-    private static boolean hasChangedNestedCollection(EObject parentModel, String modelObjectName)
+    private boolean hasChangedNestedCollection(EObject parentModel, String modelObjectName)
     {
         IResource parentResource = ProjectSelection.getResource(parentModel);
         if (parentResource == null)
@@ -136,7 +137,7 @@ final class ContextLinksGitChangedResources
         return isChangedResource(base.getFolder(new Path(sourceFolder)));
     }
 
-    private static boolean hasChangedTopLevelCollection(IProject project, String modelObjectName)
+    private boolean hasChangedTopLevelCollection(IProject project, String modelObjectName)
     {
         String sourceFolder = METADATA_TYPE_SOURCE_FOLDERS.getOrDefault(modelObjectName, toSourceFolderName(modelObjectName));
         return hasChangedProjectPath(project, "src/" + sourceFolder); //$NON-NLS-1$
@@ -147,7 +148,7 @@ final class ContextLinksGitChangedResources
         return modelObject != null && "Configuration".equals(modelObject.eClass().getName()); //$NON-NLS-1$
     }
 
-    private static boolean hasChangedAnyProjectPath(IProject project, Set<String> relativePaths)
+    private boolean hasChangedAnyProjectPath(IProject project, Set<String> relativePaths)
     {
         for (String relativePath : relativePaths)
         {
@@ -157,7 +158,7 @@ final class ContextLinksGitChangedResources
         return false;
     }
 
-    private static boolean hasChangedProjectPath(IProject project, String relativePath)
+    private boolean hasChangedProjectPath(IProject project, String relativePath)
     {
         return isChangedResource(project.getFolder(new Path(relativePath)));
     }
@@ -191,7 +192,7 @@ final class ContextLinksGitChangedResources
         return modelObjectName + "s"; //$NON-NLS-1$
     }
 
-    private static boolean isChangedResource(IResource resource)
+    private boolean isChangedResource(IResource resource)
     {
         if (resource != null)
             return isChangedResourceInternal(resource);
@@ -283,7 +284,7 @@ final class ContextLinksGitChangedResources
         "WSReferences", //$NON-NLS-1$
         "XDTOPackages"); //$NON-NLS-1$
 
-    private static boolean isChangedResourceInternal(IResource resource)
+    private boolean isChangedResourceInternal(IResource resource)
     {
         if (resource == null)
             return false;
@@ -292,81 +293,38 @@ final class ContextLinksGitChangedResources
         if (project == null || !project.isAccessible())
             return false;
 
-        RepositoryMapping mapping = getMapping(resource, project);
-        if (mapping == null)
-            return false;
-
-        RepositoryChanges changes = snapshot().getChanges(mapping);
-        if (changes.isEmpty())
-            return false;
-
-        String repoPath = getRepoRelativePath(mapping, resource);
-        return changes.contains(repoPath);
+        return snapshot.contains(resource.getLocation());
     }
 
-    private static RepositoryMapping getMapping(IResource resource, IProject project)
+    static Snapshot readWorkspaceSnapshot(IProgressMonitor monitor)
     {
+        List<Repository> repositories = new ArrayList<>();
+        for (IProject project : ResourcesPlugin.getWorkspace().getRoot().getProjects())
+        {
+            checkCanceled(monitor);
+            if (!project.isAccessible())
+                continue;
+            GitProjectData data = GitProjectData.get(project);
+            if (data != null)
+            {
+                for (RepositoryMapping mapping : data.getRepositoryMappings().values())
+                {
+                    Repository repository = mapping.getRepository();
+                    if (repository != null)
+                        repositories.add(repository);
+                }
+            }
+        }
+        return Snapshot.read(repositories, monitor, ContextLinksGitChangedResources::readChanges);
+    }
+
+    static RepositoryChanges readChanges(Repository repository, IProgressMonitor monitor)
+    {
+        checkCanceled(monitor);
         try
         {
-            RepositoryMapping mapping = RepositoryMapping.getMapping(resource);
-            return mapping != null ? mapping : RepositoryMapping.getMapping(project);
-        }
-        catch (RuntimeException e)
-        {
-            ContextLinks.logWarning("Failed to resolve Git repository mapping: " + e.getMessage()); //$NON-NLS-1$
-            return null;
-        }
-    }
-
-    private static Snapshot snapshot()
-    {
-        long now = System.currentTimeMillis();
-        Snapshot current = cachedSnapshot;
-        if (current.isFresh(now))
-            return current;
-
-        synchronized (ContextLinksGitChangedResources.class)
-        {
-            current = cachedSnapshot;
-            if (current.isFresh(now))
-                return current;
-
-            current = new Snapshot(now);
-            cachedSnapshot = current;
-            return current;
-        }
-    }
-
-    private static String getRepoRelativePath(RepositoryMapping mapping, IResource resource)
-    {
-        try
-        {
-            String repoRelativePath = mapping.getRepoRelativePath(resource);
-            if (repoRelativePath != null)
-                return normalize(repoRelativePath);
-        }
-        catch (RuntimeException e)
-        {
-            // Fall back to workspace-relative path mapping below.
-        }
-
-        IPath containerPath = mapping.getContainerPath();
-        IPath resourcePath = resource.getFullPath();
-        if (containerPath != null && resourcePath != null && containerPath.isPrefixOf(resourcePath))
-            return normalize(resourcePath.makeRelativeTo(containerPath).toString());
-
-        return null;
-    }
-
-    private static RepositoryChanges readChanges(RepositoryMapping mapping)
-    {
-        Repository repository = mapping.getRepository();
-        if (repository == null)
-            return RepositoryChanges.EMPTY;
-
-        try
-        {
-            Status status = Git.wrap(repository).status().call();
+            Status status = Git.wrap(repository).status().setProgressMonitor(new GitProgress(monitor)).call();
+            checkCanceled(monitor);
             Set<String> paths = new LinkedHashSet<>();
             addAll(paths, status.getUncommittedChanges());
             addAll(paths, status.getUntracked());
@@ -376,9 +334,10 @@ final class ContextLinksGitChangedResources
         }
         catch (GitAPIException | RuntimeException e)
         {
-            ContextLinks.logWarning("Failed to read Git status for " + describeRepository(mapping) + ": " //$NON-NLS-1$ //$NON-NLS-2$
+            checkCanceled(monitor);
+            ContextLinks.logWarning("Failed to read Git status for " + repository.getDirectory() + ": " //$NON-NLS-1$ //$NON-NLS-2$
                 + e.getMessage());
-            return RepositoryChanges.EMPTY;
+            return RepositoryChanges.UNKNOWN;
         }
     }
 
@@ -397,7 +356,7 @@ final class ContextLinksGitChangedResources
         if (path == null)
             return null;
 
-        String normalized = path.replace('\\', '/').trim();
+        String normalized = path.replace('\\', '/');
         while (normalized.startsWith("/")) //$NON-NLS-1$
             normalized = normalized.substring(1);
         while (normalized.endsWith("/")) //$NON-NLS-1$
@@ -405,80 +364,199 @@ final class ContextLinksGitChangedResources
         return normalized;
     }
 
-    private static String repositoryKey(RepositoryMapping mapping)
+    private static void checkCanceled(IProgressMonitor monitor)
     {
-        Repository repository = mapping.getRepository();
-        if (repository != null && repository.getDirectory() != null)
-            return repository.getDirectory().getAbsolutePath();
-
-        File workTree = mapping.getWorkTree();
-        return workTree != null ? workTree.getAbsolutePath() : mapping.toString();
+        if (monitor.isCanceled())
+            throw new OperationCanceledException();
     }
 
-    private static String describeRepository(RepositoryMapping mapping)
+    @FunctionalInterface
+    interface StatusReader
     {
-        File workTree = mapping.getWorkTree();
-        return workTree != null ? workTree.getAbsolutePath() : repositoryKey(mapping);
+        RepositoryChanges read(Repository repository, IProgressMonitor monitor);
     }
 
-    private static final class Snapshot
+    static final class Snapshot
     {
-        private final long createdAt;
-        private final Map<String, RepositoryChanges> repositories = new ConcurrentHashMap<>();
+        private final Map<IPath, RepositoryChanges> workTrees;
 
-        private Snapshot(long createdAt)
+        Snapshot(Map<IPath, RepositoryChanges> workTrees)
         {
-            this.createdAt = createdAt;
+            this.workTrees = Map.copyOf(workTrees);
         }
 
-        static Snapshot expired()
+        static Snapshot read(Iterable<Repository> repositories, IProgressMonitor monitor, StatusReader reader)
         {
-            return new Snapshot(0L);
+            Map<String, RepositoryChanges> changes = new LinkedHashMap<>();
+            Map<IPath, RepositoryChanges> workTrees = new LinkedHashMap<>();
+            for (Repository repository : repositories)
+            {
+                checkCanceled(monitor);
+                if (repository.isBare())
+                    continue;
+                String key = repository.getDirectory().getAbsolutePath();
+                RepositoryChanges status = changes.get(key);
+                if (status == null)
+                {
+                    repository.incrementOpen();
+                    try
+                    {
+                        status = reader.read(repository, monitor);
+                        checkCanceled(monitor);
+                        changes.put(key, status);
+                    }
+                    finally
+                    {
+                        repository.close();
+                    }
+                }
+                workTrees.put(Path.fromOSString(repository.getWorkTree().getAbsolutePath()), status);
+            }
+            return new Snapshot(workTrees);
         }
 
-        boolean isFresh(long now)
+        boolean contains(IPath location)
         {
-            return now - createdAt < CACHE_TTL_MILLIS;
+            if (location == null)
+                return true;
+            IPath closest = null;
+            for (IPath root : workTrees.keySet())
+            {
+                if (isLocationPrefix(root, location)
+                    && (closest == null || root.segmentCount() > closest.segmentCount()))
+                    closest = root;
+            }
+            if (closest != null && workTrees.get(closest).contains(
+                location.removeFirstSegments(closest.segmentCount()).setDevice(null).makeRelative().toPortableString()))
+                return true;
+            for (Map.Entry<IPath, RepositoryChanges> entry : workTrees.entrySet())
+            {
+                if (isLocationPrefix(location, entry.getKey()) && !entry.getValue().isEmpty())
+                    return true;
+            }
+            return false;
         }
 
-        RepositoryChanges getChanges(RepositoryMapping mapping)
+        private boolean isLocationPrefix(IPath prefix, IPath location)
         {
-            return repositories.computeIfAbsent(repositoryKey(mapping), key -> readChanges(mapping));
+            if (File.separatorChar != '\\')
+                return prefix.isPrefixOf(location);
+            if (prefix.segmentCount() > location.segmentCount())
+                return false;
+            String device = prefix.getDevice();
+            if (device == null ? location.getDevice() != null : !device.equalsIgnoreCase(location.getDevice()))
+                return false;
+            for (int i = 0; i < prefix.segmentCount(); i++)
+            {
+                if (!prefix.segment(i).equalsIgnoreCase(location.segment(i)))
+                    return false;
+            }
+            return true;
+        }
+
+        boolean containsRepository(Repository repository)
+        {
+            return repository != null && !repository.isBare()
+                && workTrees.containsKey(Path.fromOSString(repository.getWorkTree().getAbsolutePath()));
         }
     }
 
-    private static final class RepositoryChanges
+    static final class RepositoryChanges
     {
         static final RepositoryChanges EMPTY = new RepositoryChanges(Set.of());
+        static final RepositoryChanges UNKNOWN = new RepositoryChanges(Set.of(), true);
 
         private final Set<String> paths;
+        private final Set<String> ancestors;
+        private final boolean unknown;
 
-        private RepositoryChanges(Set<String> paths)
+        RepositoryChanges(Set<String> paths)
         {
-            this.paths = paths;
+            this(paths, false);
+        }
+
+        private RepositoryChanges(Set<String> paths, boolean unknown)
+        {
+            Set<String> normalized = new LinkedHashSet<>();
+            addAll(normalized, paths);
+            this.paths = Collections.unmodifiableSet(normalized);
+            Set<String> index = new LinkedHashSet<>(normalized);
+            for (String path : normalized)
+            {
+                for (int slash = path.lastIndexOf('/'); slash >= 0; slash = path.lastIndexOf('/', slash - 1))
+                    index.add(path.substring(0, slash));
+            }
+            this.ancestors = Collections.unmodifiableSet(index);
+            this.unknown = unknown;
         }
 
         boolean isEmpty()
         {
-            return paths.isEmpty();
+            return !unknown && paths.isEmpty();
         }
 
         boolean contains(String repoPath)
         {
             String normalized = normalize(repoPath);
+            if (unknown)
+                return true;
             if (normalized == null || normalized.isEmpty())
                 return !paths.isEmpty();
 
-            String childPrefix = normalized + '/';
-            for (String path : paths)
+            if (ancestors.contains(normalized))
+                return true;
+            for (int slash = normalized.lastIndexOf('/'); slash >= 0; slash = normalized.lastIndexOf('/', slash - 1))
             {
-                if (path.equals(normalized) || path.startsWith(childPrefix))
-                    return true;
-
-                if (normalized.startsWith(path + '/'))
+                if (paths.contains(normalized.substring(0, slash)))
                     return true;
             }
             return false;
+        }
+    }
+
+    private static final class GitProgress implements org.eclipse.jgit.lib.ProgressMonitor
+    {
+        private final IProgressMonitor monitor;
+
+        GitProgress(IProgressMonitor monitor)
+        {
+            this.monitor = monitor;
+        }
+
+        @Override
+        public void start(int totalTasks)
+        {
+            // The surrounding Eclipse Job owns the progress lifecycle.
+        }
+
+        @Override
+        public void beginTask(String title, int totalWork)
+        {
+            monitor.subTask(title);
+        }
+
+        @Override
+        public void update(int completed)
+        {
+            // Cancellation remains available even for repositories without a known work total.
+        }
+
+        @Override
+        public void endTask()
+        {
+            // The surrounding Eclipse Job owns the progress lifecycle.
+        }
+
+        @Override
+        public boolean isCancelled()
+        {
+            return monitor.isCanceled();
+        }
+
+        @Override
+        public void showDuration(boolean enabled)
+        {
+            // EDT displays job progress.
         }
     }
 }
