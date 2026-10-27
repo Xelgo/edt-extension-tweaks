@@ -31,6 +31,7 @@ https://github.com/Xelgo/edt-extension-tweaks/releases/latest/download/edt-exten
 - 1C:EDT 2025.2.6
 - 1C:EDT 2026.1.1
 - 1C:EDT 2026.2.0
+- 1C:EDT 2026.2.2
 
 ## Возможности
 
