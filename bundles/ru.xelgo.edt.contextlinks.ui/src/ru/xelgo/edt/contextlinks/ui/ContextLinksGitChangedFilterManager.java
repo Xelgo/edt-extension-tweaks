@@ -1,9 +1,25 @@
 package ru.xelgo.edt.contextlinks.ui;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.eclipse.core.commands.Command;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.State;
+import org.eclipse.core.resources.IResourceChangeListener;
+import org.eclipse.core.resources.IResourceChangeEvent;
+import org.eclipse.core.resources.IResourceDelta;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.egit.core.project.GitProjectData;
+import org.eclipse.egit.core.project.RepositoryMappingChangeListener;
+import org.eclipse.jgit.events.ListenerHandle;
+import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jface.viewers.ViewerFilter;
+import org.eclipse.swt.events.DisposeListener;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchPart;
@@ -20,7 +36,7 @@ import ru.xelgo.edt.contextlinks.core.ContextLinks;
 /**
  * Installs and removes the Git changed filter directly on the EDT Navigator viewer.
  */
-final class ContextLinksGitChangedFilterManager
+public final class ContextLinksGitChangedFilterManager
 {
     private static final String COMMAND_ID =
         "ru.xelgo.edt.contextlinks.ui.commands.toggleGitChangedNavigatorFilter"; //$NON-NLS-1$
@@ -28,8 +44,7 @@ final class ContextLinksGitChangedFilterManager
 
     private static final ContextLinksGitChangedFilterManager INSTANCE = new ContextLinksGitChangedFilterManager();
 
-    private ContextLinksGitChangedNavigatorFilter filter;
-    private boolean active;
+    private final Map<CommonViewer, Session> sessions = new IdentityHashMap<>();
 
     private ContextLinksGitChangedFilterManager()
     {
@@ -43,14 +58,6 @@ final class ContextLinksGitChangedFilterManager
 
     void toggle(ExecutionEvent event)
     {
-        if (active)
-            deactivate(event);
-        else
-            activate(event);
-    }
-
-    private void activate(ExecutionEvent event)
-    {
         CommonViewer viewer = getViewer(event);
         if (viewer == null)
         {
@@ -59,30 +66,52 @@ final class ContextLinksGitChangedFilterManager
             return;
         }
 
-        ContextLinksGitChangedResources.invalidate();
-        if (filter == null)
-            filter = new ContextLinksGitChangedNavigatorFilter();
-
-        if (!hasFilter(viewer, filter))
-            viewer.addFilter(filter);
-
-        active = true;
-        updateToggleState(event, true);
-        viewer.refresh();
-        expandVisibleTree(viewer);
-    }
-
-    private void deactivate(ExecutionEvent event)
-    {
-        CommonViewer viewer = getViewer(event);
-        if (viewer != null && filter != null && hasFilter(viewer, filter))
+        Session current;
+        synchronized (sessions)
         {
-            viewer.removeFilter(filter);
-            viewer.refresh();
+            current = sessions.get(viewer);
+        }
+        if (current != null)
+        {
+            deactivate(current);
+            return;
         }
 
-        active = false;
-        updateToggleState(event, false);
+        Session session = new Session(viewer, event);
+        synchronized (sessions)
+        {
+            sessions.put(viewer, session);
+        }
+        updateToggleState(event, true);
+        session.start();
+    }
+
+    private void deactivate(Session session)
+    {
+        synchronized (sessions)
+        {
+            sessions.remove(session.viewer);
+        }
+        session.close();
+        if (!session.control.isDisposed())
+        {
+            session.control.removeDisposeListener(session.disposeListener);
+            if (hasFilter(session.viewer, session.filter))
+                session.viewer.removeFilter(session.filter);
+        }
+        updateToggleState(session.event, false);
+    }
+
+    public static void shutdown()
+    {
+        List<Session> current;
+        synchronized (INSTANCE.sessions)
+        {
+            current = new ArrayList<>(INSTANCE.sessions.values());
+            INSTANCE.sessions.clear();
+        }
+        for (Session session : current)
+            session.close();
     }
 
     private CommonViewer getViewer(ExecutionEvent event)
@@ -135,18 +164,6 @@ final class ContextLinksGitChangedFilterManager
         return false;
     }
 
-    private void expandVisibleTree(CommonViewer viewer)
-    {
-        try
-        {
-            viewer.expandToLevel(3);
-        }
-        catch (RuntimeException e)
-        {
-            // Best effort: expansion must not break the Navigator.
-        }
-    }
-
     private void updateToggleState(ExecutionEvent event, boolean value)
     {
         updateEventCommandState(event, value);
@@ -177,5 +194,136 @@ final class ContextLinksGitChangedFilterManager
         State state = event.getCommand().getState(RegistryToggleState.STATE_ID);
         if (state != null)
             state.setValue(Boolean.valueOf(value));
+    }
+
+    static boolean hasRelevantChanges(IResourceDelta delta)
+    {
+        if (delta == null)
+            return false;
+        if (delta.getKind() == IResourceDelta.ADDED || delta.getKind() == IResourceDelta.REMOVED
+            || (delta.getFlags() & (IResourceDelta.CONTENT | IResourceDelta.REPLACED | IResourceDelta.OPEN
+                | IResourceDelta.DESCRIPTION | IResourceDelta.TYPE | IResourceDelta.ENCODING
+                | IResourceDelta.LOCAL_CHANGED)) != 0)
+            return true;
+        for (IResourceDelta child : delta.getAffectedChildren())
+        {
+            if (hasRelevantChanges(child))
+                return true;
+        }
+        return false;
+    }
+
+    private final class Session
+    {
+        private final CommonViewer viewer;
+        private final ExecutionEvent event;
+        private final Control control;
+        private final Display display;
+        private final ContextLinksGitChangedNavigatorFilter filter = new ContextLinksGitChangedNavigatorFilter();
+        private final ContextLinksGitChangedRefreshJob job;
+        private final List<ListenerHandle> gitListeners = new ArrayList<>();
+        private final IResourceChangeListener resourceListener;
+        private final RepositoryMappingChangeListener mappingListener;
+        private final DisposeListener disposeListener;
+        private volatile ContextLinksGitChangedResources.Snapshot snapshot;
+        private volatile boolean closed;
+
+        Session(CommonViewer viewer, ExecutionEvent event)
+        {
+            this.viewer = viewer;
+            this.event = event;
+            control = viewer.getControl();
+            display = control.getDisplay();
+            job = new ContextLinksGitChangedRefreshJob(ContextLinksGitChangedResources::readWorkspaceSnapshot,
+                this::asyncExec, this::publish, this::scanCanceled);
+            resourceListener = change -> {
+                if (hasRelevantChanges(change.getDelta()))
+                    requestRefresh();
+            };
+            mappingListener = mapping -> requestRefresh();
+            disposeListener = disposed -> {
+                synchronized (sessions)
+                {
+                    sessions.remove(viewer);
+                }
+                close();
+            };
+        }
+
+        synchronized void start()
+        {
+            if (closed)
+                return;
+            control.addDisposeListener(disposeListener);
+            ResourcesPlugin.getWorkspace().addResourceChangeListener(resourceListener, IResourceChangeEvent.POST_CHANGE);
+            GitProjectData.addRepositoryChangeListener(mappingListener);
+            gitListeners.add(Repository.getGlobalListenerList().addIndexChangedListener(
+                event -> repositoryChanged(event.getRepository())));
+            gitListeners.add(Repository.getGlobalListenerList().addRefsChangedListener(
+                event -> repositoryChanged(event.getRepository())));
+            gitListeners.add(Repository.getGlobalListenerList().addWorkingTreeModifiedListener(
+                event -> repositoryChanged(event.getRepository())));
+            job.request(0L);
+        }
+
+        void repositoryChanged(Repository repository)
+        {
+            ContextLinksGitChangedResources.Snapshot current = snapshot;
+            if (current == null || current.containsRepository(repository))
+                requestRefresh();
+        }
+
+        void requestRefresh()
+        {
+            if (!closed)
+                job.request(500L);
+        }
+
+        void publish(ContextLinksGitChangedResources.Snapshot ready)
+        {
+            if (closed || control.isDisposed())
+                return;
+            snapshot = ready;
+            filter.setSnapshot(ready);
+            if (!hasFilter(viewer, filter))
+                viewer.addFilter(filter);
+            else
+                viewer.refresh();
+        }
+
+        void scanCanceled()
+        {
+            if (!closed && snapshot == null && !control.isDisposed())
+                deactivate(this);
+        }
+
+        void asyncExec(Runnable runnable)
+        {
+            if (!closed && !display.isDisposed())
+            {
+                try
+                {
+                    display.asyncExec(runnable);
+                }
+                catch (org.eclipse.swt.SWTException e)
+                {
+                    if (!display.isDisposed())
+                        throw e;
+                }
+            }
+        }
+
+        synchronized void close()
+        {
+            if (closed)
+                return;
+            closed = true;
+            job.close();
+            ResourcesPlugin.getWorkspace().removeResourceChangeListener(resourceListener);
+            GitProjectData.removeRepositoryChangeListener(mappingListener);
+            for (ListenerHandle listener : gitListeners)
+                listener.remove();
+            gitListeners.clear();
+        }
     }
 }

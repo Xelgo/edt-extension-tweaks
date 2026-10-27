@@ -12,13 +12,19 @@ public class ContextLinksGitChangedNavigatorFilter
     extends ViewerFilter
 {
     private static volatile boolean loggedFailure;
+    private ContextLinksGitChangedResources resources;
+
+    void setSnapshot(ContextLinksGitChangedResources.Snapshot snapshot)
+    {
+        resources = new ContextLinksGitChangedResources(snapshot);
+    }
 
     @Override
     public boolean select(Viewer viewer, Object parentElement, Object element)
     {
         try
         {
-            return ContextLinksGitChangedResources.isChangedElement(parentElement, element);
+            return resources == null || resources.isChangedElement(parentElement, element);
         }
         catch (RuntimeException e)
         {
