@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.osgi.framework.Constants;
@@ -24,6 +26,7 @@ import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseUpdateCal
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseChangesResolutionResult;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseEqualityState;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.ObjectChange;
+import com._1c.g5.v8.dt.platform.services.model.InfobaseReference;
 
 /**
  * Softly masks disabled projects as synchronized for EDT infobase update flows.
@@ -57,15 +60,20 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
             return method.invoke(this, args);
 
         IProject project = firstProject(args);
+        IProject applicationProject = ContextLinks.getApplicationProject(project);
+        InfobaseReference infobase = firstInfobase(args);
         DelegateService delegate = delegate();
         try
         {
-            if ("updateAllInfobases".equals(method.getName()) && shouldFilterUpdateAll(project)) //$NON-NLS-1$
-                return updateAllInfobases(delegate.service, ContextLinks.getApplicationProject(project), project, args);
-            if (isUpdateOperation(method.getName()) && isDisabled(project, method.getName()))
-                return updateEnabledDependentInfobases(delegate.service, method, project, args);
+            if ("updateAllInfobases".equals(method.getName()) //$NON-NLS-1$
+                && ContextLinks.hasApplicationUpdateProjectSettings(applicationProject))
+                return updateAllInfobases(delegate.service, applicationProject, project, args);
+            if (isUpdateOperation(method.getName())
+                && !ContextLinks.getDisabledApplicationUpdateProjectNames(applicationProject, infobase).isEmpty())
+                return updateFilteredInfobases(delegate.service, method, applicationProject,
+                    project, infobase, args);
 
-            Object disabledValue = disabledValue(method, project);
+            Object disabledValue = disabledValue(method, applicationProject, project, infobase);
             if (disabledValue == SKIPPED_VOID)
                 return null;
             if (disabledValue != NOT_DISABLED)
@@ -79,9 +87,11 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         }
     }
 
-    private Object disabledValue(Method method, IProject updateProject)
+    private Object disabledValue(Method method, IProject applicationProject, IProject updateProject,
+        InfobaseReference infobase)
     {
-        if (updateProject == null || !isDisabled(updateProject, method.getName()))
+        if (updateProject == null
+            || !isDisabled(applicationProject, updateProject, infobase, method.getName()))
             return NOT_DISABLED;
 
         String name = method.getName();
@@ -98,14 +108,15 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         return NOT_DISABLED;
     }
 
-    private boolean isDisabled(IProject updateProject, String operation)
+    private boolean isDisabled(IProject applicationProject, IProject updateProject, InfobaseReference infobase,
+        String operation)
     {
-        IProject applicationProject = ContextLinks.getApplicationProject(updateProject);
-        if (!ContextLinks.isApplicationUpdateDisabled(applicationProject, updateProject))
+        if (!ContextLinks.isApplicationUpdateDisabled(applicationProject, infobase, updateProject))
             return false;
 
         ContextLinks.logDebug("EDT Extension Tweaks DEBUG [application.update.skip] operation=" + operation //$NON-NLS-1$
-            + " applicationProject=" + applicationProject.getName() + " updateProject=" + updateProject.getName()); //$NON-NLS-1$ //$NON-NLS-2$
+            + " applicationProject=" + applicationProject.getName() + " updateProject=" + updateProject.getName() //$NON-NLS-1$ //$NON-NLS-2$
+            + " infobase=" + (infobase == null ? null : infobase.getUuid())); //$NON-NLS-1$
         return true;
     }
 
@@ -114,39 +125,64 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         return "updateInfobase".equals(operation) || "reloadInfobase".equals(operation); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
-    private Object updateEnabledDependentInfobases(Object delegate, Method publicMethod, IProject project, Object[] args)
+    private Object updateFilteredInfobases(Object delegate, Method publicMethod, IProject applicationProject,
+        IProject project, InfobaseReference infobase, Object[] args)
         throws Throwable
     {
         String operation = publicMethod.getName();
-        IProject applicationProject = ContextLinks.getApplicationProject(project);
-        Object infobase = args != null && args.length > 1 ? args[1] : null;
         Object callback = args != null && args.length > 2 ? args[2] : null;
         Object monitor = args != null && args.length > 4 ? args[4] : null;
+        if (monitor instanceof IProgressMonitor && ((IProgressMonitor)monitor).isCanceled())
+            return successfulUpdateResult(publicMethod.getReturnType(), false);
         boolean reload = "reloadInfobase".equals(operation); //$NON-NLS-1$
-        boolean result = true;
-        boolean hasDependentProjects = false;
+
+        if (!isDisabled(applicationProject, project, infobase, operation))
+        {
+            Object synchronization = getOrCreateSynchronization(delegate, project);
+            invokeMethod(delegate, "synchronizeConnectionsWithApplications", 2, project, synchronization); //$NON-NLS-1$
+            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [application.update.route] operation=" //$NON-NLS-1$
+                + operation + " updateProject=" + project.getName() + " infobase=" //$NON-NLS-1$ //$NON-NLS-2$
+                + (infobase == null ? null : infobase.getUuid()));
+            Object routedCallback = wrapUpdateCallbackForLogging(applicationProject, project, callback);
+            Object result = updateConnectedInfobase(delegate, synchronization, reload, infobase, routedCallback, monitor);
+            if (!isSuccessfulUpdateResult(result))
+                return publicMethod.getReturnType().isInstance(result) ? result
+                    : successfulUpdateResult(publicMethod.getReturnType(), false);
+        }
+
+        // Native manager recursion does not pass through this proxy. Route every dependent project here.
         for (IProject dependentProject : getDependentExtensionProjects(delegate, project))
         {
-            hasDependentProjects = true;
-            if (ContextLinks.isApplicationUpdateDisabled(applicationProject, dependentProject))
-            {
-                ContextLinks.logDebug("EDT Extension Tweaks DEBUG [application.update.skip] operation=" //$NON-NLS-1$
-                    + operation + " applicationProject=" + applicationProject.getName() //$NON-NLS-1$
-                    + " updateProject=" + dependentProject.getName()); //$NON-NLS-1$
-                continue;
-            }
-
-            Object synchronization = getOrCreateSynchronization(delegate, dependentProject);
-            invokeMethod(delegate, "synchronizeConnectionsWithApplications", 2, dependentProject, synchronization); //$NON-NLS-1$
-            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [application.update.route] operation=" //$NON-NLS-1$
-                + operation + " fromProject=" + project.getName() + " updateProject=" //$NON-NLS-1$ //$NON-NLS-2$
-                + dependentProject.getName());
-            Object routedCallback = wrapUpdateCallbackForLogging(applicationProject, dependentProject, callback);
-            Object dependentResult = invokeMethod(synchronization, "updateConnectedInfobase", 4, //$NON-NLS-1$
-                Boolean.valueOf(reload), infobase, routedCallback, monitor);
-            result &= isSuccessfulUpdateResult(dependentResult);
+            Object result = updateFilteredInfobases(delegate, publicMethod, applicationProject, dependentProject,
+                infobase, args);
+            if (!isSuccessfulUpdateResult(result))
+                return result;
         }
-        return successfulUpdateResult(publicMethod.getReturnType(), !hasDependentProjects || result);
+        return successfulUpdateResult(publicMethod.getReturnType(), true);
+    }
+
+    private Object updateConnectedInfobase(Object delegate, Object synchronization, boolean reload,
+        InfobaseReference infobase, Object callback, Object monitor)
+        throws Throwable
+    {
+        if (!reload)
+        {
+            boolean hasIncrementalFallback;
+            try
+            {
+                findMethod(delegate.getClass(), "updateIncrementallyWithFallback", 4); //$NON-NLS-1$
+                hasIncrementalFallback = true;
+            }
+            catch (NoSuchMethodException e)
+            {
+                hasIncrementalFallback = false;
+            }
+            if (hasIncrementalFallback)
+                return invokeMethod(delegate, "updateIncrementallyWithFallback", 4, //$NON-NLS-1$
+                    infobase, callback, synchronization, monitor);
+        }
+        return invokeMethod(synchronization, "updateConnectedInfobase", 4, //$NON-NLS-1$
+            Boolean.valueOf(reload), infobase, callback, monitor);
     }
 
     private Object successfulUpdateResult(Class<?> returnType, boolean success)
@@ -166,6 +202,8 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
             return ((Boolean)result).booleanValue();
         if (result instanceof IStatus)
             return ((IStatus)result).isOK();
+        if (hasUnresolvedInfobaseChanges(result))
+            return false;
         Boolean imported = invokeBooleanGetter(result, "areProjectChangesImportedToInfobase"); //$NON-NLS-1$
         if (imported != null)
             return imported.booleanValue();
@@ -173,6 +211,22 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         if (finished != null)
             return finished.booleanValue();
         return true;
+    }
+
+    private boolean hasUnresolvedInfobaseChanges(Object result)
+    {
+        if (result == null)
+            return false;
+        try
+        {
+            Method method = findMethod(result.getClass(), "getInfobaseChangesResolutionResult", 0); //$NON-NLS-1$
+            method.setAccessible(true);
+            return method.invoke(result) == InfobaseChangesResolutionResult.CHANGES_NOT_RESOLVED;
+        }
+        catch (ReflectiveOperationException | RuntimeException e)
+        {
+            return false;
+        }
     }
 
     private Boolean invokeBooleanGetter(Object target, String name)
@@ -282,14 +336,6 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         return result.append(']').toString();
     }
 
-    private boolean shouldFilterUpdateAll(IProject updateProject)
-    {
-        IProject applicationProject = ContextLinks.getApplicationProject(updateProject);
-        return applicationProject != null
-            && !ContextLinks.getDisabledApplicationUpdateProjectNames(applicationProject).isEmpty();
-    }
-
-    @SuppressWarnings("unchecked")
     private Map<Object, Object> updateAllInfobases(Object delegate, IProject applicationProject, IProject project,
         Object[] args)
         throws Throwable
@@ -298,22 +344,26 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         Object monitor = args != null && args.length > 2 ? args[2] : null;
         Map<Object, Object> result = new HashMap<>();
 
-        if (!ContextLinks.isApplicationUpdateDisabled(applicationProject, project))
+        Object synchronization = getSynchronization(delegate, project);
+        if (synchronization != null)
         {
-            Object synchronization = getSynchronization(delegate, project);
-            if (synchronization != null)
+            invokeMethod(delegate, "synchronizeConnectionsWithApplications", 2, project, synchronization); //$NON-NLS-1$
+            Object connectedInfobases = invokeMethod(synchronization, "getConnectedInfobases", 0); //$NON-NLS-1$
+            if (connectedInfobases instanceof Collection)
             {
-                invokeMethod(delegate, "synchronizeConnectionsWithApplications", 2, project, synchronization); //$NON-NLS-1$
-                Object updateResult = invokeMethod(synchronization, "updateAllConnectedInfobases", 2, callback, //$NON-NLS-1$
-                    monitor);
-                if (updateResult instanceof Map)
-                    result.putAll((Map<Object, Object>)updateResult);
+                for (Object connectedInfobase : new ArrayList<>((Collection<?>)connectedInfobases))
+                {
+                    if (monitor instanceof IProgressMonitor && ((IProgressMonitor)monitor).isCanceled())
+                        return result;
+                    if (!(connectedInfobase instanceof InfobaseReference)
+                        || isDisabled(applicationProject, project, (InfobaseReference)connectedInfobase,
+                            "updateAllInfobases")) //$NON-NLS-1$
+                        continue;
+                    Object updateResult = invokeMethod(synchronization, "updateConnectedInfobase", 4, //$NON-NLS-1$
+                        Boolean.FALSE, connectedInfobase, callback, monitor);
+                    result.put(connectedInfobase, updateResult);
+                }
             }
-        }
-        else
-        {
-            ContextLinks.logDebug("EDT Extension Tweaks DEBUG [application.update.skip] operation=updateAllInfobases" //$NON-NLS-1$
-                + " applicationProject=" + applicationProject.getName() + " updateProject=" + project.getName()); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
         for (IProject dependentProject : getDependentExtensionProjects(delegate, project))
@@ -402,6 +452,19 @@ final class ContextLinksInfobaseSynchronizationManagerProxy
         {
             if (arg instanceof IProject)
                 return (IProject)arg;
+        }
+        return null;
+    }
+
+    private static InfobaseReference firstInfobase(Object[] args)
+    {
+        if (args != null)
+        {
+            for (Object arg : args)
+            {
+                if (arg instanceof InfobaseReference)
+                    return (InfobaseReference)arg;
+            }
         }
         return null;
     }

@@ -23,6 +23,7 @@ import com._1c.g5.v8.dt.core.platform.IExtensionProject;
 import com._1c.g5.v8.dt.core.platform.IDependentProject;
 import com._1c.g5.v8.dt.core.platform.IV8Project;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
+import com._1c.g5.v8.dt.platform.services.model.InfobaseReference;
 import com._1c.g5.wiring.ServiceAccess;
 
 /**
@@ -124,11 +125,82 @@ public final class ContextLinks
             "application.update.disabled.save"); //$NON-NLS-1$
     }
 
+    public static Set<String> getDisabledApplicationUpdateProjectNames(IProject applicationProject,
+        InfobaseReference infobase)
+    {
+        if (applicationProject == null || !applicationProject.isAccessible())
+            return Set.of();
+
+        QualifiedName property = getApplicationUpdateProperty(infobase);
+        if (property != null)
+        {
+            try
+            {
+                String value = applicationProject.getPersistentProperty(property);
+                // An empty value explicitly enables every project for this infobase.
+                if (value != null)
+                    return normalizeProjectNames(value);
+            }
+            catch (CoreException e)
+            {
+                logWarning("Failed to read EDT infobase update settings: " + e.getMessage()); //$NON-NLS-1$
+            }
+        }
+        return getDisabledApplicationUpdateProjectNames(applicationProject);
+    }
+
+    public static void setDisabledApplicationUpdateProjectNames(IProject applicationProject,
+        InfobaseReference infobase, Set<String> names)
+        throws CoreException
+    {
+        QualifiedName property = getApplicationUpdateProperty(infobase);
+        if (property == null)
+            throw new CoreException(new Status(IStatus.ERROR, PLUGIN_ID,
+                "Cannot save EDT update settings without an infobase UUID")); //$NON-NLS-1$
+        if (applicationProject == null || !applicationProject.isAccessible())
+            return;
+
+        String value = String.join("\n", normalizeProjectNames(names)); //$NON-NLS-1$
+        applicationProject.setPersistentProperty(property, value);
+    }
+
+    public static boolean hasApplicationUpdateProjectSettings(IProject applicationProject)
+    {
+        if (applicationProject == null || !applicationProject.isAccessible())
+            return false;
+        try
+        {
+            return applicationProject.getPersistentProperties().keySet().stream()
+                .anyMatch(property -> PLUGIN_ID.equals(property.getQualifier())
+                    && (DISABLED_APPLICATION_UPDATE_PROJECTS.equals(property)
+                        || property.getLocalName().startsWith(DISABLED_APPLICATION_UPDATE_PROJECTS.getLocalName() + "."))); //$NON-NLS-1$
+        }
+        catch (CoreException e)
+        {
+            logWarning("Failed to read EDT infobase update settings: " + e.getMessage()); //$NON-NLS-1$
+            return false;
+        }
+    }
+
+    private static QualifiedName getApplicationUpdateProperty(InfobaseReference infobase)
+    {
+        return infobase == null || infobase.getUuid() == null ? null
+            : new QualifiedName(PLUGIN_ID, DISABLED_APPLICATION_UPDATE_PROJECTS.getLocalName() + "." //$NON-NLS-1$
+                + infobase.getUuid());
+    }
+
     public static boolean isApplicationUpdateDisabled(IProject applicationProject, IProject updateProject)
     {
         if (applicationProject == null || updateProject == null)
             return false;
         return getDisabledApplicationUpdateProjectNames(applicationProject).contains(updateProject.getName());
+    }
+
+    public static boolean isApplicationUpdateDisabled(IProject applicationProject, InfobaseReference infobase,
+        IProject updateProject)
+    {
+        return updateProject != null
+            && getDisabledApplicationUpdateProjectNames(applicationProject, infobase).contains(updateProject.getName());
     }
 
     public static boolean isApplicationUpdateDisabled(IProject updateProject)

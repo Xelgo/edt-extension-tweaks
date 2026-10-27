@@ -273,7 +273,7 @@
                <iterate
                      ifEmpty="false">
                   <instanceof
-                        value="com.e1c.g5.dt.applications.IApplication">
+                        value="com.e1c.g5.dt.applications.infobases.IInfobaseApplication">
                   </instanceof>
                </iterate>
             </with>

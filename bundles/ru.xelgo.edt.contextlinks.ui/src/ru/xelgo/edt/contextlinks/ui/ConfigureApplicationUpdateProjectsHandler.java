@@ -17,7 +17,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.dialogs.ListSelectionDialog;
 import org.eclipse.ui.handlers.HandlerUtil;
 
-import com.e1c.g5.dt.applications.IApplication;
+import com.e1c.g5.dt.applications.infobases.IInfobaseApplication;
 
 import ru.xelgo.edt.contextlinks.core.ContextLinks;
 
@@ -32,7 +32,7 @@ public class ConfigureApplicationUpdateProjectsHandler
         throws ExecutionException
     {
         Shell shell = HandlerUtil.getActiveShell(event);
-        IApplication application = getSelectedApplication(event);
+        IInfobaseApplication application = getSelectedApplication(event);
         if (application == null)
         {
             Messages.showInfo(shell, Messages.ConfigureApplicationUpdateProjectsHandler_Title,
@@ -49,7 +49,7 @@ public class ConfigureApplicationUpdateProjectsHandler
             return null;
         }
 
-        Object[] initialSelection = getInitialSelection(applicationProject, candidates);
+        Object[] initialSelection = getInitialSelection(application, candidates);
         ListSelectionDialog dialog = ListSelectionDialog.of(candidates)
             .contentProvider(ArrayContentProvider.getInstance())
             .labelProvider(new LabelProvider()
@@ -77,7 +77,7 @@ public class ConfigureApplicationUpdateProjectsHandler
 
         try
         {
-            ContextLinks.setDisabledApplicationUpdateProjectNames(applicationProject, names);
+            ContextLinks.setDisabledApplicationUpdateProjectNames(applicationProject, application.getInfobase(), names);
         }
         catch (CoreException e)
         {
@@ -86,17 +86,18 @@ public class ConfigureApplicationUpdateProjectsHandler
         return null;
     }
 
-    private IApplication getSelectedApplication(ExecutionEvent event)
+    private IInfobaseApplication getSelectedApplication(ExecutionEvent event)
     {
         Object selected = HandlerUtil.getCurrentSelection(event) instanceof IStructuredSelection
             ? ((IStructuredSelection)HandlerUtil.getCurrentSelection(event)).getFirstElement()
             : null;
-        return selected instanceof IApplication ? (IApplication)selected : null;
+        return selected instanceof IInfobaseApplication ? (IInfobaseApplication)selected : null;
     }
 
-    private Object[] getInitialSelection(IProject applicationProject, IProject[] candidates)
+    private Object[] getInitialSelection(IInfobaseApplication application, IProject[] candidates)
     {
-        Set<String> selectedNames = ContextLinks.getDisabledApplicationUpdateProjectNames(applicationProject);
+        Set<String> selectedNames = ContextLinks.getDisabledApplicationUpdateProjectNames(application.getProject(),
+            application.getInfobase());
         return Arrays.stream(candidates)
             .filter(candidate -> selectedNames.contains(candidate.getName()))
             .toArray();
