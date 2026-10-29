@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            id="ru.xelgo.edt.opensources.ui.category"
+            name="%command.category.name">
+      </category>
+      <command
+            categoryId="ru.xelgo.edt.opensources.ui.category"
+            defaultHandler="ru.xelgo.edt.opensources.ui.OpenSourcesHandler"
+            id="ru.xelgo.edt.opensources.ui.commands.openSources"
+            name="%command.name">
+      </command>
+   </extension>
+
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="popup:com._1c.g5.v8.dt.navigator.ui.navigator.popup?endof=group.open">
+         <command
+               commandId="ru.xelgo.edt.opensources.ui.commands.openSources"
+               style="push"
+               tooltip="%command.tooltip">
+         </command>
+      </menuContribution>
+   </extension>
+</plugin>

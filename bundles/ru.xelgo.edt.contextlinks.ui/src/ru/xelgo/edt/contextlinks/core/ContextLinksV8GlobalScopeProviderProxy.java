@@ -1,4 +1,4 @@
-﻿package ru.xelgo.edt.contextlinks.core;
+package ru.xelgo.edt.contextlinks.core;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
@@ -13,7 +13,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -45,7 +44,6 @@ import com._1c.g5.v8.dt.metadata.dbview.DbViewDef;
 import com._1c.g5.v8.dt.metadata.dbview.DbViewElement;
 import com._1c.g5.v8.dt.metadata.dbview.DbViewTableDef;
 import com._1c.g5.v8.dt.metadata.dbview.Table;
-import com._1c.g5.v8.dt.metadata.mdclass.MdClassPackage;
 import com._1c.g5.wiring.ServiceAccess;
 import com.google.common.base.Predicate;
 
@@ -57,13 +55,9 @@ final class ContextLinksV8GlobalScopeProviderProxy
 {
     static final String SERVICE_CLASS_NAME = "com._1c.g5.v8.dt.core.scoping.IV8GlobalScopeProvider"; //$NON-NLS-1$
     static final String WRAPPER_MARKER_PROPERTY = ContextLinks.PLUGIN_ID + ".qlV8Scope.wrapper"; //$NON-NLS-1$
-    private static final String QL_PROBE_OBJECT =
-        "\u0420\u0430\u0441\u04481_\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442"; //$NON-NLS-1$
-    private static final int QL_PROBE_SCAN_LIMIT = 20000;
 
     private static final Set<String> loggedCompositions = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedDelegateFailures = ConcurrentHashMap.newKeySet();
-    private static final Set<String> loggedProbeResults = ConcurrentHashMap.newKeySet();
     private static final Set<String> loggedResourceCalls = ConcurrentHashMap.newKeySet();
     private static final ConcurrentHashMap<String, EObject> friendlyDbViewObjects = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Object> friendlyDbViewElements = new ConcurrentHashMap<>();
@@ -146,12 +140,12 @@ final class ContextLinksV8GlobalScopeProviderProxy
         if (linkedProjectNames.isEmpty())
             return ownScope;
 
-        CurrentMdObjects currentMdObjects = collectCurrentMdObjects(ownScope, false);
+        boolean externalProject = ContextLinks.isExternalObjectsProject(project);
+        CurrentMdObjects currentMdObjects = externalProject ? null : collectCurrentMdObjects(ownScope, false);
         List<IScope> linkedScopes = new ArrayList<>();
         List<String> addedProjects = new ArrayList<>();
         List<String> skippedProjects = new ArrayList<>();
 
-        logProbe("own", project, null, reference, ownScope, resource); //$NON-NLS-1$
         for (String linkedProjectName : linkedProjectNames)
         {
             IProject linkedProject = ResourcesPlugin.getWorkspace().getRoot().getProject(linkedProjectName);
@@ -168,8 +162,8 @@ final class ContextLinksV8GlobalScopeProviderProxy
                 continue;
             }
 
-            IScope currentProjectFriendlyScope = new CurrentProjectFriendlyScope(linkedScope, currentMdObjects);
-            logProbe("linked", project, linkedProject, reference, currentProjectFriendlyScope, resource); //$NON-NLS-1$
+            IScope currentProjectFriendlyScope = externalProject ? linkedScope
+                : new CurrentProjectFriendlyScope(linkedScope, currentMdObjects);
             linkedScopes.add(currentProjectFriendlyScope);
             addedProjects.add(linkedProjectName);
         }
@@ -178,9 +172,8 @@ final class ContextLinksV8GlobalScopeProviderProxy
         if (!addedProjects.isEmpty())
             ContextLinks.logScopeExtension("ql-bm-scope", project, //$NON-NLS-1$
                 "linked=" + addedProjects + " skipped=" + skippedProjects); //$NON-NLS-1$ //$NON-NLS-2$
-        IScope result = new CurrentFirstLinkedScope(ownScope, linkedScopes);
-        if (!addedProjects.isEmpty())
-            logProbe("composite", project, null, reference, result, resource); //$NON-NLS-1$
+        IScope result = externalProject ? new ContextLinksExternalQueryScope(ownScope, linkedScopes, resource)
+            : new CurrentFirstLinkedScope(ownScope, linkedScopes);
         return addedProjects.isEmpty() ? ownScope : result;
     }
 
@@ -299,129 +292,6 @@ final class ContextLinksV8GlobalScopeProviderProxy
         }
     }
 
-    private void logProbe(String phase, IProject project, IProject linkedProject, EReference reference, IScope scope,
-        Resource resolutionContext)
-    {
-        if (!ContextLinks.isDebugLoggingEnabled())
-            return;
-
-        ScopeProbeResult result = probeScope(scope, resolutionContext);
-        String linkedProjectName = linkedProject != null ? linkedProject.getName() : "-"; //$NON-NLS-1$
-        String key = phase + "|" + project.getName() + "|" + linkedProjectName + "|" //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-            + describeReference(reference) + "|" + result.found + "|" + result.scanned + "|" + result.matches; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-        if (loggedProbeResults.add(key))
-        {
-            ContextLinks.logDebug("EDT Extension Tweaks QL probe phase=" + phase //$NON-NLS-1$
-                + " project=" + project.getName() + " linkedProject=" + linkedProjectName //$NON-NLS-1$ //$NON-NLS-2$
-                + " reference=" + describeReference(reference) + " target=" + QL_PROBE_OBJECT //$NON-NLS-1$ //$NON-NLS-2$
-                + " scope=" + describeScope(scope) + " found=" + result.found //$NON-NLS-1$ //$NON-NLS-2$
-                + " scanned=" + result.scanned + " truncated=" + result.truncated //$NON-NLS-1$ //$NON-NLS-2$
-                + " matches=" + result.matches + " samples=" + result.samples //$NON-NLS-1$
-                + " firstElements=" + result.firstElements); //$NON-NLS-1$
-        }
-    }
-
-    private ScopeProbeResult probeScope(IScope scope, Resource resolutionContext)
-    {
-        ScopeProbeResult result = new ScopeProbeResult();
-        if (scope == null)
-            return result;
-
-        String target = QL_PROBE_OBJECT.toLowerCase(Locale.ROOT);
-        for (IEObjectDescription description : scope.getAllElements())
-        {
-            if (result.scanned >= QL_PROBE_SCAN_LIMIT)
-            {
-                result.truncated = true;
-                break;
-            }
-
-            result.scanned++;
-            String candidate = describeElement(description);
-            if (result.firstElements.size() < 8)
-                result.firstElements.add(candidate + " " + describeResolution(description, resolutionContext)); //$NON-NLS-1$
-            String normalizedCandidate = candidate.toLowerCase(Locale.ROOT);
-            if (normalizedCandidate.contains(target))
-            {
-                result.found = true;
-                result.matches++;
-                if (result.samples.size() < 5)
-                    result.samples.add(candidate + " " + describeResolution(description, resolutionContext)); //$NON-NLS-1$
-            }
-        }
-        return result;
-    }
-
-    private String describeResolution(IEObjectDescription description, Resource resolutionContext)
-    {
-        try
-        {
-            EObject object = description.getEObjectOrProxy();
-            EObject resolved = resolutionContext != null && object != null ? EcoreUtil.resolve(object, resolutionContext)
-                : object;
-            return "proxy=" + describeEObject(object) + " resolved=" + describeEObject(resolved) //$NON-NLS-1$ //$NON-NLS-2$
-                + " dbView=" + describeDbView(resolved); //$NON-NLS-1$
-        }
-        catch (RuntimeException e)
-        {
-            return "resolveError=" + e.getClass().getName() + ":" + e.getMessage(); //$NON-NLS-1$ //$NON-NLS-2$
-        }
-    }
-
-    private String describeDbView(EObject object)
-    {
-        if (!(object instanceof DbViewDef))
-            return "-"; //$NON-NLS-1$
-
-        DbViewDef dbView = (DbViewDef)object;
-        EObject mdObject = dbView.getMdObject();
-        return "name=" + dbView.getName() + ",md=" + describeEObject(mdObject) //$NON-NLS-1$ //$NON-NLS-2$
-            + ",folder=" + describeFolderMatch(mdObject); //$NON-NLS-1$
-    }
-
-    private String describeFolderMatch(EObject object)
-    {
-        if (object == null || object.eClass() == null)
-            return "NULL"; //$NON-NLS-1$
-
-        return "document=" + (object.eClass() //$NON-NLS-1$
-            == MdClassPackage.Literals.CONFIGURATION__DOCUMENTS.getEReferenceType())
-            + ",catalog=" + (object.eClass() //$NON-NLS-1$
-                == MdClassPackage.Literals.CONFIGURATION__CATALOGS.getEReferenceType())
-            + ",class=" + object.eClass().getName(); //$NON-NLS-1$
-    }
-
-    private String describeEObject(EObject object)
-    {
-        if (object == null)
-            return "NULL"; //$NON-NLS-1$
-
-        String className = object.eClass() != null ? object.eClass().getName() : object.getClass().getName();
-        String uri = object.eResource() != null ? object.eResource().getURIFragment(object) : "NO_RESOURCE"; //$NON-NLS-1$
-        return className + "{proxy=" + object.eIsProxy() + ",fragment=" + uri + "}"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-    }
-
-    private String describeElement(IEObjectDescription description)
-    {
-        if (description == null)
-            return "NULL"; //$NON-NLS-1$
-
-        String name = description.getName() != null ? description.getName().toString() : "NULL"; //$NON-NLS-1$
-        String uri = description.getEObjectURI() != null ? description.getEObjectURI().toString() : "NULL"; //$NON-NLS-1$
-        return name + "@" + uri; //$NON-NLS-1$
-    }
-
-    private String describeReference(EReference reference)
-    {
-        return reference != null ? reference.getName() : "NULL"; //$NON-NLS-1$
-    }
-
-    private String describeScope(IScope scope)
-    {
-        return scope != null ? scope.getClass().getName() + "@" //$NON-NLS-1$
-            + Integer.toHexString(System.identityHashCode(scope)) : "NULL"; //$NON-NLS-1$
-    }
-
     private Object invokeDelegate(Object delegate, Method method, Object[] args)
         throws Throwable
     {
@@ -517,16 +387,6 @@ final class ContextLinksV8GlobalScopeProviderProxy
         {
             context.ungetService(reference);
         }
-    }
-
-    private static final class ScopeProbeResult
-    {
-        private boolean found;
-        private int matches;
-        private int scanned;
-        private boolean truncated;
-        private final List<String> samples = new ArrayList<>();
-        private final List<String> firstElements = new ArrayList<>();
     }
 
     private static final class CurrentMdObjects
