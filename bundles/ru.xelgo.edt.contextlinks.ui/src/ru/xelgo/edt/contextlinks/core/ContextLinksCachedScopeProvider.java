@@ -294,6 +294,27 @@ public class ContextLinksCachedScopeProvider
         return scope;
     }
 
+    /** Direct donor scopes only: do not follow transitive links or rebuild donor models. */
+    List<IScope> getLinkedMemberTypeScopes(IProject project)
+    {
+        if (!canExtend(project, IScope.NULLSCOPE, "member-types")) //$NON-NLS-1$
+            return List.of();
+
+        List<IScope> scopes = new ArrayList<>();
+        for (String name : ContextLinks.getContextProjectNames(project))
+        {
+            IProject linked = ResourcesPlugin.getWorkspace().getRoot().getProject(name);
+            if (!isUsableLinkedProject(project, linked))
+                continue;
+            IScope scope = getDirectTypeItemScope(linked);
+            if (scope == null)
+                scope = getLastKnownScope(ScopeKind.TYPE_ITEM, linked);
+            if (scope != null)
+                scopes.add(scope);
+        }
+        return scopes;
+    }
+
     private IScope getDirectPropertyScope(IProject project)
     {
         IScope scope = super.getPropertyScope(project);

@@ -6,6 +6,7 @@ import org.eclipse.xtext.scoping.IScopeProvider;
 import org.eclipse.xtext.service.AbstractGenericModule;
 
 import com._1c.g5.v8.dt.bsl.contextdef.IBslModuleContextDefService;
+import com._1c.g5.v8.dt.bsl.resource.DynamicFeatureAccessComputer;
 import com._1c.g5.v8.dt.bsl.resource.TypesComputer;
 import com._1c.g5.v8.dt.bsl.scoping.BslCachedScopeProvider;
 
@@ -38,6 +39,11 @@ public class ContextLinksBslRuntimeModule
     public Class<? extends TypesComputer> bindTypesComputer()
     {
         return ContextLinksTypesComputer.class;
+    }
+
+    public Class<? extends DynamicFeatureAccessComputer> bindDynamicFeatureAccessComputer()
+    {
+        return ContextLinksDynamicFeatureAccessComputer.class;
     }
 
     public Class<? extends IContainer.Manager> bindIContainer$Manager()
