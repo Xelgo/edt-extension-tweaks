@@ -23,6 +23,7 @@ public final class Messages
     public static String ConfigureApplicationUpdateProjectsHandler_Message;
     public static String ConfigureApplicationUpdateProjectsHandler_NoApplication;
     public static String ConfigureApplicationUpdateProjectsHandler_NoCandidates;
+    public static String ConfigureApplicationUpdateProjectsHandler_NoInfobase;
     public static String ConfigureApplicationUpdateProjectsHandler_Title;
     public static String ForceUpdateApplicationExtensionHandler_JobName;
     public static String ForceUpdateApplicationExtensionHandler_Message;
