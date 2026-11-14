@@ -272,9 +272,14 @@
                </count>
                <iterate
                      ifEmpty="false">
-                  <instanceof
-                        value="com.e1c.g5.dt.applications.infobases.IInfobaseApplication">
-                  </instanceof>
+                  <or>
+                     <instanceof
+                           value="com.e1c.g5.dt.applications.infobases.IInfobaseApplication">
+                     </instanceof>
+                     <instanceof
+                           value="com.e1c.g5.dt.applications.wst.IServerApplication">
+                     </instanceof>
+                  </or>
                </iterate>
             </with>
          </enabledWhen>

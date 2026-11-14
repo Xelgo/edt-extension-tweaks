@@ -2,6 +2,8 @@ package ru.xelgo.edt.contextlinks.core;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -18,6 +20,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.eclipse.core.commands.ExecutionEvent;
+import org.eclipse.core.expressions.EvaluationContext;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -25,6 +29,8 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.QualifiedName;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.ui.ISources;
 import org.junit.Test;
 
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.IInfobaseSynchronizationManager;
@@ -33,7 +39,9 @@ import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseSyncResolu
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseEqualityState;
 import com._1c.g5.v8.dt.platform.services.core.infobases.sync.InfobaseChangesResolutionResult;
 import com._1c.g5.v8.dt.platform.services.model.InfobaseReference;
+import com.e1c.g5.dt.applications.IApplication;
 import com.e1c.g5.dt.applications.infobases.IInfobaseApplication;
+import com.e1c.g5.dt.applications.wst.IServerApplication;
 
 import ru.xelgo.edt.contextlinks.ui.ConfigureApplicationUpdateProjectsHandler;
 
@@ -116,14 +124,31 @@ public class ApplicationUpdateProjectsTest
     {
         exclude(left, second);
         exclude(right, first);
-        Method initialSelection = ConfigureApplicationUpdateProjectsHandler.class.getDeclaredMethod(
-            "getInitialSelection", IInfobaseApplication.class, IProject[].class);
-        initialSelection.setAccessible(true);
-        ConfigureApplicationUpdateProjectsHandler handler = new ConfigureApplicationUpdateProjectsHandler();
-        assertEquals(List.of(second), List.of((Object[])initialSelection.invoke(handler, application(left),
-            new IProject[] { configuration, first, second })));
-        assertEquals(List.of(first), List.of((Object[])initialSelection.invoke(handler, application(right),
-            new IProject[] { configuration, first, second })));
+        assertEquals(List.of(second), dialogSelection(application(left)));
+        assertEquals(List.of(first), dialogSelection(application(right)));
+    }
+
+    @Test
+    public void standaloneApplicationResolvesTheSameInfobaseAsTheUpdateManager() throws Throwable
+    {
+        IServerApplication standalone = standaloneApplication(left);
+        assertSame(standalone, selectedApplication(standalone));
+
+        InfobaseReference fromDialog = applicationInfobase(standalone);
+        assertSame(left, fromDialog);
+        assertSame(right, applicationInfobase(application(right)));
+        assertNull(selectedApplication(standalone, application(right)));
+        assertNull(selectedApplication(configuration));
+        assertNull(applicationInfobase(standaloneApplication(null)));
+
+        exclude(fromDialog, second);
+        assertEquals(List.of(second), dialogSelection(standalone));
+        assertTrue(dialogSelection(application(right)).isEmpty());
+
+        FakeDelegate delegate = delegate();
+        InfobaseReference fromUpdate = infobase(left.getUuid(), "Standalone designer endpoint");
+        assertTrue(update(delegate, configuration, fromUpdate, false, new NullProgressMonitor()).isOK());
+        assertEquals(List.of(call(configuration, fromUpdate, false), call(first, fromUpdate, false)), delegate.calls);
     }
 
     @Test
@@ -270,6 +295,38 @@ public class ApplicationUpdateProjectsTest
             case "getInfobase" -> infobase;
             default -> throw new UnsupportedOperationException(method.getName());
         });
+    }
+
+    private IServerApplication standaloneApplication(InfobaseReference infobase)
+    {
+        return mock(IServerApplication.class, (proxy, method, args) -> switch (method.getName())
+        {
+            case "getProject" -> configuration;
+            case "getAdapter" -> args[0] == InfobaseReference.class ? infobase : null;
+            default -> throw new UnsupportedOperationException(method.getName());
+        });
+    }
+
+    private static IApplication selectedApplication(Object... elements) throws Throwable
+    {
+        StructuredSelection selection = new StructuredSelection(elements);
+        EvaluationContext context = new EvaluationContext(null, selection);
+        context.addVariable(ISources.ACTIVE_CURRENT_SELECTION_NAME, selection);
+        return (IApplication)invoke(new ConfigureApplicationUpdateProjectsHandler(), "getSelectedApplication",
+            new Class<?>[] { ExecutionEvent.class }, new ExecutionEvent(null, Map.of(), null, context));
+    }
+
+    private static InfobaseReference applicationInfobase(IApplication application) throws Throwable
+    {
+        return (InfobaseReference)invoke(new ConfigureApplicationUpdateProjectsHandler(), "getInfobase",
+            new Class<?>[] { IApplication.class }, application);
+    }
+
+    private List<Object> dialogSelection(IApplication application) throws Throwable
+    {
+        return List.of((Object[])invoke(new ConfigureApplicationUpdateProjectsHandler(), "getInitialSelection",
+            new Class<?>[] { IProject.class, InfobaseReference.class, IProject[].class },
+            application.getProject(), applicationInfobase(application), new IProject[] { configuration, first, second }));
     }
 
     private FakeDelegate delegate()

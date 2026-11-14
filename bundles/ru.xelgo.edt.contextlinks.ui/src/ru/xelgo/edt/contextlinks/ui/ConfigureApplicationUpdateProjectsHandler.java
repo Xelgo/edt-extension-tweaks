@@ -8,6 +8,7 @@ import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.Adapters;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -17,7 +18,10 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.dialogs.ListSelectionDialog;
 import org.eclipse.ui.handlers.HandlerUtil;
 
+import com._1c.g5.v8.dt.platform.services.model.InfobaseReference;
+import com.e1c.g5.dt.applications.IApplication;
 import com.e1c.g5.dt.applications.infobases.IInfobaseApplication;
+import com.e1c.g5.dt.applications.wst.IServerApplication;
 
 import ru.xelgo.edt.contextlinks.core.ContextLinks;
 
@@ -32,11 +36,19 @@ public class ConfigureApplicationUpdateProjectsHandler
         throws ExecutionException
     {
         Shell shell = HandlerUtil.getActiveShell(event);
-        IInfobaseApplication application = getSelectedApplication(event);
+        IApplication application = getSelectedApplication(event);
         if (application == null)
         {
             Messages.showInfo(shell, Messages.ConfigureApplicationUpdateProjectsHandler_Title,
                 Messages.ConfigureApplicationUpdateProjectsHandler_NoApplication);
+            return null;
+        }
+
+        InfobaseReference infobase = getInfobase(application);
+        if (infobase == null || infobase.getUuid() == null)
+        {
+            Messages.showInfo(shell, Messages.ConfigureApplicationUpdateProjectsHandler_Title,
+                Messages.ConfigureApplicationUpdateProjectsHandler_NoInfobase);
             return null;
         }
 
@@ -49,7 +61,7 @@ public class ConfigureApplicationUpdateProjectsHandler
             return null;
         }
 
-        Object[] initialSelection = getInitialSelection(application, candidates);
+        Object[] initialSelection = getInitialSelection(applicationProject, infobase, candidates);
         ListSelectionDialog dialog = ListSelectionDialog.of(candidates)
             .contentProvider(ArrayContentProvider.getInstance())
             .labelProvider(new LabelProvider()
@@ -77,7 +89,7 @@ public class ConfigureApplicationUpdateProjectsHandler
 
         try
         {
-            ContextLinks.setDisabledApplicationUpdateProjectNames(applicationProject, application.getInfobase(), names);
+            ContextLinks.setDisabledApplicationUpdateProjectNames(applicationProject, infobase, names);
         }
         catch (CoreException e)
         {
@@ -86,18 +98,27 @@ public class ConfigureApplicationUpdateProjectsHandler
         return null;
     }
 
-    private IInfobaseApplication getSelectedApplication(ExecutionEvent event)
+    private IApplication getSelectedApplication(ExecutionEvent event)
     {
-        Object selected = HandlerUtil.getCurrentSelection(event) instanceof IStructuredSelection
-            ? ((IStructuredSelection)HandlerUtil.getCurrentSelection(event)).getFirstElement()
-            : null;
-        return selected instanceof IInfobaseApplication ? (IInfobaseApplication)selected : null;
+        if (HandlerUtil.getCurrentSelection(event) instanceof IStructuredSelection selection && selection.size() == 1)
+        {
+            Object selected = selection.getFirstElement();
+            if (selected instanceof IInfobaseApplication || selected instanceof IServerApplication)
+                return (IApplication)selected;
+        }
+        return null;
     }
 
-    private Object[] getInitialSelection(IInfobaseApplication application, IProject[] candidates)
+    private static InfobaseReference getInfobase(IApplication application)
     {
-        Set<String> selectedNames = ContextLinks.getDisabledApplicationUpdateProjectNames(application.getProject(),
-            application.getInfobase());
+        if (application instanceof IInfobaseApplication infobaseApplication)
+            return infobaseApplication.getInfobase();
+        return Adapters.adapt(application, InfobaseReference.class);
+    }
+
+    private Object[] getInitialSelection(IProject applicationProject, InfobaseReference infobase, IProject[] candidates)
+    {
+        Set<String> selectedNames = ContextLinks.getDisabledApplicationUpdateProjectNames(applicationProject, infobase);
         return Arrays.stream(candidates)
             .filter(candidate -> selectedNames.contains(candidate.getName()))
             .toArray();
