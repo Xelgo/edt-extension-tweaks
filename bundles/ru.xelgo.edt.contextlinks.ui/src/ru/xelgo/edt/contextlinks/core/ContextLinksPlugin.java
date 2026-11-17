@@ -43,6 +43,7 @@ public final class ContextLinksPlugin
         throws Exception
     {
         ru.xelgo.edt.contextlinks.ui.ContextLinksGitChangedFilterManager.shutdown();
+        ru.xelgo.edt.contextlinks.ui.AdoptedFormReloadListener.stop();
         ContextLinksInfobaseSynchronizationManagerRegistrar.unregister();
         if (queryWizardWeavingRegistration != null)
         {

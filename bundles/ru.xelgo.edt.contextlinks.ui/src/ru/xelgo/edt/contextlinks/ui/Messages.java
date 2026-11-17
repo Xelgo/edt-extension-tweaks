@@ -55,6 +55,9 @@ public final class Messages
     public static String ContextLinksPreferencePage_VariableSnapshotsEnabled;
     public static String ContextLinksPreferencePage_VariableSnapshotsMaxDepth;
     public static String ContextLinksPreferencePage_WorkbenchViewActivationEnabled;
+    public static String ContextLinksPreferencePage_AdoptedFormReloadEnabled;
+    public static String AdoptedFormReload_Progress;
+    public static String AdoptedFormReload_Error;
     public static String ChangeAndValidateMergeQuickfix_AncestorLabel;
     public static String ChangeAndValidateMergeQuickfix_Description;
     public static String ChangeAndValidateMergeQuickfix_InvalidMethodRange;
